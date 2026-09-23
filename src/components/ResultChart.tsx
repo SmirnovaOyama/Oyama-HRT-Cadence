@@ -793,23 +793,13 @@ const ResultChart = ({
     // dashed line is the logged doses wearing off, and it says that instead.
     const forecastText = t(proj ? 'chart.if_schedule' : 'chart.if_no_more');
     const forecastX = (now < vt0 ? mL : splitX) + 6 * ui;
-    // On a phone the future half of a week is narrow, so the label takes two
-    // lines (split at the space nearest the middle) before it gives up.
+    // Drawn only when it fits on one line in the future part. On a phone the
+    // future half of a week is narrow and a wrapped label sat on top of the
+    // dashed lines; the caption under the chart already says the same thing.
     const forecastLines = (() => {
         const room = mL + plotW - forecastX - 4 * ui;
         if (now > vt1 || room <= 0) return [] as string[];
-        if (textWidth(forecastText, axisFont) <= room) return [forecastText];
-        const words = forecastText.split(' ');
-        if (words.length < 2) return [] as string[];
-        let best: string[] = [];
-        let bestW = Infinity;
-        for (let i = 1; i < words.length; i++) {
-            const a = words.slice(0, i).join(' ');
-            const b = words.slice(i).join(' ');
-            const w = Math.max(textWidth(a, axisFont), textWidth(b, axisFont));
-            if (w <= room && w < bestW) { best = [a, b]; bestW = w; }
-        }
-        return best;
+        return textWidth(forecastText, axisFont) <= room ? [forecastText] : [];
     })();
 
 
@@ -875,7 +865,8 @@ const ResultChart = ({
                                 <rect x={mL - 2} y={0} width={Math.max(0, splitX - mL + 2)} height={height} />
                             </clipPath>
                             <clipPath id={`future-${clipId}`}>
-                                <rect x={splitX} y={0} width={Math.max(0, mL + plotW - splitX + 2)} height={height} />
+                                {/* Plot height only, so the likely range never runs above the axis. */}
+                                <rect x={splitX} y={mT - 4} width={Math.max(0, mL + plotW - splitX + 2)} height={plotH + 8} />
                             </clipPath>
                         </defs>
 

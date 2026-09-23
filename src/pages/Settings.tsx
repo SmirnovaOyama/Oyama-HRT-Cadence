@@ -241,7 +241,7 @@ const Settings: React.FC<SettingsProps> = ({
                 {signedIn && (
                     <ListGroup footer={onNavigate ? t('you.account.delete_footer') : undefined}>
                         <ListRow
-                            title={<span className="text-[var(--c-accent)]">{t('you.sign_out')}</span>}
+                            title={<span className="text-[var(--c-ink)]">{t('you.sign_out')}</span>}
                             onClick={() => { void logout(); }}
                         />
                         {onNavigate && (

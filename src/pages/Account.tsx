@@ -653,7 +653,7 @@ const Account: React.FC<AccountProps> = ({
 
                     {/* Sign out and delete, in their own group at the bottom. */}
                     <ListGroup footer={t('you.account.delete_footer')}>
-                        <ListRow title={<span className="text-[var(--c-accent)]">{t('you.sign_out')}</span>} onClick={onLogout} />
+                        <ListRow title={<span className="text-[var(--c-ink)]">{t('you.sign_out')}</span>} onClick={onLogout} />
                         <ListRow
                             title={<span className="text-[var(--c-danger)]">{t('you.delete_account')}</span>}
                             onClick={() => onNavigate('delete-account')}
