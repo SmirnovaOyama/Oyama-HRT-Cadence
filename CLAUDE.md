@@ -8,5 +8,9 @@ non-negotiable UI rules: no shadows or gradients, no all-caps, no dot-before-lab
 straight segments), Apple system fonts, large HIG type, Apple-style buttons, list views for choices, and the real pixel
 cat only.
 
+Use bun, never npm or pnpm: `bun install`, `bun run dev`, `bun run typecheck`, `bun run build`, `bun run icons`
+(regenerates `src/components/icons/generated.tsx` from `design/cadence/icons/icons.json`). Icons come from
+`src/components/icons`. Never add lucide-react or any other icon library.
+
 The pharmacokinetic engine (`logic.ts`), the Cloudflare Worker backend (`worker.ts`, `migrations/`), cloud sync and the
 7 UI languages (`src/i18n/translations.ts`) are carried over unchanged. Every new string needs all 7 languages.

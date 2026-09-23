@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiErrorCode } from '../services/apiClient';
-import {
-    ArrowLeft, Loader2, Check,
-    AlertCircle, Eye, EyeOff, Copy, Fingerprint, X, Plus,
-    KeyRound, Download, RefreshCw,
-} from 'lucide-react';
-import ShieldIcon from '../components/ShieldIcon';
+import { Attention, Delete, InTarget } from '../components/icons';
 import { QRCodeSVG } from 'qrcode.react';
 import {
     authService, Passkey,
@@ -14,7 +9,9 @@ import {
 import { formatRelative } from '../utils/helpers';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useDialog } from '../contexts/DialogContext';
-import { SettingsIconBox, settingsMuted, settingsOn } from '../components/SettingsListItem';
+import { BackHeader, Button, ListGroup, ListRow, PageHeader, SegmentedControl } from '../components/ui';
+import { YouPage } from './you/shared';
+import { ActionTitle, BusySpinner, ErrorNote, Field, Groups, Loading, Lead, Note, Panel, PasswordInput } from './account/shared';
 import PasswordInputModal from '../components/PasswordInputModal';
 
 interface TwoFactorPageProps {
@@ -39,20 +36,6 @@ function detectDeviceName(): string {
     return '';   // the caller substitutes a translated fallback
 }
 
-const divider = "border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]";
-const muted = settingsMuted;
-const on = settingsOn;
-const inputCls = "w-full px-3 py-2.5 text-sm bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container-low)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-md focus:outline-none focus:border-[var(--color-m3-primary)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]";
-const labelCls = `block text-xs font-semibold ${muted} mb-1`;
-const primaryBtn = "w-full py-2.5 bg-[var(--color-m3-primary)] hover:bg-[var(--color-m3-primary-light)] text-white text-sm font-medium rounded-md disabled:opacity-40 flex items-center justify-center gap-2 transition-colors";
-
-const ErrLine: React.FC<{ msg: string | null }> = ({ msg }) =>
-    msg ? (
-        <p className="flex items-center gap-1.5 text-sm text-red-500 dark:text-red-400">
-            <AlertCircle size={13} className="shrink-0" />{msg}
-        </p>
-    ) : null;
-
 const BackupCodesBlock: React.FC<{
     codes: string[];
     copied: boolean;
@@ -60,23 +43,27 @@ const BackupCodesBlock: React.FC<{
     onDownload: () => void;
     t: (k: string) => string;
 }> = ({ codes, copied, onCopy, onDownload, t }) => (
-    <div className={`py-4 ${divider}`}>
-        <p className={`text-xs font-semibold ${muted} mb-3`}>{t('account.backup_codes_warning')}</p>
-        <div className="grid grid-cols-2 gap-1.5 mb-3">
+    <Panel aria-label={t('account.two_step.backup_codes')}>
+        <div className="flex items-start gap-3">
+            <Attention size={22} className="mt-px flex-none text-[var(--c-attention)]" />
+            <p className="m-0 text-sm font-semibold text-[var(--c-ink)]">{t('account.backup_codes_warning')}</p>
+        </div>
+        <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0">
             {codes.map((c, i) => (
-                <code key={i} className={`text-center text-xs font-mono tabular-nums py-1.5 px-2 rounded-md bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)] ${on}`}>{c}</code>
+                <li key={i}>
+                    <code className="block rounded-lg bg-[var(--c-surface)] px-2 py-2 text-center font-mono text-base tabular-nums text-[var(--c-ink)]">{c}</code>
+                </li>
             ))}
-        </div>
+        </ul>
         <div className="flex gap-3">
-            <button onClick={onCopy} className={`flex items-center gap-1.5 text-xs font-medium ${on} hover:opacity-70 transition-opacity`}>
-                {copied ? <Check size={12} strokeWidth={1.5} /> : <Copy size={12} strokeWidth={1.5} />}
-                {copied ? t('account.backup_codes_copied') : t('account.backup_codes_copy_all')}
-            </button>
-            <button onClick={onDownload} className={`flex items-center gap-1.5 text-xs font-medium ${on} hover:opacity-70 transition-opacity`}>
-                <Download size={12} strokeWidth={1.5} />{t('account.backup_codes_download')}
-            </button>
+            <Button variant="secondary" compact onTint className="flex-1" onClick={onCopy}>
+                {copied ? t('account.copied') : t('account.two_step.copy_codes')}
+            </Button>
+            <Button variant="secondary" compact onTint className="flex-1" onClick={onDownload}>
+                {t('account.two_step.save_codes')}
+            </Button>
         </div>
-    </div>
+    </Panel>
 );
 
 const TwoFactorPage: React.FC<TwoFactorPageProps> = ({ token, enabled, onStatusChange, onBack, setupRequired = false }) => {
@@ -391,194 +378,160 @@ const TwoFactorPage: React.FC<TwoFactorPageProps> = ({ token, enabled, onStatusC
         });
     };
 
-    return (
-        <div className="relative pb-32">
-            {/* Header */}
-            <div className="sticky top-0 z-20 bg-[var(--color-m3-surface-dim)] dark:bg-[var(--color-m3-dark-surface)] px-6 md:px-10 pt-8 pb-3">
-                <button
-                    onClick={setupRequired ? undefined : onBack}
-                    disabled={setupRequired}
-                    className={`flex items-center gap-2 -ml-2 px-2 py-1.5 rounded-md transition-colors ${setupRequired ? 'opacity-30 cursor-default' : 'hover:bg-[var(--color-m3-surface-container-low)] dark:hover:bg-[var(--color-m3-dark-surface-container-low)]'}`}
-                >
-                    <ArrowLeft size={18} strokeWidth={1.5} className={`${muted} shrink-0`} />
-                    <span className={`text-xl font-semibold ${on}`}>{t('account.2fa')}</span>
-                </button>
-            </div>
+    const setupStep = success ? 2 : step === 'scan' ? 1 : 2;
+    const nowSec = Math.floor(Date.now() / 1000);
+    // The app is on and nothing is being set up: the page shows its state, and
+    // turning it off is the destructive action at the bottom of the page.
+    const showTurnOff = activeTab === 'totp' && totpEnabled === true && !success;
 
-            {/* Mandatory setup notice */}
-            {setupRequired && (
-                <div className={`px-6 md:px-10 mb-4 flex items-start gap-2 text-sm ${muted}`}>
-                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                    <span>{t('auth.setup_2fa_required')}</span>
-                </div>
+    return (
+        <YouPage>
+            {setupRequired ? (
+                <PageHeader title={t('account.page.two_step')} />
+            ) : (
+                <BackHeader parentLabel={t('account.title')} onBack={onBack} title={t('account.page.two_step')} />
             )}
 
-            <div className="px-6 md:px-10 max-w-2xl">
-                {/* Tab switcher — underline style */}
-                <div className="flex gap-6 mb-6 border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]">
-                    {(['totp', 'passkey'] as ActiveTab[]).map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex items-center gap-2 pb-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                                activeTab === tab
-                                    ? `${on} border-[var(--color-m3-on-surface)] dark:border-[var(--color-m3-dark-on-surface)]`
-                                    : `${muted} border-transparent hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)]`
-                            }`}
-                        >
-                            {tab === 'totp' ? <KeyRound size={14} strokeWidth={1.5} /> : <Fingerprint size={14} strokeWidth={1.5} />}
-                            {tab === 'totp' ? 'TOTP' : t('account.passkey')}
-                        </button>
-                    ))}
+            <Groups className="mt-2">
+                <div className="flex flex-col gap-4">
+                    {setupRequired && (
+                        <Panel>
+                            <div className="flex items-start gap-3">
+                                <Attention size={22} className="mt-px flex-none text-[var(--c-attention)]" />
+                                <p className="m-0 text-sm text-[var(--c-ink)]">{t('auth.setup_2fa_required')}</p>
+                            </div>
+                        </Panel>
+                    )}
+                    <Lead>{t('account.two_step.lead_short')}</Lead>
+                    <SegmentedControl<ActiveTab>
+                        aria-label={t('account.page.two_step')}
+                        value={activeTab}
+                        onChange={setActiveTab}
+                        options={[
+                            { value: 'totp', label: t('account.two_step.app') },
+                            { value: 'passkey', label: t('account.two_step.passkeys') },
+                        ]}
+                    />
                 </div>
 
-                {/* ===== TOTP TAB ===== */}
-                {activeTab === 'totp' && (
-                    <div className="space-y-5">
-                        {totpEnabled === null && (
-                            <div className="flex justify-center py-10"><Loader2 className={`animate-spin ${muted}`} size={20} /></div>
-                        )}
+                {/* ===== Authenticator app ===== */}
+                {activeTab === 'totp' && totpEnabled === null && <Loading />}
 
-                        {totpEnabled === true && !success && (
+                {showTurnOff && (
+                    <ListGroup>
+                        <ListRow title={t('account.two_step.app')} value={t('account.two_step.on')} />
+                    </ListGroup>
+                )}
+
+                {activeTab === 'totp' && (totpEnabled === false || success) && (
+                    <div className="flex flex-col gap-5">
+                        {/* Progress in words, not a row of dots. */}
+                        <div className="flex flex-col gap-1">
+                            <p className="m-0 text-sm text-[var(--c-muted)]">
+                                {t('account.step_of').replace('{n}', String(setupStep)).replace('{total}', '2')}
+                            </p>
+                            <h2 className="m-0 text-xl font-semibold text-[var(--c-ink)]">
+                                {success
+                                    ? t('account.2fa_enabled_success')
+                                    : step === 'scan' ? t('account.two_step.scan_title') : t('account.two_step.verify_title')}
+                            </h2>
+                        </div>
+
+                        {step === 'scan' && !success && (
                             <>
-                                <div className="flex items-start gap-3 pb-4">
-                                    <SettingsIconBox icon={ShieldIcon} />
-                                    <div>
-                                        <p className={`text-sm font-medium ${on}`}>{t('account.2fa_is_active')}</p>
-                                        <p className={`text-xs ${muted} mt-1 leading-relaxed`}>{t('account.2fa_disable_hint')}</p>
-                                    </div>
+                                <ErrorNote>{error}</ErrorNote>
+                                <div className="flex flex-col gap-1">
+                                    <p className="m-0 text-base text-[var(--c-ink)]">{t('account.two_step.scan_hint')}</p>
+                                    <Note>{t('account.2fa_recommended_apps')}</Note>
                                 </div>
-                                <form onSubmit={handleDisable} className="space-y-4">
-                                    <ErrLine msg={disableError} />
-                                    <div>
-                                        <label className={labelCls}>{t('account.current_password')}</label>
-                                        <input type="password" value={disablePassword} onChange={e => setDisablePassword(e.target.value)}
-                                            className={inputCls} required autoComplete="current-password"
-                                            style={{ fontSize: '16px' }} />
+                                {setupLoading ? (
+                                    <Loading />
+                                ) : uri ? (
+                                    <div className="flex justify-center py-2">
+                                        {/* White on purpose, in every theme: scanners need the contrast. */}
+                                        <div className="inline-block rounded-2xl border border-[var(--c-hairline)] bg-white p-4">
+                                            <QRCodeSVG value={uri} size={176} />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className={labelCls}>{t('account.2fa_code')}</label>
-                                        <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
-                                            value={disableCode} onChange={e => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                            className={`${inputCls} tracking-[0.4em] font-mono text-center`}
-                                            placeholder="000000" required autoComplete="one-time-code"
-                                            style={{ fontSize: '16px' }} />
+                                ) : null}
+                                {secret && (
+                                    <div className="flex flex-col gap-2">
+                                        <p className="list-group-header m-0">{t('account.two_step.key_label')}</p>
+                                        <code
+                                            className={`block break-all rounded-xl bg-[var(--c-plate)] px-4 py-3 font-mono text-base text-[var(--c-ink)] ${!secretVisible ? 'select-none blur-sm' : ''}`}
+                                            aria-hidden={!secretVisible}
+                                        >
+                                            {secret}
+                                        </code>
+                                        <div className="flex gap-3">
+                                            <Button variant="secondary" compact className="flex-1" onClick={() => setSecretVisible(v => !v)} aria-pressed={secretVisible}>
+                                                {secretVisible ? t('account.two_step.hide_key') : t('account.two_step.show_key')}
+                                            </Button>
+                                            <Button variant="secondary" compact className="flex-1" onClick={handleCopySecret}>
+                                                {secretCopied ? t('account.copied') : t('account.two_step.copy_key')}
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <button type="submit" disabled={disableLoading || !disablePassword || disableCode.length !== 6}
-                                        className={`text-sm font-medium ${muted} hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] flex items-center gap-1.5 disabled:opacity-40 transition-colors`}>
-                                        {disableLoading && <Loader2 size={13} strokeWidth={1.5} className="animate-spin" />}
-                                        {t('account.2fa_disable')}
-                                    </button>
-                                </form>
+                                )}
+                                <Button variant="primary" block onClick={() => setStep('verify')} disabled={!secret || setupLoading}>
+                                    {t('account.next')}
+                                </Button>
                             </>
                         )}
 
-                        {(totpEnabled === false || success) && (
-                            <>
-                                {/* Step indicator */}
-                                <div className="flex items-center gap-3 mb-2">
-                                    {(['scan', 'verify'] as SetupStep[]).map((s, i) => (
-                                        <React.Fragment key={s}>
-                                            <div className="flex items-center gap-1.5">
-                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[0.6875rem] font-medium shrink-0 border ${step === s || (success && s === 'verify') ? `${on} border-[var(--color-m3-on-surface)] dark:border-[var(--color-m3-dark-on-surface)] bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)]` : `border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] ${muted}`}`}>
-                                                    {success && s === 'verify' ? <Check size={10} strokeWidth={2} /> : i + 1}
-                                                </div>
-                                                <span className={`text-xs font-medium ${step === s ? on : muted}`}>
-                                                    {s === 'scan' ? t('account.2fa_step_scan') : t('account.2fa_step_verify')}
-                                                </span>
-                                            </div>
-                                            {i < 1 && <div className={`flex-1 h-px bg-[var(--color-m3-outline-variant)] dark:bg-[var(--color-m3-dark-outline-variant)]`} />}
-                                        </React.Fragment>
-                                    ))}
+                        {step === 'verify' && !success && (
+                            <form onSubmit={handleEnable} className="flex flex-col gap-5">
+                                <p className="m-0 text-base text-[var(--c-ink)]">{t('account.2fa_verify')}</p>
+                                <ErrorNote>{error}</ErrorNote>
+                                <Field label={t('account.field.code')} htmlFor="tf-enable-code">
+                                    <input
+                                        id="tf-enable-code"
+                                        type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
+                                        value={code}
+                                        onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        className="input-base text-center font-mono text-2xl tabular-nums"
+                                        placeholder="000000" autoComplete="one-time-code" autoFocus
+                                    />
+                                </Field>
+                                <div className="flex gap-3">
+                                    <Button variant="secondary" compact className="flex-1" onClick={() => setStep('scan')}>
+                                        {t('account.back')}
+                                    </Button>
+                                    <Button type="submit" variant="primary" compact className="flex-1" disabled={loading || code.length !== 6}>
+                                        {loading && <BusySpinner />}
+                                        {t('account.two_step.turn_on')}
+                                    </Button>
                                 </div>
+                            </form>
+                        )}
 
-                                {step === 'scan' && (
-                                    <div className="space-y-4">
-                                        <ErrLine msg={error} />
-                                        <p className={`text-sm ${muted}`}>{t('account.2fa_scan_qr')}</p>
-                                        <p className={`text-xs ${muted} opacity-70`}>{t('account.2fa_recommended_apps')}</p>
-                                        {setupLoading ? (
-                                            <div className="flex justify-center py-8"><Loader2 className={`animate-spin ${muted}`} size={24} /></div>
-                                        ) : uri ? (
-                                            <div className="flex justify-center py-2">
-                                                <div className="p-3 bg-white rounded-lg inline-block">
-                                                    <QRCodeSVG value={uri} size={160} />
-                                                </div>
-                                            </div>
-                                        ) : null}
-                                        {secret && (
-                                            <div>
-                                                <p className={`text-xs ${muted} mb-1.5`}>{t('account.2fa_secret')}</p>
-                                                <div className={`flex items-center gap-2 bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)] rounded-md px-3 py-2`}>
-                                                    <code className={`flex-1 text-xs font-mono ${on} tracking-widest break-all ${!secretVisible ? 'blur-sm select-none' : ''}`}>{secret}</code>
-                                                    <button onClick={() => setSecretVisible(v => !v)} className={muted}>{secretVisible ? <EyeOff size={14} strokeWidth={1.5} /> : <Eye size={14} strokeWidth={1.5} />}</button>
-                                                    <button onClick={handleCopySecret} className={secretCopied ? on : muted}>{secretCopied ? <Check size={14} strokeWidth={1.5} /> : <Copy size={14} strokeWidth={1.5} />}</button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        <button onClick={() => setStep('verify')} disabled={!secret || setupLoading} className={primaryBtn}>
-                                            {t('account.2fa_next')}
-                                        </button>
+                        {success && (
+                            <>
+                                <Panel>
+                                    <div className="flex items-start gap-3">
+                                        <InTarget size={22} className="mt-px flex-none text-[var(--c-target)]" />
+                                        <p className="m-0 text-sm text-[var(--c-ink)]">{t('account.2fa_success_hint')}</p>
                                     </div>
+                                </Panel>
+                                {backupCodes.length > 0 && (
+                                    <BackupCodesBlock codes={backupCodes} copied={backupCopied} onCopy={handleCopyBackupCodes} onDownload={handleDownloadBackupCodes} t={t} />
                                 )}
-
-                                {step === 'verify' && !success && (
-                                    <form onSubmit={handleEnable} className="space-y-4">
-                                        <p className={`text-sm ${muted}`}>{t('account.2fa_verify')}</p>
-                                        <ErrLine msg={error} />
-                                        <div>
-                                            <label className={labelCls}>{t('account.2fa_code')}</label>
-                                            <input type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
-                                                value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                                className={`${inputCls} text-center tracking-[0.6em] font-mono text-xl py-3`}
-                                                placeholder="000000" autoComplete="one-time-code" autoFocus
-                                                style={{ fontSize: '16px' }} />
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <button type="button" onClick={() => setStep('scan')}
-                                                className={`flex-1 py-2.5 text-sm font-medium ${muted} border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-md`}>
-                                                ← {t('account.2fa_step_scan')}
-                                            </button>
-                                            <button type="submit" disabled={loading || code.length !== 6} className={`flex-1 py-2.5 ${primaryBtn}`}>
-                                                {loading && <Loader2 size={14} strokeWidth={1.5} className="animate-spin" />}
-                                                {t('account.2fa_enable_btn')}
-                                            </button>
-                                        </div>
-                                    </form>
-                                )}
-
-                                {success && (
-                                    <div className="flex flex-col items-center gap-3 py-4 text-center">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)]">
-                                            <Check size={18} strokeWidth={1.5} className={on} />
-                                        </div>
-                                        <p className={`font-medium ${on}`}>{t('account.2fa_enabled_success')}</p>
-                                        <p className={`text-xs ${muted} max-w-xs leading-relaxed`}>{t('account.2fa_success_hint')}</p>
-                                        {backupCodes.length > 0 && (
-                                            <div className="w-full text-left">
-                                                <BackupCodesBlock codes={backupCodes} copied={backupCopied} onCopy={handleCopyBackupCodes} onDownload={handleDownloadBackupCodes} t={t} />
-                                            </div>
-                                        )}
-                                        <button onClick={() => { onStatusChange(true); onBack(); }}
-                                            className={`mt-2 px-6 py-2.5 ${primaryBtn} w-auto`}>
-                                            {t('btn.ok')}
-                                        </button>
-                                    </div>
-                                )}
+                                <Button variant="primary" block onClick={() => { onStatusChange(true); onBack(); }}>
+                                    {t('account.done')}
+                                </Button>
                             </>
                         )}
                     </div>
                 )}
 
-                {/* ===== PASSKEY TAB ===== */}
+                {/* ===== Passkeys ===== */}
                 {activeTab === 'passkey' && (
-                    <div className="space-y-5">
-                        <p className={`text-xs ${muted}`}>{t('account.passkey_desc')}</p>
-
-                        <ErrLine msg={passkeyError} />
+                    <div className="flex flex-col gap-4">
+                        <ErrorNote>{passkeyError}</ErrorNote>
                         {passkeySuccess && (
-                            <p className={`flex items-center gap-1.5 text-xs ${muted}`}>
-                                <Check size={12} strokeWidth={1.5} className="shrink-0" />{t('account.passkey_registered')}
+                            <p className="m-0 flex items-start gap-2 text-sm text-[var(--c-target)]" role="status">
+                                <InTarget size={20} className="mt-px flex-none" />
+                                {t('account.passkey_registered')}
                             </p>
                         )}
 
@@ -587,84 +540,121 @@ const TwoFactorPage: React.FC<TwoFactorPageProps> = ({ token, enabled, onStatusC
                         )}
 
                         {passkeyLoading ? (
-                            <div className="flex justify-center py-6"><Loader2 className={`animate-spin ${muted}`} size={20} /></div>
-                        ) : passkeys.length === 0 ? (
-                            <div className={`flex flex-col items-center gap-2 py-10 text-center ${muted}`}>
-                                <SettingsIconBox icon={Fingerprint} />
-                                <p className={`text-sm font-medium mt-2 ${on}`}>{t('account.passkey_empty')}</p>
-                                <p className="text-xs max-w-xs leading-relaxed">{t('account.passkey_empty_hint')}</p>
-                            </div>
+                            <Loading />
                         ) : (
-                            <div>
+                            <ListGroup
+                                header={t('account.two_step.passkeys')}
+                                footer={webauthnSupported ? t('account.two_step.passkeys_footer') : t('auth.passkey_unsupported')}
+                            >
+                                {passkeys.length === 0 && (
+                                    <ListRow title={<span className="text-[var(--c-muted)]">{t('account.two_step.no_passkeys')}</span>} />
+                                )}
                                 {passkeys.map(pk => (
-                                    <div key={pk.id} className={`flex items-center gap-3 py-3.5 ${divider}`}>
-                                        <SettingsIconBox icon={Fingerprint} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className={`text-sm font-medium ${on} truncate`}>{pk.device_name || t('session.unknown_device')}</p>
-                                            <p className={`text-xs ${muted}`}>{formatRelative(pk.created_at, Math.floor(Date.now() / 1000), t)}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleDeletePasskey(pk)}
-                                            disabled={deleteLoadingId === pk.id}
-                                            className={`shrink-0 p-1.5 rounded-md ${muted} hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] disabled:opacity-40 transition-colors`}
-                                        >
-                                            {deleteLoadingId === pk.id ? <Loader2 size={14} strokeWidth={1.5} className="animate-spin" /> : <X size={14} strokeWidth={1.5} />}
-                                        </button>
-                                    </div>
+                                    <ListRow
+                                        key={pk.id}
+                                        title={<span className="block truncate">{pk.device_name || t('session.unknown_device')}</span>}
+                                        sub={t('account.two_step.added').replace('{when}', formatRelative(pk.created_at, nowSec, t))}
+                                        trailing={
+                                            <Button
+                                                variant="icon"
+                                                onClick={() => handleDeletePasskey(pk)}
+                                                disabled={deleteLoadingId === pk.id}
+                                                aria-label={t('account.two_step.passkey_remove')}
+                                                className="-me-2 text-[var(--c-danger)]"
+                                            >
+                                                {deleteLoadingId === pk.id ? <BusySpinner /> : <Delete size={22} />}
+                                            </Button>
+                                        }
+                                    />
                                 ))}
-                            </div>
-                        )}
-
-                        {!webauthnSupported ? (
-                            <p className={`text-xs text-center ${muted}`}>{t('auth.passkey_unsupported')}</p>
-                        ) : (
-                            <button onClick={handleRegisterPasskey} disabled={registerLoading} className={primaryBtn}>
-                                {registerLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                                {passkeys.length === 0 ? t('account.passkey_add') : t('account.passkey_add_another')}
-                            </button>
+                                {webauthnSupported && (
+                                    <ListRow
+                                        title={<ActionTitle>{passkeys.length === 0 ? t('account.two_step.passkey_add') : t('account.two_step.passkey_add_another')}</ActionTitle>}
+                                        trailing={registerLoading ? <BusySpinner /> : undefined}
+                                        onClick={handleRegisterPasskey}
+                                        disabled={registerLoading}
+                                    />
+                                )}
+                            </ListGroup>
                         )}
                     </div>
                 )}
 
-                {/* ===== BACKUP CODES SECTION (enabled) ===== */}
+                {/* ===== Backup codes, once any factor is on ===== */}
                 {enabled && (
-                    <div className={`mt-8 pt-6 ${divider}`}>
-                        <div className="flex items-center gap-2 mb-1">
-                            <KeyRound size={15} strokeWidth={1.5} className={muted} />
-                            <h3 className={`text-sm font-medium ${on}`}>{t('account.backup_codes')}</h3>
-                        </div>
-                        <p className={`text-xs ${muted} mb-4`}>
-                            {backupRemaining !== null
-                                ? t('account.backup_codes_remaining').replace('{n}', String(backupRemaining))
-                                : t('account.backup_codes_none')}
-                        </p>
-                        <p className={`text-xs ${muted} mb-4`}>{t('account.backup_codes_generate_hint')}</p>
-
-                        <ErrLine msg={backupError} />
-
-                        {backupCodes.length > 0 && (
+                    <div className="flex flex-col gap-4">
+                        <ListGroup header={t('account.two_step.backup_codes')} footer={t('account.two_step.backup_footer')}>
+                            <ListRow
+                                title={t('account.two_step.codes_left')}
+                                value={backupRemaining !== null && backupRemaining > 0
+                                    ? String(backupRemaining)
+                                    : t('account.two_step.codes_none')}
+                            />
+                            <ListRow
+                                title={
+                                    <ActionTitle>
+                                        {backupRemaining !== null && backupRemaining > 0
+                                            ? t('account.two_step.backup_regenerate')
+                                            : t('account.two_step.backup_generate')}
+                                    </ActionTitle>
+                                }
+                                trailing={backupLoading ? <BusySpinner /> : undefined}
+                                onClick={handleGenerateBackupCodes}
+                                disabled={backupLoading}
+                            />
+                        </ListGroup>
+                        <ErrorNote>{backupError}</ErrorNote>
+                        {backupCodes.length > 0 && activeTab === 'totp' && !success && (
                             <BackupCodesBlock codes={backupCodes} copied={backupCopied} onCopy={handleCopyBackupCodes} onDownload={handleDownloadBackupCodes} t={t} />
                         )}
-
-                        <button
-                            onClick={handleGenerateBackupCodes}
-                            disabled={backupLoading}
-                            className={`flex items-center gap-1.5 text-sm font-medium ${on} hover:opacity-70 disabled:opacity-40 mt-3 transition-opacity`}
-                        >
-                            {backupLoading ? <Loader2 size={13} strokeWidth={1.5} className="animate-spin" /> : <RefreshCw size={13} strokeWidth={1.5} />}
-                            {backupRemaining !== null && backupRemaining > 0
-                                ? t('account.backup_codes_regenerate')
-                                : t('account.backup_codes_generate')}
-                        </button>
                     </div>
                 )}
-            </div>
+
+                {/* ===== Turning the app off: destructive, so last ===== */}
+                {showTurnOff && (
+                    <form onSubmit={handleDisable} className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2">
+                            <p className="list-group-header m-0">{t('account.two_step.turn_off')}</p>
+                            <Note className="px-4">{t('account.two_step.turn_off_hint')}</Note>
+                        </div>
+                        <ErrorNote>{disableError}</ErrorNote>
+                        <Field label={t('account.field.current_password')} htmlFor="tf-disable-password">
+                            <PasswordInput
+                                id="tf-disable-password"
+                                value={disablePassword}
+                                onChange={e => setDisablePassword(e.target.value)}
+                                required
+                                autoComplete="current-password"
+                            />
+                        </Field>
+                        <Field label={t('account.field.code')} htmlFor="tf-disable-code">
+                            <input
+                                id="tf-disable-code"
+                                type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
+                                value={disableCode}
+                                onChange={e => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                className="input-base text-center font-mono tabular-nums"
+                                placeholder="000000" required autoComplete="one-time-code"
+                            />
+                        </Field>
+                        <Button
+                            type="submit"
+                            variant="destructive"
+                            className="self-start"
+                            disabled={disableLoading || !disablePassword || disableCode.length !== 6}
+                        >
+                            {disableLoading && <BusySpinner />}
+                            {t('account.two_step.turn_off')}
+                        </Button>
+                    </form>
+                )}
+            </Groups>
 
             <PasswordInputModal
                 isOpen={!!pwPrompt}
                 onClose={() => { setPwPrompt(null); setPwError(null); }}
                 onConfirm={submitPasswordPrompt}
-                title={t('account.current_password')}
+                title={t('account.field.current_password')}
                 description={
                     pwPrompt?.kind === 'passkey' ? t('account.passkey_delete_password_desc')
                         : pwPrompt?.kind === 'enable' ? t('account.2fa_enable_password_desc')
@@ -675,7 +665,7 @@ const TwoFactorPage: React.FC<TwoFactorPageProps> = ({ token, enabled, onStatusC
                 loading={pwLoading}
                 masked
             />
-        </div>
+        </YouPage>
     );
 };
 

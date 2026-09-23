@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { UploadCloud, LogOut, BadgeCheck, Edit2, Loader2, Trash2, Cloud, HardDrive, DownloadCloud, Merge, ChevronDown, Plus, Minus, Fingerprint, Lock, MonitorSmartphone, CloudOff, CheckCircle2, AlertCircle } from 'lucide-react';
-import ShieldIcon from '../components/ShieldIcon';
-import { SettingsListItem } from '../components/SettingsListItem';
+import {
+    Attention, Back, ChevronDown, CloudDownload, CloudUpload, Delete, Merge, Minus,
+    Passkey, Plus, Spinner, TwoStep, Verified,
+} from '../components/icons';
+import { BackHeader, Button, ListGroup, ListRow, SegmentedControl } from '../components/ui';
+import { Avatar, GroupHeader, LIST_CHEVRON, SyncPanel, YouPage, useSyncWords } from './you/shared';
+import { useTranslation } from '../contexts/LanguageContext';
 
 import { useAuth } from '../contexts/AuthContext';
 import { cloudService, BackupMeta } from '../services/cloud';
@@ -38,17 +42,11 @@ interface AccountProps {
     lastSyncedAt: number | null;
 }
 
-const divider = "border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]";
-const sectionLabel ="text-xs font-semibold text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mb-2 block";
-const rowBase = `w-full flex items-center gap-3 py-4 ${divider} text-start`;
-const iconCls = "text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0";
-const statusMuted = "text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0";
-
 /**
  * Why the password prompt is open.
  *
  * `expand` is one encrypted backup in the list the user asked to look inside.
- * `sync` is the whole device having no key at all — the state that shows as
+ * `sync` is the whole device having no key at all: the state that shows as
  * "cloud archive is encrypted, unlock it first" and, until it is cleared, stops
  * every backup this device would otherwise write.
  */
@@ -56,16 +54,9 @@ type UnlockTarget =
     | { purpose: 'expand'; rawData: any; backupId: string }
     | { purpose: 'sync' };
 
-const SyncIcon: React.FC<{ status: SyncStatus; className?: string }> = ({ status, className }) => {
-    switch (status) {
-        case 'syncing': return <Loader2 size={18} className={`${className} animate-spin`} />;
-        case 'synced': return <CheckCircle2 size={18} className={className} />;
-        case 'locked': return <Lock size={18} className={className} />;
-        case 'error': return <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />;
-        case 'off': return <CloudOff size={18} className={className} />;
-        default: return <Cloud size={18} className={className} />;
-    }
-};
+/** Replace `{name}` placeholders in a translated string. */
+const fill = (text: string, vars: Record<string, string | number>) =>
+    Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(String(v)), text);
 
 const Account: React.FC<AccountProps> = ({
     t,
@@ -83,11 +74,9 @@ const Account: React.FC<AccountProps> = ({
     syncErrorCode,
     lastSyncedAt,
 }) => {
-    const [avatarError, setAvatarError] = useState(false);
     // Bust the avatar cache once per mount so returning from the edit-avatar
     // page (which remounts Account) reflects a freshly uploaded image.
     const avatarCacheBuster = useMemo(() => Date.now(), []);
-    const avatarUrl = `/api/user/avatar/${user?.username}?t=${avatarCacheBuster}`;
     const [backupList, setBackupList] = useState<BackupMeta[]>([]);
     const [backupsLoading, setBackupsLoading] = useState(false);
     const [savingCloud, setSavingCloud] = useState(false);
@@ -114,6 +103,9 @@ const Account: React.FC<AccountProps> = ({
     const [backupCode, setBackupCode] = useState('');
     const [passkeyLoading, setPasskeyLoading] = useState(false);
     const { login, register, loginWithToken } = useAuth();
+    const { lang } = useTranslation();
+    // Account only receives the status; `off` already covers sync switched off.
+    const syncWords = useSyncWords({ t, lang, autoSync: true, status: syncStatus, errorCode: syncErrorCode, lastSyncedAt });
 
     // `silent` refreshes the list in place. Sync reports in on its own schedule
     // — including a poll every few minutes — and swapping the whole list for a
@@ -390,454 +382,370 @@ const Account: React.FC<AccountProps> = ({
         }
     };
 
-    const inputCls = "w-full px-3 py-2.5 text-sm bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container-low)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--color-m3-primary)]/30 focus:border-[var(--color-m3-primary)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]";
+    const fieldLabel = 'mb-2 block text-sm font-semibold text-[var(--c-muted)]';
+    const hasPasskeys = typeof window !== 'undefined' && !!window.PublicKeyCredential;
+
+    const OrRule = () => (
+        <div className="flex items-center gap-3" aria-hidden="true">
+            <div className="h-px flex-1 bg-[var(--c-hairline)]" />
+            <span className="text-sm text-[var(--c-muted)]">{t('common.or')}</span>
+            <div className="h-px flex-1 bg-[var(--c-hairline)]" />
+        </div>
+    );
+
+    const DiffLine = ({ added, label, n }: { added: boolean; label: string; n: number }) => (
+        <li className={`flex items-center gap-2 text-sm ${added ? 'text-[var(--c-ink)]' : 'text-[var(--c-muted)]'}`}>
+            {added ? <Plus size={16} className="flex-none" /> : <Minus size={16} className="flex-none" />}
+            <span className="flex-1">{label}</span>
+            <span className="font-semibold tabular-nums">{added ? `+${n}` : n}</span>
+        </li>
+    );
 
     return (
-        <div className="relative pb-32 px-6 md:px-10">
-            <h1 className="sticky top-0 z-20 -mx-6 md:-mx-10 px-6 md:px-10 pt-8 pb-3 mb-3 bg-[var(--color-m3-surface-dim)] dark:bg-[var(--color-m3-dark-surface)] text-xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                {t('account.title')}
-            </h1>
+        <YouPage>
+            <BackHeader parentLabel={t('you.title')} onBack={() => onNavigate('settings')} title={t('account.title')} />
 
             {user ? (
-                <div className="max-w-2xl">
+                <div className="mt-2 flex flex-col gap-6">
                     {/* Profile */}
-                    <div className={`flex flex-col items-center py-6 gap-2 ${divider} mb-6`}>
-                        <button
-                            type="button"
-                            onClick={() => onNavigate('edit-avatar')}
-                            className="relative group w-28 h-28 rounded-full overflow-hidden cursor-pointer bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)] focus:outline-none focus:ring-2 focus:ring-[var(--color-m3-primary)]/40 focus:ring-offset-2 focus:ring-offset-[var(--color-m3-surface)] dark:focus:ring-offset-[var(--color-m3-dark-surface)]"
-                            aria-label={t('avatar.change')}
-                        >
-                            <img
-                                src={avatarUrl}
-                                alt={user.username}
-                                className={`w-full h-full object-cover absolute inset-0 z-10 ${avatarError ? 'hidden' : 'block'}`}
-                                onError={() => setAvatarError(true)}
-                            />
-                            <div className="w-full h-full flex items-center justify-center text-4xl font-light text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] absolute inset-0">
-                                {user.username.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-colors flex items-center justify-center z-20">
-                                <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity font-medium text-xs">
-                                    {t('avatar.change')}
-                                </span>
-                            </div>
-                        </button>
-                        <div className="flex items-center gap-1.5 mt-1">
-                            <span className="font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] text-lg">{user.username}</span>
-                            {user.isAdmin && (
-                                <BadgeCheck className="w-5 h-5 text-[var(--color-m3-primary)]" strokeWidth={2.5} />
-                            )}
-                        </div>
-                        <button
-                            onClick={() => onNavigate('edit-profile')}
-                            className="text-xs text-[var(--color-m3-primary)] flex items-center gap-1"
-                        >
-                            <Edit2 size={12} />
-                            {t('account.edit_profile')}
-                        </button>
-                    </div>
-
-                    {/* Security */}
-                    <div className="mb-6">
-                        <span className={sectionLabel}>{t('account.security')}</span>
-                        <SettingsListItem
-                            icon={Lock}
-                            title={t('account.change_password')}
-                            description={t('account.change_password_desc')}
-                            onClick={() => onNavigate('change-password')}
-                        />
-                        <SettingsListItem
-                            icon={ShieldIcon}
-                            title={t('account.2fa')}
-                            description={t('account.2fa_desc')}
-                            onClick={() => onNavigate('two-factor')}
-                            trailing={
-                                <span className={statusMuted}>
-                                    {twoFAEnabled ? t('account.2fa_enabled') : t('account.2fa_disabled')}
-                                </span>
-                            }
-                        />
-                        <SettingsListItem
-                            icon={MonitorSmartphone}
-                            title={t('account.sessions')}
-                            description={t('account.sessions_desc')}
-                            onClick={() => onNavigate('sessions')}
-                        />
-                    </div>
-
-                    {/* Data / Cloud */}
-                    <div className="mb-6">
-                        <span className={sectionLabel}>{t('settings.group.data')}</span>
-
-                        {/* Sync runs on its own — no prompts, no buttons. This line
-                            is the only place it reports for duty, so a failure
-                            (or a backup this device can't decrypt) is visible
-                            somewhere rather than silently never happening.
-
-                            `locked` is the exception that needs a hand: nothing
-                            the app can do on its own gets the key back, and the
-                            only way in used to be opening a backup in the list
-                            below, which is not where anyone looks after reading
-                            "unlock it first". So this line becomes the button. */}
-                        {syncStatus === 'locked' ? (
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-4">
                             <button
                                 type="button"
-                                onClick={() => { setUnlockError(null); setUnlockTarget({ purpose: 'sync' }); }}
-                                className={`w-full flex items-center gap-2.5 py-3 ${divider} text-start hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] -mx-2 px-2 rounded`}
+                                onClick={() => onNavigate('edit-avatar')}
+                                aria-label={t('you.account.change_photo')}
+                                className="flex-none rounded-full border-0 bg-transparent p-0 cursor-pointer focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--c-ink)]"
                             >
-                                <SyncIcon status={syncStatus} className={iconCls} />
-                                <p className="flex-1 min-w-0 text-sm text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                                    {t('sync.status.locked')}
-                                </p>
-                                <span className="text-xs font-medium text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)] shrink-0">
-                                    {t('sync.unlock_action')}
-                                </span>
+                                <Avatar username={user.username} size={72} cacheKey={avatarCacheBuster} />
                             </button>
-                        ) : (
-                            <div className={`flex items-center gap-2.5 py-3 ${divider}`}>
-                                <SyncIcon status={syncStatus} className={iconCls} />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                                        {t(`sync.status.${syncStatus}`)}
-                                    </p>
-                                    {/* The reason, not just the fact. Without this line a full
-                                        database, an oversized payload and a dead network were
-                                        all the same word. */}
-                                    {syncStatus === 'error' && (
-                                        <p className="text-xs text-red-600 dark:text-red-400">
-                                            {describeSyncError(syncErrorCode, t)}
-                                        </p>
-                                    )}
-                                    {lastSyncedAt !== null && syncStatus !== 'off' && (
-                                        <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                                            {(t('sync.last_synced') as string).replace('{time}', new Date(lastSyncedAt).toLocaleTimeString())}
-                                        </p>
-                                    )}
-                                </div>
+                            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                                <span className="truncate text-xl font-semibold text-[var(--c-ink)]">{user.username}</span>
+                                {user.isAdmin && (
+                                    <Verified size={22} className="flex-none text-[var(--c-accent)]" title={t('you.account.admin')} />
+                                )}
                             </div>
-                        )}
+                        </div>
+                        <ListGroup chevronIcon={LIST_CHEVRON}>
+                            <ListRow title={t('you.account.change_photo')} drillIn onClick={() => onNavigate('edit-avatar')} />
+                            <ListRow title={t('you.account.change_username')} drillIn onClick={() => onNavigate('edit-profile')} />
+                        </ListGroup>
+                    </div>
 
-                        {/* Disabled while locked: with no key on this device the
-                            reconcile behind this button cannot read the cloud
-                            copy and refuses to overwrite it, so pressing it only
-                            ever produced "save failed". The row above is what
-                            fixes that, so leave this one out of reach until it
-                            has been. */}
-                        <button
-                            onClick={handleSave}
-                            disabled={savingCloud || syncStatus === 'locked' || syncStatus === 'syncing'}
-                            className={`${rowBase} hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] -mx-2 px-2 rounded disabled:opacity-50`}
-                        >
-                            {savingCloud
-                                ? <Loader2 className={`${iconCls} animate-spin`} size={18} />
-                                : <UploadCloud className={iconCls} size={18} />
-                            }
-                            <div className="flex-1 text-start">
-                                <p className="font-medium text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] text-sm">{t('account.backup_cloud')}</p>
-                                <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('account.backup_cloud_desc')}</p>
-                            </div>
-                            {backupList.length > 0 && (
-                                <span className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] tabular-nums shrink-0">{backupList.length}/{MAX_CLOUD_BACKUPS}</span>
-                            )}
-                        </button>
-
-                        {/* Backup list */}
-                        {backupsLoading ? (
-                            <div className="flex justify-center py-6">
-                                <Loader2 className="animate-spin text-[var(--color-m3-on-surface-variant)]" size={20} />
-                            </div>
-                        ) : backupList.length === 0 ? (
-                            <div className="py-6 flex flex-col items-center gap-2">
-                                <Cloud size={28} className="text-[var(--color-m3-outline)] dark:text-[var(--color-m3-dark-outline)]" />
-                                <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('account.no_backups')}</p>
-                            </div>
-                        ) : (
-                            backupList.map(b => (
-                                <div key={b.id} className={divider}>
-                                    <div
-                                        className="flex items-center py-3 cursor-pointer hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] -mx-2 px-2 rounded"
-                                        onClick={() => toggleExpand(b)}
-                                    >
-                                        <HardDrive size={14} className={`${iconCls} mr-3`} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] truncate">
-                                                {new Date(b.created_at * 1000).toLocaleString()}
-                                            </p>
-                                            <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{formatBytes(b.data_size)}</p>
-                                        </div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteBackup(b.id); }}
-                                            className="p-1.5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:text-red-500 rounded shrink-0"
+                    {/* Cloud backup */}
+                    <section aria-labelledby="account-backup">
+                        <GroupHeader id="account-backup">{t('you.account.backup_section')}</GroupHeader>
+                        <div className="flex flex-col gap-4">
+                            {/* Sync runs on its own, with no prompts. This panel is the only
+                                place it reports for duty, so a failure (or a backup this device
+                                can't decrypt) is visible somewhere rather than silently never
+                                happening. `locked` is the one state that needs a hand: nothing
+                                the app can do on its own gets the key back, so the panel carries
+                                the unlock action itself. */}
+                            <SyncPanel words={syncWords}>
+                                {syncStatus === 'locked' && (
+                                    <div className="pl-[34px]">
+                                        <Button
+                                            variant="secondary"
+                                            compact
+                                            onTint
+                                            onClick={() => { setUnlockError(null); setUnlockTarget({ purpose: 'sync' }); }}
                                         >
-                                            <Trash2 size={14} />
-                                        </button>
-                                        <ChevronDown size={14} className={`chev ${iconCls} ${expandedId === b.id ? 'rotate-180' : ''}`} />
+                                            {t('sync.unlock_action')}
+                                        </Button>
                                     </div>
-                                    <div className="disclosure" data-open={expandedId === b.id}>
-                                        <div className="disclosure-inner">
-                                            <div className="pb-4 pt-1 space-y-3">
-                                                {expandLoading === b.id ? (
-                                                    <div className="flex justify-center py-6">
-                                                        <Loader2 className="animate-spin text-[var(--color-m3-on-surface-variant)]" size={20} />
+                                )}
+                            </SyncPanel>
+
+                            {/* Disabled while locked: with no key on this device the reconcile
+                                behind this button cannot read the cloud copy and refuses to
+                                overwrite it, so pressing it only ever produced "save failed".
+                                The unlock action above is what fixes that. */}
+                            <Button
+                                variant="primary"
+                                block
+                                onClick={handleSave}
+                                disabled={savingCloud || syncStatus === 'locked' || syncStatus === 'syncing'}
+                            >
+                                {savingCloud
+                                    ? <Spinner size={20} className="animate-spin" />
+                                    : <CloudUpload size={20} />}
+                                {t('you.account.back_up_now')}
+                            </Button>
+
+                            {/* Backup list */}
+                            <div className="mt-2">
+                                <div className="list-group-header">{t('you.account.backups_header')}</div>
+                                {backupsLoading ? (
+                                    <div className="flex justify-center py-6 text-[var(--c-muted)]">
+                                        <Spinner size={22} className="animate-spin" title={t('you.sync.syncing')} />
+                                    </div>
+                                ) : backupList.length === 0 ? (
+                                    <p className="callout m-0">{t('account.no_backups')}</p>
+                                ) : (
+                                    <div className="list-group">
+                                        {backupList.map((b, i) => {
+                                            const open = expandedId === b.id;
+                                            const panelId = `backup-${b.id}`;
+                                            return (
+                                                <React.Fragment key={b.id}>
+                                                    {i > 0 && <div className="list-sep" role="presentation" aria-hidden="true" />}
+                                                    <div className="flex items-center pe-2">
+                                                        <button
+                                                            type="button"
+                                                            className="list-row list-row-tall flex-1"
+                                                            aria-expanded={open}
+                                                            aria-controls={panelId}
+                                                            onClick={() => toggleExpand(b)}
+                                                        >
+                                                            <span className="list-row-text">
+                                                                <span className="list-row-title">
+                                                                    {new Date(b.created_at * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                                                                </span>
+                                                                <span className="list-row-sub">{formatBytes(b.data_size)}</span>
+                                                            </span>
+                                                            <span className="list-row-chevron" aria-hidden="true">
+                                                                <ChevronDown size={16} className={`chev ${open ? 'rotate-180' : ''}`} />
+                                                            </span>
+                                                        </button>
+                                                        <Button
+                                                            variant="icon"
+                                                            aria-label={t('you.account.delete_backup')}
+                                                            onClick={() => handleDeleteBackup(b.id)}
+                                                            className="text-[var(--c-muted)]"
+                                                        >
+                                                            <Delete size={22} />
+                                                        </Button>
                                                     </div>
-                                                ) : expandedData[b.id] ? (() => {
-                                                    const data = expandedData[b.id];
-                                                    const diff = computeDiff(data);
-                                                    const showingDiff = mergeDiffId === b.id;
-                                                    return (
-                                                        <>
-                                                            {/* Stats row */}
-                                                            <div className="grid grid-cols-4 gap-3 py-2">
-                                                                {[
-                                                                    { label: t('account.backup_doses'), val: (data.events || []).length },
-                                                                    { label: t('account.backup_weight'), val: data.weight ?? '—' },
-                                                                    { label: t('account.backup_labs'), val: (data.labResults || []).length },
-                                                                    { label: t('account.backup_templates'), val: (data.doseTemplates || []).length },
-                                                                ].map(({ label, val }) => (
-                                                                    <div key={label} className="text-center">
-                                    <p className="text-[0.625rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] font-medium">{label}</p>
-                                                                        <p className="text-sm font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] mt-0.5 tabular-nums">{val}</p>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-
-                                                            {/* Recent doses preview */}
-                                                            {(data.events || []).length > 0 && (
-                                                                <div>
-                                                                    {(data.events as any[]).slice(0, 3).map((ev: any, i: number) => (
-                                                                        <div key={i} className={`flex items-center justify-between py-2 text-xs ${divider} last:border-b-0`}>
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="font-medium text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{ev.ester}</span>
-                                                                                <span className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{ev.route}</span>
-                                                                            </div>
-                                                                            <span className="font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] tabular-nums">{ev.doseMG} mg</span>
-                                                                        </div>
-                                                                    ))}
-                                                                    {(data.events || []).length > 3 && (
-                                                                        <p className="text-[0.625rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] text-center py-1.5">
-                                                                            +{(data.events || []).length - 3} …
-                                                                        </p>
-                                                                    )}
+                                                    <div id={panelId} className="disclosure" data-open={open}>
+                                                        <div className="disclosure-inner">
+                                                            {expandLoading === b.id ? (
+                                                                <div className="flex justify-center py-6 text-[var(--c-muted)]">
+                                                                    <Spinner size={22} className="animate-spin" />
                                                                 </div>
-                                                            )}
+                                                            ) : expandedData[b.id] ? (() => {
+                                                                const data = expandedData[b.id];
+                                                                const diff = computeDiff(data);
+                                                                const showingDiff = mergeDiffId === b.id;
+                                                                const events = (data.events || []) as any[];
+                                                                return (
+                                                                    <div className="flex flex-col gap-4 px-4 pb-4 pt-1">
+                                                                        {/* What is inside */}
+                                                                        <dl className="m-0 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                                                            {[
+                                                                                { label: t('you.account.stat_doses'), val: events.length },
+                                                                                { label: t('you.account.stat_weight'), val: data.weight ?? '–' },
+                                                                                { label: t('you.account.stat_labs'), val: (data.labResults || []).length },
+                                                                                { label: t('you.account.stat_templates'), val: (data.doseTemplates || []).length },
+                                                                            ].map(({ label, val }) => (
+                                                                                <div key={label} className="rounded-[12px] bg-[var(--c-plate)] px-3 py-2">
+                                                                                    <dt className="text-sm text-[var(--c-muted)]">{label}</dt>
+                                                                                    <dd className="m-0 text-base font-semibold tabular-nums text-[var(--c-ink)]">{val}</dd>
+                                                                                </div>
+                                                                            ))}
+                                                                        </dl>
 
-                                                            {/* Merge diff panel */}
-                                                            <div className={`grid ${showingDiff ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-                                                                <div className="overflow-hidden">
-                                                                    <div className="space-y-2 pt-2">
-                                    <p className="text-[0.625rem] font-semibold text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('account.merge_preview')}</p>
-                                                                        {diff.totalDiff === 0 ? (
-                                                                            <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] py-2 text-center">{t('account.nothing_to_merge')}</p>
-                                                                        ) : (
-                                                                            <div className="space-y-1.5">
-                                                                                {diff.newEvents.length > 0 && (
-                                                                                    <div className="flex items-center gap-1.5 text-xs">
-                                                                                        <Plus size={12} strokeWidth={1.5} className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0" />
-                                                                                        <span className="text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{t('account.new_doses')}</span>
-                                                                                        <span className="text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] font-medium tabular-nums">+{diff.newEvents.length}</span>
-                                                                                    </div>
+                                                                        {/* Most recent doses */}
+                                                                        {events.length > 0 && (
+                                                                            <ul className="m-0 flex list-none flex-col p-0">
+                                                                                {events.slice(0, 3).map((ev: any, idx: number) => (
+                                                                                    <li
+                                                                                        key={idx}
+                                                                                        className="flex items-center justify-between gap-3 border-b border-[var(--c-hairline)] py-2 text-sm last:border-b-0"
+                                                                                    >
+                                                                                        <span className="min-w-0 truncate">
+                                                                                            <span className="font-semibold text-[var(--c-ink)]">{ev.ester}</span>{' '}
+                                                                                            <span className="text-[var(--c-muted)]">{ev.route}</span>
+                                                                                        </span>
+                                                                                        <span className="flex-none font-semibold tabular-nums text-[var(--c-ink)]">{ev.doseMG} mg</span>
+                                                                                    </li>
+                                                                                ))}
+                                                                                {events.length > 3 && (
+                                                                                    <li className="pt-2 text-sm text-[var(--c-muted)]">
+                                                                                        {fill(t('you.account.more'), { n: events.length - 3 })}
+                                                                                    </li>
                                                                                 )}
-                                                                                {diff.newLabs.length > 0 && (
-                                                                                    <div className="flex items-center gap-1.5 text-xs">
-                                                                                        <Plus size={12} strokeWidth={1.5} className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0" />
-                                                                                        <span className="text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{t('account.new_labs')}</span>
-                                                                                        <span className="text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] font-medium tabular-nums">+{diff.newLabs.length}</span>
-                                                                                    </div>
+                                                                            </ul>
+                                                                        )}
+
+                                                                        {/* Merge preview */}
+                                                                        {showingDiff && (
+                                                                            <div className="flex flex-col gap-3 rounded-[12px] bg-[var(--c-plate)] p-3">
+                                                                                <p className="m-0 text-sm font-semibold text-[var(--c-muted)]">{t('you.account.merge_preview')}</p>
+                                                                                {diff.totalDiff === 0 ? (
+                                                                                    <p className="m-0 text-sm text-[var(--c-muted)]">{t('you.account.nothing_to_merge')}</p>
+                                                                                ) : (
+                                                                                    <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                                                                                        {diff.newEvents.length > 0 && <DiffLine added label={t('you.account.new_doses')} n={diff.newEvents.length} />}
+                                                                                        {diff.newLabs.length > 0 && <DiffLine added label={t('you.account.new_labs')} n={diff.newLabs.length} />}
+                                                                                        {diff.newTemplates.length > 0 && <DiffLine added label={t('you.account.new_templates')} n={diff.newTemplates.length} />}
+                                                                                        {diff.localOnlyEvents.length > 0 && <DiffLine added={false} label={t('you.account.local_only_doses')} n={diff.localOnlyEvents.length} />}
+                                                                                        {diff.localOnlyLabs.length > 0 && <DiffLine added={false} label={t('you.account.local_only_labs')} n={diff.localOnlyLabs.length} />}
+                                                                                        {diff.localOnlyTemplates.length > 0 && <DiffLine added={false} label={t('you.account.local_only_templates')} n={diff.localOnlyTemplates.length} />}
+                                                                                    </ul>
                                                                                 )}
-                                                                                {diff.newTemplates.length > 0 && (
-                                                                                    <div className="flex items-center gap-1.5 text-xs">
-                                                                                        <Plus size={12} strokeWidth={1.5} className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0" />
-                                                                                        <span className="text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{t('account.new_templates')}</span>
-                                                                                        <span className="text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] font-medium tabular-nums">+{diff.newTemplates.length}</span>
-                                                                                    </div>
-                                                                                )}
-                                                                                {diff.localOnlyEvents.length > 0 && (
-                                                                                    <div className="flex items-center gap-1.5 text-xs">
-                                                                                        <Minus size={12} strokeWidth={1.5} className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0" />
-                                                                                        <span className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('account.local_only_doses')}</span>
-                                                                                        <span className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] font-medium tabular-nums">{diff.localOnlyEvents.length}</span>
-                                                                                    </div>
-                                                                                )}
-                                                                                {diff.localOnlyLabs.length > 0 && (
-                                                                                    <div className="flex items-center gap-1.5 text-xs">
-                                                                                        <Minus size={12} strokeWidth={1.5} className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0" />
-                                                                                        <span className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('account.local_only_labs')}</span>
-                                                                                        <span className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] font-medium tabular-nums">{diff.localOnlyLabs.length}</span>
-                                                                                    </div>
-                                                                                )}
-                                                                                {diff.localOnlyTemplates.length > 0 && (
-                                                                                    <div className="flex items-center gap-1.5 text-xs">
-                                                                                        <Minus size={12} strokeWidth={1.5} className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0" />
-                                                                                        <span className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('account.local_only_templates')}</span>
-                                                                                        <span className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] font-medium tabular-nums">{diff.localOnlyTemplates.length}</span>
-                                                                                    </div>
+                                                                                {diff.total > 0 && (
+                                                                                    <Button
+                                                                                        variant="primary"
+                                                                                        compact
+                                                                                        block
+                                                                                        onClick={() => { onCloudMerge(b.id); setExpandedId(null); setMergeDiffId(null); }}
+                                                                                    >
+                                                                                        <Merge size={20} />
+                                                                                        {fill(t('you.account.confirm_merge'), { n: diff.total })}
+                                                                                    </Button>
                                                                                 )}
                                                                             </div>
                                                                         )}
-                                                                        {diff.total > 0 && (
-                                                                            <button
-                                                                                onClick={() => { onCloudMerge(b.id); setExpandedId(null); setMergeDiffId(null); }}
-                                                                                className="w-full py-2 bg-[var(--color-m3-primary)] hover:bg-[var(--color-m3-primary-light)] text-white text-xs font-medium rounded-md flex items-center justify-center gap-1.5 mt-1 transition-colors"
+
+                                                                        {/* Actions */}
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            <Button
+                                                                                variant="secondary"
+                                                                                compact
+                                                                                className="flex-1"
+                                                                                aria-expanded={showingDiff}
+                                                                                onClick={() => setMergeDiffId(showingDiff ? null : b.id)}
                                                                             >
-                                                                                <Merge size={13} strokeWidth={1.5} />
-                                                                                {t('account.confirm_merge')} (+{diff.total})
-                                                                            </button>
-                                                                        )}
+                                                                                <Merge size={20} />
+                                                                                {t(showingDiff ? 'you.account.hide_merge' : 'you.account.show_merge')}
+                                                                            </Button>
+                                                                            <Button
+                                                                                variant={showingDiff ? 'secondary' : 'primary'}
+                                                                                compact
+                                                                                className="flex-1"
+                                                                                onClick={() => { onCloudLoad(b.id); setExpandedId(null); }}
+                                                                            >
+                                                                                <CloudDownload size={20} />
+                                                                                {t('account.restore')}
+                                                                            </Button>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Action buttons */}
-                                                            <div className="flex gap-2 pt-1">
-                                                                <button
-                                                                    onClick={() => setMergeDiffId(showingDiff ? null : b.id)}
-                                                                    className={`flex-1 py-2 text-xs font-medium rounded-md flex items-center justify-center gap-1.5 border transition-colors ${showingDiff
-                                                                        ? 'bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container-high)] border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]'
-                                                                        : 'border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] hover:bg-[var(--color-m3-surface-container-low)] dark:hover:bg-[var(--color-m3-dark-surface-container-high)]'
-                                                                    }`}
-                                                                >
-                                                                    <Merge size={13} strokeWidth={1.5} />
-                                                                    {t('account.merge')}
-                                                                    {diff.total > 0 && <span className="text-[0.625rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] font-medium">+{diff.total}</span>}
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => { onCloudLoad(b.id); setExpandedId(null); }}
-                                                                    className="flex-1 py-2 bg-[var(--color-m3-primary)] hover:bg-[var(--color-m3-primary-light)] text-white text-xs font-medium rounded-md flex items-center justify-center gap-1.5 transition-colors"
-                                                                >
-                                                                    <DownloadCloud size={13} strokeWidth={1.5} />
-                                                                    {t('account.restore')}
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    );
-                                                })() : null}
-                                            </div>
-                                        </div>
+                                                                );
+                                                            })() : null}
+                                                        </div>
+                                                    </div>
+                                                </React.Fragment>
+                                            );
+                                        })}
                                     </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-
-                    {/* Danger Zone */}
-                    <div className="mb-6">
-                        <span className={`${sectionLabel} text-red-500`}>{t('account.danger_zone')}</span>
-                        <button
-                            onClick={() => onNavigate('delete-account')}
-                            className={`${rowBase} hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] -mx-2 px-2 rounded`}
-                        >
-                            <Trash2 className="text-red-500 shrink-0" size={18} />
-                            <div className="text-start">
-                                <p className="font-medium text-red-600 dark:text-red-400 text-sm">{t('account.delete_account')}</p>
-                                <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('account.delete_account_desc')}</p>
+                                )}
+                                {backupList.length > 0 && (
+                                    <div className="list-group-footer">
+                                        {fill(t('you.account.backups_kept'), { n: backupList.length, max: MAX_CLOUD_BACKUPS })}
+                                    </div>
+                                )}
                             </div>
-                        </button>
-                    </div>
+                        </div>
+                    </section>
 
-                    {/* Sign out */}
-                    <div className="flex justify-center pt-2">
-                        <button
-                            onClick={onLogout}
-                            className="flex items-center gap-2 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] px-6 py-2 rounded-md text-sm"
-                        >
-                            <LogOut size={16} />
-                            {t('account.sign_out')}
-                        </button>
-                    </div>
+                    {/* Security */}
+                    <ListGroup header={t('you.account.security')} chevronIcon={LIST_CHEVRON}>
+                        <ListRow title={t('you.account.password')} drillIn onClick={() => onNavigate('change-password')} />
+                        <ListRow
+                            title={t('you.account.two_step')}
+                            value={t(twoFAEnabled ? 'you.account.on' : 'you.account.off')}
+                            drillIn
+                            onClick={() => onNavigate('two-factor')}
+                        />
+                        <ListRow title={t('you.account.passkeys')} drillIn onClick={() => onNavigate('two-factor')} />
+                        <ListRow title={t('you.account.sessions')} drillIn onClick={() => onNavigate('sessions')} />
+                    </ListGroup>
+
+                    {/* Sign out and delete, in their own group at the bottom. */}
+                    <ListGroup footer={t('you.account.delete_footer')}>
+                        <ListRow title={<span className="text-[var(--c-accent)]">{t('you.sign_out')}</span>} onClick={onLogout} />
+                        <ListRow
+                            title={<span className="text-[var(--c-danger)]">{t('you.delete_account')}</span>}
+                            onClick={() => onNavigate('delete-account')}
+                        />
+                    </ListGroup>
                 </div>
             ) : (
-                <div className="max-w-sm">
-                    {/* Login / Register tabs */}
-                    <div className={`flex gap-5 ${divider} mb-5`}>
-                        {[
-                            { key: true, label: t('auth.sign_in') },
-                            { key: false, label: t('auth.sign_up') },
-                        ].map(({ key, label }) => (
-                            <button
-                                key={String(key)}
-                                onClick={() => { setIsLogin(key); setAuthError(null); setNeedsTOTP(false); }}
-                                className={`text-sm pb-2 -mb-px border-b-2 ${isLogin === key
-                                    ? 'font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] border-[var(--color-m3-primary)]'
-                                    : 'text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] border-transparent'
-                                }`}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
+                <div className="mt-2 flex max-w-md flex-col gap-6">
+                    <p className="m-0 text-base text-[var(--c-muted)]">{t('you.signed_out_body')}</p>
 
-                    <form onSubmit={handleAuthSubmit} className="space-y-4">
+                    <SegmentedControl
+                        aria-label={t('account.title')}
+                        options={[
+                            { value: 'in', label: t('you.account.sign_in') },
+                            { value: 'up', label: t('you.account.create') },
+                        ]}
+                        value={isLogin ? 'in' : 'up'}
+                        onChange={(v) => { setIsLogin(v === 'in'); setAuthError(null); setNeedsTOTP(false); }}
+                    />
+
+                    <form onSubmit={handleAuthSubmit} className="flex flex-col gap-4">
                         {authError && (
-                            <p className="text-sm text-red-500 dark:text-red-400">
-                                {authError}
+                            <p role="alert" className="m-0 flex items-start gap-2 text-base text-[var(--c-danger)]">
+                                <Attention size={20} className="mt-0.5 flex-none" />
+                                <span>{authError}</span>
                             </p>
                         )}
-                        <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('auth.username')}</label>
+                        <div>
+                            <label htmlFor="account-username" className={fieldLabel}>{t('auth.username')}</label>
                             <input
+                                id="account-username"
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className={inputCls}
-                                style={{ fontSize: '16px' }}
+                                className="input-base"
                                 placeholder={t('auth.username_placeholder')}
                                 autoComplete="username"
                                 required
                             />
                         </div>
-                        <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('auth.password')}</label>
+                        <div>
+                            <label htmlFor="account-password" className={fieldLabel}>{t('auth.password')}</label>
                             <input
+                                id="account-password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className={inputCls}
-                                style={{ fontSize: '16px' }}
+                                className="input-base"
                                 placeholder={t('auth.password_placeholder')}
                                 autoComplete={isLogin ? 'current-password' : 'new-password'}
                                 required
                             />
                         </div>
                         {needsTOTP && isLogin && (
-                            <div className="space-y-3">
-                                <div className="p-2.5 text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)] rounded-md flex items-center gap-2">
-                                    <ShieldIcon size={16} className="shrink-0 text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)]" />
-                                    {t('auth.needs_2fa')}
-                                </div>
+                            <div className="flex flex-col gap-3">
+                                <p className="callout m-0 flex items-start gap-2">
+                                    <TwoStep size={20} className="mt-0.5 flex-none text-[var(--c-ink)]" />
+                                    <span>{t('auth.needs_2fa')}</span>
+                                </p>
                                 {useBackupCode ? (
-                                    <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('auth.backup_code_label')}</label>
+                                    <div className="flex flex-col items-start gap-2">
+                                        <label htmlFor="account-backup-code" className={fieldLabel}>{t('auth.backup_code_label')}</label>
                                         <input
+                                            id="account-backup-code"
                                             type="text"
                                             value={backupCode}
                                             onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
-                                            className={`${inputCls} tracking-[0.1em] font-mono text-center`}
-                                            style={{ fontSize: '16px' }}
+                                            className="input-base font-mono text-center"
                                             placeholder={t('auth.backup_code_placeholder')}
                                             autoComplete="off"
                                             autoFocus
                                             required={useBackupCode}
                                         />
-                                        <button type="button" onClick={() => { setUseBackupCode(false); setBackupCode(''); }}
-                                            className="text-xs text-[var(--color-m3-primary)] hover:underline">
-                                            ← {twoFAMethod === 'totp' ? t('auth.totp_code') : t('auth.passkey_as_2fa')}
-                                        </button>
+                                        <Button variant="plain" className="-ms-3" onClick={() => { setUseBackupCode(false); setBackupCode(''); }}>
+                                            <Back size={20} />
+                                            {twoFAMethod === 'totp' ? t('auth.totp_code') : t('auth.passkey_as_2fa')}
+                                        </Button>
                                     </div>
                                 ) : (
                                     <>
                                         {twoFAMethod !== 'passkey' && (
-                                            <div className="space-y-1.5">
-                        <label className="block text-xs font-semibold text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('auth.totp_code')}</label>
+                                            <div>
+                                                <label htmlFor="account-totp" className={fieldLabel}>{t('auth.totp_code')}</label>
                                                 <input
+                                                    id="account-totp"
                                                     type="text"
                                                     inputMode="numeric"
                                                     pattern="[0-9]{6}"
                                                     maxLength={6}
                                                     value={totpCode}
                                                     onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                                    className={`${inputCls} tracking-[0.15em] font-mono text-center`}
-                                                    style={{ fontSize: '16px' }}
+                                                    className="input-base font-mono text-center"
                                                     placeholder={t('auth.totp_placeholder')}
                                                     autoComplete="one-time-code"
                                                     autoFocus
@@ -845,63 +753,41 @@ const Account: React.FC<AccountProps> = ({
                                                 />
                                             </div>
                                         )}
-                                        {twoFAMethod === 'passkey' && typeof window !== 'undefined' && !window.PublicKeyCredential && (
-                                            <p className="text-xs text-red-500 text-center">{t('auth.passkey_unsupported')}</p>
+                                        {twoFAMethod === 'passkey' && !hasPasskeys && (
+                                            <p className="m-0 flex items-start gap-2 text-base text-[var(--c-danger)]">
+                                                <Attention size={20} className="mt-0.5 flex-none" />
+                                                <span>{t('auth.passkey_unsupported')}</span>
+                                            </p>
                                         )}
-                                        {typeof window !== 'undefined' && !!window.PublicKeyCredential && (
+                                        {hasPasskeys && (
                                             <>
-                                                {twoFAMethod !== 'passkey' && (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex-1 h-px bg-[var(--color-m3-outline-variant)] dark:bg-[var(--color-m3-dark-outline-variant)]" />
-                                                        <span className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('common.or')}</span>
-                                                        <div className="flex-1 h-px bg-[var(--color-m3-outline-variant)] dark:bg-[var(--color-m3-dark-outline-variant)]" />
-                                                    </div>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handlePasskeyLogin()}
-                                                    disabled={passkeyLoading}
-                                                    className="w-full py-2.5 text-sm font-medium border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-md hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] disabled:opacity-50 flex items-center justify-center gap-2"
-                                                >
-                                                    {passkeyLoading ? <Loader2 size={16} className="animate-spin" /> : <Fingerprint size={16} />}
+                                                {twoFAMethod !== 'passkey' && <OrRule />}
+                                                <Button variant="secondary" block onClick={() => handlePasskeyLogin()} disabled={passkeyLoading}>
+                                                    {passkeyLoading ? <Spinner size={20} className="animate-spin" /> : <Passkey size={20} />}
                                                     {t('auth.passkey_as_2fa')}
-                                                </button>
+                                                </Button>
                                             </>
                                         )}
-                                        <button type="button" onClick={() => setUseBackupCode(true)}
-                                            className="w-full text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] text-center py-1">
+                                        <Button variant="plain" onClick={() => setUseBackupCode(true)}>
                                             {t('auth.use_backup_code')}
-                                        </button>
+                                        </Button>
                                     </>
                                 )}
                             </div>
                         )}
                         {!(needsTOTP && twoFAMethod === 'passkey' && !useBackupCode) && (
-                            <button
-                                type="submit"
-                                disabled={authLoading}
-                                className="w-full py-2.5 text-sm font-medium bg-[var(--color-m3-primary)] hover:bg-[var(--color-m3-primary-light)] text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {authLoading && <Loader2 size={16} className="animate-spin" />}
-                                {isLogin ? t('auth.sign_in') : t('auth.sign_up')}
-                            </button>
+                            <Button type="submit" variant="primary" block disabled={authLoading}>
+                                {authLoading && <Spinner size={20} className="animate-spin" />}
+                                {isLogin ? t('you.account.sign_in') : t('you.account.create')}
+                            </Button>
                         )}
-                        {isLogin && !needsTOTP && typeof window !== 'undefined' && !!window.PublicKeyCredential && (
+                        {isLogin && !needsTOTP && hasPasskeys && (
                             <>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1 h-px bg-[var(--color-m3-outline-variant)] dark:bg-[var(--color-m3-dark-outline-variant)]" />
-                                    <span className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('common.or')}</span>
-                                    <div className="flex-1 h-px bg-[var(--color-m3-outline-variant)] dark:bg-[var(--color-m3-dark-outline-variant)]" />
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePasskeyLogin()}
-                                    disabled={passkeyLoading}
-                                    className="w-full py-2.5 text-sm font-medium border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-md hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {passkeyLoading ? <Loader2 size={16} className="animate-spin" /> : <Fingerprint size={16} />}
-                                    {t('auth.passkey_login')}
-                                </button>
+                                <OrRule />
+                                <Button variant="secondary" block onClick={() => handlePasskeyLogin()} disabled={passkeyLoading}>
+                                    {passkeyLoading ? <Spinner size={20} className="animate-spin" /> : <Passkey size={20} />}
+                                    {t('you.account.passkey_sign_in')}
+                                </Button>
                             </>
                         )}
                     </form>
@@ -918,7 +804,7 @@ const Account: React.FC<AccountProps> = ({
                 loading={unlockLoading}
                 masked
             />
-        </div>
+        </YouPage>
     );
 };
 

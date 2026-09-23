@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Monitor, Smartphone, Loader2, LogOut, X } from 'lucide-react';
 import { authService, Session } from '../services/auth';
 import { useTranslation } from '../contexts/LanguageContext';
+import { joinList, listSeparator } from '../i18n/listSeparator';
 import { useDialog } from '../contexts/DialogContext';
-import { SettingsIconBox, maskIpAddress, settingsMuted, settingsOn } from '../components/SettingsListItem';
+import { maskIpAddress } from '../components/SettingsListItem';
+import { BackHeader, Button, ListGroup, ListRow } from '../components/ui';
+import { YouPage } from './you/shared';
+import { BusySpinner, DangerTitle, Groups, Loading, Note, Panel } from './account/shared';
 import { formatRelative } from '../utils/helpers';
 
 interface SessionsPageProps {
@@ -16,13 +19,8 @@ interface SessionsPageProps {
  * as they are; only the "we couldn't tell" case is a word, so the caller
  * translates that one rather than this taking a `t` for a single string.
  */
-function parseDevice(ua: string): { browser: string | null; os: string; isMobile: boolean } {
+function parseDevice(ua: string): { browser: string | null; os: string } {
     const lower = ua.toLowerCase();
-    const isMobile =
-        lower.includes('mobile') ||
-        lower.includes('android') ||
-        lower.includes('iphone') ||
-        lower.includes('ipad');
 
     let browser: string | null = null;
     if (lower.includes('edg')) browser = 'Edge';
@@ -38,11 +36,11 @@ function parseDevice(ua: string): { browser: string | null; os: string; isMobile
     else if (lower.includes('mac os') || lower.includes('macos')) os = 'macOS';
     else if (lower.includes('linux')) os = 'Linux';
 
-    return { browser, os, isMobile };
+    return { browser, os };
 }
 
 const SessionsPage: React.FC<SessionsPageProps> = ({ token, onBack }) => {
-    const { t } = useTranslation();
+    const { t, lang } = useTranslation();
     const { showDialog } = useDialog();
     // One instant for every row, rather than each call reading its own clock.
     const nowSec = Math.floor(Date.now() / 1000);
@@ -91,89 +89,76 @@ const SessionsPage: React.FC<SessionsPageProps> = ({ token, onBack }) => {
         });
     };
 
+    const current = sessions.filter(s => s.is_current);
     const otherSessions = sessions.filter(s => !s.is_current);
-    const divider = 'border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]';
+
+    const row = (s: Session) => {
+        const { browser, os } = parseDevice(s.device_info || '');
+        const label = joinList(lang, [browser ?? t('session.unknown_browser'), os].filter((p): p is string => !!p));
+        const isTerminating = terminating === s.id;
+        // One line of state: when it was last used, and roughly where from.
+        const sub = (
+            <span className="block truncate">
+                {t('account.sessions_last_used')} {formatRelative(s.last_used_at, nowSec, t)}
+                {listSeparator(lang)}
+                <span className="font-mono">{maskIpAddress(s.ip)}</span>
+            </span>
+        );
+        return (
+            <ListRow
+                key={s.id}
+                title={<span className="block truncate">{label}</span>}
+                sub={sub}
+                trailing={!s.is_current && (
+                    <Button
+                        variant="destructive"
+                        className="-me-2"
+                        onClick={() => handleTerminate(s.id)}
+                        disabled={isTerminating || terminating === 'others'}
+                        aria-label={t('account.sessions.sign_out_device').replace('{device}', label)}
+                    >
+                        {isTerminating ? <BusySpinner /> : t('account.sessions.sign_out')}
+                    </Button>
+                )}
+            />
+        );
+    };
 
     return (
-        <div className="relative pb-32">
-            <div className="sticky top-0 z-20 bg-[var(--color-m3-surface-dim)] dark:bg-[var(--color-m3-dark-surface)] px-6 md:px-10 pt-8 pb-3">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 -ml-2 px-2 py-1.5 rounded-md hover:bg-[var(--color-m3-surface-container-low)] dark:hover:bg-[var(--color-m3-dark-surface-container-low)] transition-colors"
-                >
-                    <ArrowLeft size={18} strokeWidth={1.5} className={`${settingsMuted} shrink-0`} />
-                    <span className={`text-xl font-semibold ${settingsOn}`}>{t('account.sessions')}</span>
-                </button>
-                <p className={`text-sm ${settingsMuted} mt-1 ml-0.5 leading-relaxed`}>{t('account.sessions_desc')}</p>
-            </div>
+        <YouPage>
+            <BackHeader parentLabel={t('account.title')} onBack={onBack} title={t('account.page.sessions')} />
 
-            <div className="px-6 md:px-10 mt-2 max-w-2xl">
-                {loading ? (
-                    <div className="flex justify-center py-16">
-                        <Loader2 className={`animate-spin ${settingsMuted}`} size={20} />
-                    </div>
-                ) : sessions.length === 0 ? (
-                    <p className={`text-sm ${settingsMuted} text-center py-14`}>{t('account.sessions_empty')}</p>
-                ) : (
-                    <div>
-                        {sessions.map(s => {
-                            const { browser, os, isMobile } = parseDevice(s.device_info || '');
-                            const label = [browser ?? t('session.unknown_browser'), os].filter(Boolean).join(' · ');
-                            const isTerminating = terminating === s.id;
-                            const DeviceIcon = isMobile ? Smartphone : Monitor;
-
-                            return (
-                                <div
-                                    key={s.id}
-                                    className={`flex items-start gap-3 py-4 ${divider}`}
-                                >
-                                    <SettingsIconBox icon={DeviceIcon} />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <p className={`text-sm font-medium ${settingsOn} truncate`}>{label}</p>
-                                            {s.is_current && (
-                                                <span className={`shrink-0 text-[0.6875rem] font-medium ${settingsMuted} px-1.5 py-0.5 rounded bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)]`}>
-                                                    {t('account.sessions_current')}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className={`text-xs ${settingsMuted} mt-1 font-mono tracking-wide`}>
-                                            {maskIpAddress(s.ip)}
-                                        </p>
-                                        <p className={`text-xs ${settingsMuted} mt-0.5`}>
-                                            {t('account.sessions_last_used')} {formatRelative(s.last_used_at, nowSec, t)}
-                                            {' · '}
-                                            {t('account.sessions_created')} {formatRelative(s.created_at, nowSec, t)}
-                                        </p>
-                                    </div>
-                                    {!s.is_current && (
-                                        <button
-                                            onClick={() => handleTerminate(s.id)}
-                                            disabled={isTerminating || terminating === 'others'}
-                                            aria-label={t('account.sessions_terminate_confirm')}
-                                            className={`shrink-0 mt-1 p-1.5 rounded-md ${settingsMuted} hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] disabled:opacity-40 transition-colors`}
-                                        >
-                                            {isTerminating ? <Loader2 size={15} strokeWidth={1.5} className="animate-spin" /> : <X size={15} strokeWidth={1.5} />}
-                                        </button>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {otherSessions.length > 1 && (
-                    <button
-                        onClick={handleTerminateOthers}
-                        disabled={terminating === 'others'}
-                        className={`w-full flex items-center justify-center gap-2 py-3.5 mt-2 text-sm font-medium ${settingsMuted} hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] disabled:opacity-50 transition-colors`}
-                    >
-                        {terminating === 'others' ? <Loader2 size={15} strokeWidth={1.5} className="animate-spin" /> : <LogOut size={15} strokeWidth={1.5} />}
-                        {t('account.sessions_terminate_others')}
-                    </button>
-                )}
-            </div>
-        </div>
+            {loading ? (
+                <Loading />
+            ) : sessions.length === 0 ? (
+                <Panel className="mt-4"><Note>{t('account.sessions_empty')}</Note></Panel>
+            ) : (
+                <Groups className="mt-4">
+                    {current.length > 0 && (
+                        <ListGroup header={t('account.sessions_current')}>
+                            {current.map(row)}
+                        </ListGroup>
+                    )}
+                    {otherSessions.length > 0 && (
+                        <ListGroup header={t('account.sessions.others')} footer={t('account.sessions.others_footer')}>
+                            {otherSessions.map(row)}
+                        </ListGroup>
+                    )}
+                    {/* The one action that affects every other device sits in
+                        its own group at the bottom. */}
+                    {otherSessions.length > 1 && (
+                        <ListGroup>
+                            <ListRow
+                                title={<DangerTitle>{t('account.sessions.sign_out_others')}</DangerTitle>}
+                                trailing={terminating === 'others' ? <BusySpinner /> : undefined}
+                                onClick={handleTerminateOthers}
+                                disabled={terminating === 'others'}
+                            />
+                        </ListGroup>
+                    )}
+                </Groups>
+            )}
+        </YouPage>
     );
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { useTranslation } from '../../contexts/LanguageContext';
-import { Route, Ester, isTestosteroneEster } from '../../../logic';
+import { Ester, isTestosteroneEster } from '../../../logic';
+import AmountSection, { AmountBasis } from './AmountSection';
 
 interface InjectionFieldsProps {
     ester: Ester;
@@ -8,63 +8,13 @@ interface InjectionFieldsProps {
     e2Dose: string;
     onRawChange: (val: string) => void;
     onE2Change: (val: string) => void;
-    route: Route;
+    basis: AmountBasis;
+    onBasisChange: (basis: AmountBasis) => void;
 }
 
-const InjectionFields: React.FC<InjectionFieldsProps> = ({
-    ester,
-    rawDose,
-    e2Dose,
-    onRawChange,
-    onE2Change,
-    route
-}) => {
-    const { t } = useTranslation();
-    const isT = isTestosteroneEster(ester);
-    const equivLabelKey = isT ? 'field.dose_t' : 'field.dose_e2';
-
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {(ester !== Ester.E2) && (
-                <div className={`space-y-2 ${(ester === Ester.EV && (route === Route.injection)) ? 'col-span-2' : ''}`}>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 pl-1">{t('field.dose_raw')}</label>
-                    <input
-                        type="number" inputMode="decimal"
-                        min="0"
-                        step="0.001"
-                        value={rawDose} onChange={e => onRawChange(e.target.value)}
-                        className="w-full p-3 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-1 focus:ring-[var(--color-m3-primary)]/30 focus:border-[var(--color-m3-primary)] outline-none text-gray-900 dark:text-gray-100 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="0.0"
-                        style={{ fontSize: '16px' }}
-                    />
-                </div>
-            )}
-            {!(ester === Ester.EV && route === Route.injection) && ester !== Ester.CPA && (
-                <div className={`space-y-2 ${(ester === Ester.E2) ? "col-span-2" : ""}`}>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 pl-1">
-                        {t(equivLabelKey)}
-                    </label>
-                    <input
-                        type="number" inputMode="decimal"
-                        min="0"
-                        step="0.001"
-                        value={e2Dose} onChange={e => onE2Change(e.target.value)}
-                        className="w-full p-3 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-1 focus:ring-[var(--color-m3-primary)]/30 focus:border-[var(--color-m3-primary)] outline-none text-gray-900 dark:text-gray-100 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="0.0"
-                        style={{ fontSize: '16px' }}
-                    />
-                </div>
-            )}
-
-            {(ester === Ester.EV && route === Route.injection) && (
-                <div className="col-span-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 pl-1">
-                        {t(equivLabelKey)}: {e2Dose ? `${e2Dose} mg` : '--'}
-                    </p>
-                </div>
-            )}
-        </div>
-    );
-};
+/** Injections step by 0.5 mg of estradiol ester, or 5 mg of testosterone. */
+const InjectionFields: React.FC<InjectionFieldsProps> = (props) => (
+    <AmountSection {...props} step={isTestosteroneEster(props.ester) ? 5 : 0.5} />
+);
 
 export default InjectionFields;

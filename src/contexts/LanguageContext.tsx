@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TRANSLATIONS, Lang } from '../i18n/translations';
+import { CADENCE_STRINGS } from '../i18n/cadence';
 
 const LanguageContext = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: (k: string) => string } | null>(null);
 
@@ -56,10 +57,10 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
 
     const t = (key: string) => {
         const packs = (TRANSLATIONS as Record<string, Record<string, string>>);
-        const own = packs[lang]?.[key];
+        const own = CADENCE_STRINGS[lang]?.[key] ?? packs[lang]?.[key];
         if (own !== undefined) return own;
         for (const alt of FALLBACK[lang] ?? FALLBACK.zh) {
-            const value = packs[alt]?.[key];
+            const value = CADENCE_STRINGS[alt]?.[key] ?? packs[alt]?.[key];
             if (value !== undefined) return value;
         }
         return key;

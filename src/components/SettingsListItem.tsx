@@ -1,22 +1,26 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight } from './icons';
+import { ListRow } from './ui';
 
-const muted = 'text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]';
-const on = 'text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]';
-const divider = 'border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]';
+// Cadence tokens flip in .dark on their own, so no dark: pair is needed.
+const muted = 'text-[var(--c-muted)]';
+const on = 'text-[var(--c-ink)]';
 
 export const settingsMuted = muted;
 export const settingsOn = on;
 
-// Accepts lucide icons as well as custom icon components with the same props.
+// Accepts Cadence icons as well as custom icon components with the same props.
 export type SettingsIcon = React.ComponentType<{ size?: number | string; className?: string }>;
 
+/** A bare 18px muted icon, for inline use beside text. */
 export function SettingsIconBox({ icon: Icon }: { icon: SettingsIcon }) {
     return <Icon size={18} className={`${muted} shrink-0`} />;
 }
 
 interface SettingsListItemProps {
-    icon: SettingsIcon;
+    /** Kept for older callers. Settings lists carry no icon tiles
+     *  (design/cadence/spec/format_rules.md 5), so it is not drawn. */
+    icon?: SettingsIcon;
     title: string;
     description?: string;
     trailing?: React.ReactNode;
@@ -25,32 +29,30 @@ interface SettingsListItemProps {
     className?: string;
 }
 
+/**
+ * Legacy settings row, now a thin wrapper over the Cadence ListRow: a one-line
+ * title, an optional short state line, trailing content and a drill-in chevron.
+ * Put it inside a ListGroup so it gets the group's border and separators.
+ * New code should use ListGroup and ListRow directly.
+ */
 export const SettingsListItem: React.FC<SettingsListItemProps> = ({
-    icon: Icon,
     title,
     description,
     trailing,
     onClick,
     showChevron = true,
-    className = '',
-}) => {
-    const Tag = onClick ? 'button' : 'div';
-    return (
-        <Tag
-            type={onClick ? 'button' : undefined}
-            onClick={onClick}
-            className={`w-full flex items-center gap-3 py-4 ${divider} text-start ${className}`}
-        >
-            <Icon size={18} className={`${muted} shrink-0`} />
-            <div className="flex-1 min-w-0 text-start">
-                <p className={`text-sm font-medium ${on}`}>{title}</p>
-                {description && <p className={`text-xs ${muted} mt-0.5 leading-relaxed`}>{description}</p>}
-            </div>
-            {trailing}
-            {showChevron && onClick && <ChevronRight size={16} className={`${muted} shrink-0`} />}
-        </Tag>
-    );
-};
+    className,
+}) => (
+    <ListRow
+        title={title}
+        sub={description}
+        trailing={trailing}
+        onClick={onClick}
+        drillIn={showChevron && !!onClick}
+        chevron={<ChevronRight size={16} />}
+        className={className}
+    />
+);
 
 export function maskIpAddress(ip: string | null | undefined): string {
     if (!ip) return '—';
@@ -59,13 +61,13 @@ export function maskIpAddress(ip: string | null | undefined): string {
 
     const v4 = trimmed.split('.');
     if (v4.length === 4 && v4.every(p => /^\d{1,3}$/.test(p))) {
-        return `${v4[0]}.${v4[1]}.•••.•••`;
+        return `${v4[0]}.${v4[1]}.***.***`;
     }
 
     if (trimmed.includes(':')) {
         const head = trimmed.split(':').filter(Boolean)[0] ?? '';
-        return head ? `${head}:••••:••••:••••` : '••••:••••:••••:••••';
+        return head ? `${head}:****:****:****` : '****:****:****:****';
     }
 
-    return '•••.•••.•••.•••';
+    return '***.***.***.***';
 }

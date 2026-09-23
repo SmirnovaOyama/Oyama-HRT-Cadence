@@ -1,8 +1,9 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
-import { DoseEvent, Route } from '../../logic';
-import { LOCALE_MAP, createDayLabelFormatter, toDayKey } from '../utils/helpers';
-import { useElementSize } from '../hooks/useElementSize';
+import { DoseEvent, Ester, Route } from '../../logic';
+import { LOCALE_MAP, toDayKey } from '../utils/helpers';
+import { joinList } from '../i18n/listSeparator';
+import type { Lang } from '../i18n/translations';
 
 /** Local midnight of whatever day a moment falls on. */
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -11,29 +12,79 @@ const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDat
  *  milliseconds, so a DST boundary doesn't slide the grid by an hour. */
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+/**
+ * "Wed Sep 23" (or "Wed Sep 23, 2025" outside this year) in the reader's
+ * language. English drops the comma Intl puts after the weekday, as the
+ * boards write it, so a list of days can itself be joined with commas.
+ */
+export const makeDayFormatter = (lang: Lang) => {
+    const locale = LOCALE_MAP[lang] || 'en-US';
+    const plain = new Intl.DateTimeFormat(locale, { weekday: 'short', month: 'short', day: 'numeric' });
+    const withYear = new Intl.DateTimeFormat(locale, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    return (d: Date): string => {
+        const fmt = d.getFullYear() === new Date().getFullYear() ? plain : withYear;
+        if (lang !== 'en') return fmt.format(d);
+        const parts = fmt.formatToParts(d);
+        const get = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+        const year = get('year');
+        return `${get('weekday')} ${get('month')} ${get('day')}${year ? `, ${year}` : ''}`;
+    };
+};
 
-type DayTotals = { count: number; mg: Map<string, number> };
-type Cell = { col: number; row: number; date: Date; key: string; count: number; mg: Map<string, number> | null };
+/** "Sun Sep 13 and Tue Sep 22", joined the way the language joins a list. */
+export const joinDays = (lang: Lang, days: string[]): string => {
+    const locale = LOCALE_MAP[lang] || 'en-US';
+    try {
+        return new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).format(days);
+    } catch {
+        return joinList(lang, days);
+    }
+};
+
+const WEEKS_STRIP = 13;   // injections: one square per week
+const WEEKS_GRID = 4;     // daily medicines: one square per day
+
+/** The compound's own colour: cyproterone takes the second hue, everything
+ *  else the accent, the same split the chart and the history tiles use. */
+const toneOf = (ester: Ester) => (ester === Ester.CPA ? 'var(--c-second)' : 'var(--c-accent)');
+
+/** Routes that are taken every day or so, and so read as a day grid. Injections
+ *  get the weekly strip; patches are worn for days at a time and fit neither. */
+const DAILY_ROUTES = new Set<Route>([Route.oral, Route.sublingual, Route.gel]);
+
+type DayLog = { count: number; mg: number };
+
+type CellState = 'taken' | 'missed' | 'future' | 'empty';
+
+/** One flat square of the rhythm grid (Timeline board, "Your rhythm"). Flat
+ *  fill for logged, a dashed edge for not logged, a hairline outline for days
+ *  that haven't come yet. Radius 4, no dots, no gradients. */
+const cellStyle = (state: CellState, tone: string): CSSProperties => {
+    switch (state) {
+        case 'taken':
+            return { background: tone };
+        case 'missed':
+            return { border: '1.5px dashed var(--c-control)', background: 'transparent' };
+        case 'future':
+            return { border: '1px solid var(--c-hairline)', background: 'var(--c-surface)' };
+        default:
+            return { border: '1px solid var(--c-hairline)', background: 'transparent' };
+    }
+};
 
 /**
- * A GitHub-contributions-style calendar of dosing days: one square per day, a
- * column per week, shaded by how many doses were logged that day.
+ * "Your rhythm": a calm picture of how regularly each medicine was logged.
  *
- * Intensity is a *count*, not an amount. Milligrams of estradiol, of CPA and of
- * a testosterone ester don't share a scale, so summing them into one number to
- * shade a square would be a category error; the tooltip breaks the day down by
- * compound instead, which is where an amount can be read honestly.
+ * Injections read as a strip of weeks (was there a shot in each of the last 13
+ * weeks?); tablets, under-the-tongue doses and gels read as a four-week day
+ * grid per compound. Each has a plain sentence under it, so nothing depends on
+ * reading the colours. Tap a square to read that day or week underneath.
  *
- * The ramp is chosen so its grayscale projection stays monotonic — the mono
- * theme is a page-wide `grayscale(1)`, and a ramp picked on hue alone collapses
- * under it. That is why this component, unlike the chart beside it, needs no
- * `isMono` branch: nothing here is distinguished by colour alone, only by
- * lightness, and lightness survives the filter.
+ * `isDarkMode` is still accepted for existing callers; the colours come from
+ * the --c-* tokens, which flip on their own.
  */
 const DoseHeatmap = ({
     events,
-    isDarkMode = false,
     className = '',
 }: {
     events: DoseEvent[];
@@ -43,19 +94,7 @@ const DoseHeatmap = ({
     const { t, lang } = useTranslation();
     const locale = LOCALE_MAP[lang] || 'en-US';
 
-    const [wrapEl, setWrapEl] = useState<HTMLDivElement | null>(null);
-    const { width } = useElementSize(wrapEl);
-    // The hovered *day*, not a snapshot of its cell: the grid is rebuilt whenever
-    // doses change (cloud sync lands one while the page is open), the window is
-    // resized or midnight passes, and a captured cell would go on displaying the
-    // counts it held at hover time — and, after a resize, at a column index that
-    // no longer exists. Holding the key means the tooltip tracks the data and
-    // clears itself when the day scrolls out of the window.
-    const [hoverKey, setHoverKey] = useState<string | null>(null);
-
-    // The grid ends on "today", so it has to notice midnight passing. Polled
-    // rather than scheduled, but the state only changes when the day actually
-    // turns over, so this is one comparison a minute and no re-render.
+    // The grid ends on "today", so it has to notice midnight passing.
     const [today, setToday] = useState(() => startOfDay(new Date()));
     useEffect(() => {
         const id = setInterval(() => {
@@ -65,307 +104,262 @@ const DoseHeatmap = ({
         return () => clearInterval(id);
     }, []);
 
-    // Same terracotta family as the chart. Empty is the chart's grid neutral;
-    // the four filled steps climb from a light tint to a deep burnt shade.
-    const c = isDarkMode
-        ? { empty: '#2E2C28', axis: '#7A776F', ring: '#D8927C', levels: ['#4E3428', '#7B4C37', '#AC6A4C', '#D8927C'] }
-        : { empty: '#E7E4DD', axis: '#A8A59E', ring: '#CC785C', levels: ['#F0CDB8', '#DFA184', '#CC785C', '#9E4F2E'] };
+    const [picked, setPicked] = useState<{ group: string; key: string } | null>(null);
 
-    // The plot is laid out in raw SVG units, so unlike the rest of the UI it
-    // does not follow the root font size. Reading that size back keeps the
-    // squares and their labels in proportion when the desktop scale steps up.
-    const ui = useMemo(() => {
-        if (typeof window === 'undefined') return 1;
-        const px = parseFloat(getComputedStyle(document.documentElement).fontSize);
-        return Number.isFinite(px) && px > 0 ? px / 16 : 1;
-    }, [width]);
+    const fmtShort = useMemo(() => new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }), [locale]);
+    const fmtDay = useMemo(() => ({ format: makeDayFormatter(lang) }), [lang]);
+    const fmtWeekday = useMemo(() => new Intl.DateTimeFormat(locale, { weekday: 'short' }), [locale]);
 
-    const gutter = 20 * ui;   // weekday labels down the left
-    const header = 14 * ui;   // month labels across the top
-    const gap = 3 * ui;
+    const doseLabel = (n: number) =>
+        n === 0 ? t('heatmap.none') : n === 1 ? t('heatmap.dose_one') : t('heatmap.doses').replace('{n}', String(n));
+    const mgLabel = (mg: number) => `${Math.round(mg * 100) / 100}\u00a0mg`;
 
-    // How many weeks fit, then the square size that divides that span exactly —
-    // so the grid's right edge lands flush with the column it sits in rather
-    // than trailing a ragged remainder.
-    const geom = useMemo(() => {
-        const avail = width - gutter;
-        if (avail <= 0) return { weeks: 0, cell: 0 };
-        const weeks = clamp(Math.floor((avail + gap) / (12 * ui + gap)), 4, 53);
-        const cell = clamp((avail - gap * (weeks - 1)) / weeks, 7 * ui, 15 * ui);
-        return { weeks, cell };
-    }, [width, gutter, gap, ui]);
-    const { weeks, cell } = geom;
+    // --- Injections: 13 rolling weeks ending today ---------------------------
+    const strip = useMemo(() => {
+        const injections = events.filter(e => e.route === Route.injection);
+        const firstStart = addDays(today, -(WEEKS_STRIP * 7) + 1);
+        const weeks = Array.from({ length: WEEKS_STRIP }, (_, i) => {
+            const start = addDays(firstStart, i * 7);
+            const end = addDays(start, 6);
+            return { key: toDayKey(start), start, end, count: 0, mg: 0, ester: null as Ester | null };
+        });
+        const t0 = firstStart.getTime();
+        const tEnd = addDays(today, 1).getTime();
+        let any = false;
+        for (const e of injections) {
+            const at = e.timeH * 3600000;
+            if (!(at >= t0 && at < tEnd)) continue;
+            const day = startOfDay(new Date(at));
+            const idx = Math.floor(Math.round((day.getTime() - t0) / 86400000) / 7);
+            const w = weeks[Math.max(0, Math.min(WEEKS_STRIP - 1, idx))];
+            w.count += 1;
+            w.mg += e.doseMG;
+            w.ester = w.ester ?? e.ester;
+            any = true;
+        }
+        const ester = weeks.find(w => w.ester)?.ester ?? Ester.EV;
+        const logged = weeks.filter(w => w.count > 0).length;
+        return { any, weeks, ester, logged };
+    }, [events, today]);
 
-    // Doses per calendar day. A patch removal is the end of a dose, not one of
-    // its own, so it doesn't light a square.
-    const byDay = useMemo(() => {
-        const m = new Map<string, DayTotals>();
+    // --- Daily medicines: a four-week grid per compound ----------------------
+    const grids = useMemo(() => {
+        const mondayOffset = (today.getDay() + 6) % 7;
+        const first = addDays(today, -mondayOffset - (WEEKS_GRID - 1) * 7);
+        const byEster = new Map<Ester, { days: Map<string, DayLog>; firstEver: number }>();
         for (const e of events) {
-            if (e.route === Route.patchRemove) continue;
+            if (!DAILY_ROUTES.has(e.route)) continue;
             const at = new Date(e.timeH * 3600000);
             if (Number.isNaN(at.getTime())) continue;
+            let rec = byEster.get(e.ester);
+            if (!rec) { rec = { days: new Map(), firstEver: Infinity }; byEster.set(e.ester, rec); }
+            rec.firstEver = Math.min(rec.firstEver, startOfDay(at).getTime());
+            if (at < first || at >= addDays(today, 1)) continue;
             const key = toDayKey(at);
-            let rec = m.get(key);
-            if (!rec) { rec = { count: 0, mg: new Map() }; m.set(key, rec); }
-            rec.count += 1;
-            if (e.doseMG > 0) rec.mg.set(e.ester, (rec.mg.get(e.ester) ?? 0) + e.doseMG);
+            const d = rec.days.get(key) ?? { count: 0, mg: 0 };
+            d.count += 1;
+            d.mg += e.doseMG;
+            rec.days.set(key, d);
         }
-        return m;
-    }, [events]);
 
-    // Columns of days, oldest week first, ending on the week that holds today.
-    // Weeks run Monday-first: six of the app's seven locales write them that
-    // way, and the choice is invisible except in the labels down the left.
-    const columns = useMemo<Cell[][]>(() => {
-        if (weeks <= 0) return [];
-        const mondayOffset = (today.getDay() + 6) % 7;
-        const first = addDays(today, -mondayOffset - (weeks - 1) * 7);
-        const out: Cell[][] = [];
-        for (let col = 0; col < weeks; col++) {
-            const days: Cell[] = [];
-            for (let row = 0; row < 7; row++) {
-                const date = addDays(first, col * 7 + row);
-                if (date.getTime() > today.getTime()) continue;  // the rest of this week hasn't happened
-                const key = toDayKey(date);
-                const rec = byDay.get(key);
-                days.push({ col, row, date, key, count: rec?.count ?? 0, mg: rec?.mg ?? null });
-            }
-            out.push(days);
+        const out: {
+            ester: Ester;
+            rows: { label: string; cells: { key: string; date: Date; state: CellState; log: DayLog | null }[] }[];
+            logged: number;
+            elapsed: number;
+            missed: Date[];
+        }[] = [];
+
+        for (const [ester, rec] of byEster) {
+            if (rec.days.size === 0) continue;   // nothing in the last four weeks
+            let logged = 0;
+            let elapsed = 0;
+            const missed: Date[] = [];
+            const rows = Array.from({ length: WEEKS_GRID }, (_, r) => {
+                const rowStart = addDays(first, r * 7);
+                const cells = Array.from({ length: 7 }, (_, c) => {
+                    const date = addDays(rowStart, c);
+                    const key = toDayKey(date);
+                    const log = rec.days.get(key) ?? null;
+                    const isToday = date.getTime() === today.getTime();
+                    let state: CellState;
+                    if (log) state = 'taken';
+                    else if (date > today || isToday) state = 'future';
+                    else if (date.getTime() < rec.firstEver) state = 'empty';
+                    else state = 'missed';
+                    if (state === 'taken') { logged++; elapsed++; }
+                    if (state === 'missed') { elapsed++; missed.push(date); }
+                    return { key, date, state, log };
+                });
+                return { label: fmtShort.format(rowStart), cells };
+            });
+            out.push({ ester, rows, logged, elapsed, missed });
         }
-        return out;
-    }, [weeks, today, byDay]);
+        // Estradiol first, then the rest in a stable order.
+        return out.sort((a, b) => (a.ester === Ester.CPA ? 1 : 0) - (b.ester === Ester.CPA ? 1 : 0) || a.ester.localeCompare(b.ester));
+    }, [events, today, fmtShort]);
 
-    const byKey = useMemo(() => {
-        const m = new Map<string, Cell>();
-        for (const column of columns) for (const d of column) m.set(d.key, d);
-        return m;
-    }, [columns]);
-    const hover = hoverKey ? byKey.get(hoverKey) ?? null : null;
-
-    const { total, days, busiest } = useMemo(() => {
-        let total = 0, days = 0, busiest = 0;
-        for (const column of columns) for (const d of column) {
-            total += d.count;
-            days += 1;
-            if (d.count > busiest) busiest = d.count;
-        }
-        return { total, days, busiest };
-    }, [columns]);
-
-    // Four steps spread over the busiest day, with a floor of four so a routine
-    // of one-to-four doses maps straight onto the four shades. Without the floor
-    // a once-a-day regimen would paint every square the darkest shade.
-    const ceiling = Math.max(4, busiest);
-    const levelOf = (count: number) => (count <= 0 ? 0 : Math.min(4, Math.ceil((count / ceiling) * 4)));
-
-    // A month label sits on the first column whose week ends in that month, and
-    // only if there is room since the last one — the grid is far narrower than
-    // GitHub's and unspaced labels would run together.
-    const monthLabels = useMemo(() => {
-        const fmt = new Intl.DateTimeFormat(locale, { month: 'short' });
-        const out: { col: number; label: string }[] = [];
-        let last = -99;
-        let prevMonth = -1;
-        for (let col = 0; col < columns.length; col++) {
-            const monday = columns[col][0]?.date;
-            if (!monday) continue;
-            const endOfWeek = addDays(monday, 6);
-            const month = endOfWeek.getMonth();
-            if (month !== prevMonth) {
-                prevMonth = month;
-                if (col > 0 && col - last >= 3 && col <= columns.length - 2) {
-                    out.push({ col, label: fmt.format(endOfWeek) });
-                    last = col;
-                }
-            }
-        }
-        return out;
-    }, [columns, locale]);
-
-    // 2024-01-01 was a Monday, so day n of that week is row n.
-    const weekdayLabels = useMemo(() => {
-        const fmt = new Intl.DateTimeFormat(locale, { weekday: 'narrow' });
-        return [0, 2, 4].map(row => ({ row, label: fmt.format(new Date(2024, 0, 1 + row)) }));
-    }, [locale]);
-
-    const dayLabel = useMemo(() => createDayLabelFormatter(lang), [lang]);
-    const doseLabel = (n: number) =>
-        n === 1 ? t('heatmap.dose_one') : t('heatmap.doses').replace('{n}', String(n));
-    // The grid shows no heading or tally of its own; this is the whole of what a
-    // screen reader gets before the per-day detail in the tooltip.
-    const summary = (total === 1 ? t('heatmap.summary_one') : t('heatmap.summary').replace('{n}', String(total)))
-        .replace('{d}', String(days));
-
-    // A finger has no "leave", so a tapped tooltip is dismissed by the next press
-    // anywhere outside the grid. Capture phase, so a press on the grid itself is
-    // seen here first and left alone for the tap handler to re-target.
-    useEffect(() => {
-        if (!hoverKey || !wrapEl) return;
-        const dismiss = (e: PointerEvent) => {
-            if (!wrapEl.contains(e.target as Node)) setHoverKey(null);
-        };
-        window.addEventListener('pointerdown', dismiss, true);
-        return () => window.removeEventListener('pointerdown', dismiss, true);
-    }, [hoverKey, wrapEl]);
-
-    const todayKey = toDayKey(today);
-    const step = cell + gap;
-    const svgW = weeks > 0 ? gutter + weeks * cell + (weeks - 1) * gap : 0;
-    const svgH = header + 7 * cell + 6 * gap;
-    const x = (col: number) => gutter + col * step;
-    const y = (row: number) => header + row * step;
-
-    // Hit-test from the pointer rather than hanging a handler off each of up to
-    // 371 squares. The gap between squares reads as empty space, not as the
-    // nearest neighbour, so a pointer between two cells clears the tooltip.
-    const cellAt = (clientX: number, clientY: number, target: Element): Cell | null => {
-        if (step <= 0) return null;
-        const rect = target.getBoundingClientRect();
-        const px = clientX - rect.left - gutter;
-        const py = clientY - rect.top - header;
-        const col = Math.floor(px / step);
-        const row = Math.floor(py / step);
-        if (col < 0 || col >= columns.length || row < 0 || row > 6) return null;
-        if (px - col * step > cell || py - row * step > cell) return null;
-        return columns[col].find(d => d.row === row) ?? null;
-    };
-
-    const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-        if (e.pointerType !== 'mouse') return;   // touch commits on tap, below
-        setHoverKey(cellAt(e.clientX, e.clientY, e.currentTarget)?.key ?? null);
-    };
-    const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
-        setHoverKey(cellAt(e.clientX, e.clientY, e.currentTarget)?.key ?? null);
-    };
-    // Only a mouse leaving means "done looking". A finger lifting fires this
-    // too, and clearing on it would make the tooltip flash and vanish — so a
-    // tapped tooltip is dismissed by the next press outside instead.
-    const onPointerLeave = (e: React.PointerEvent<SVGSVGElement>) => {
-        if (e.pointerType === 'mouse') setHoverKey(null);
-    };
-
-    const hoverMg = hover?.mg ? [...hover.mg.entries()].filter(([, mg]) => mg > 0) : [];
-
-    // The tooltip is as tall as the day is busy — two lines plus one per
-    // compound — so where it fits can't be decided from the row index. Measured
-    // in a layout effect, before paint, so the corrected placement is the first
-    // one drawn. Without this a four-line tooltip on rows 2-4 reached back over
-    // the header above the grid.
-    const [tipEl, setTipEl] = useState<HTMLDivElement | null>(null);
-    const [tip, setTip] = useState({ w: 0, h: 0 });
-    useLayoutEffect(() => {
-        if (!tipEl) return;
-        const r = tipEl.getBoundingClientRect();
-        setTip(prev => (Math.abs(prev.w - r.width) < 0.5 && Math.abs(prev.h - r.height) < 0.5 ? prev : { w: r.width, h: r.height }));
-    });
-
-    // Above the cell when it fits there, below otherwise — and below on the very
-    // first hover, before anything has been measured, that being the direction
-    // with the whole empty column beneath the grid to spill into.
-    const tipBelow = hover != null && (tip.h === 0 || y(hover.row) - 6 - tip.h < 0);
-    const tipTop = hover == null ? 0 : tipBelow ? y(hover.row) + cell + 6 : y(hover.row) - 6 - tip.h;
-    // Right-aligned to the cell once a left-aligned tooltip would run past the
-    // grid, then clamped so neither edge can leave it.
-    const tipLeft = hover == null ? 0 : clamp(
-        x(hover.col) + tip.w > svgW ? x(hover.col) + cell - tip.w : x(hover.col),
-        0,
-        Math.max(0, svgW - tip.w),
+    const weekdayHeaders = useMemo(
+        () => Array.from({ length: 7 }, (_, i) => fmtWeekday.format(new Date(2024, 0, 1 + i))), // 2024-01-01 was a Monday
+        [fmtWeekday],
     );
 
+    // A tap outside the grids clears the readout.
+    useEffect(() => {
+        if (!picked) return;
+        const clear = (e: PointerEvent) => {
+            if (!(e.target as Element | null)?.closest?.('[data-rhythm-cell]')) setPicked(null);
+        };
+        window.addEventListener('pointerdown', clear, true);
+        return () => window.removeEventListener('pointerdown', clear, true);
+    }, [picked]);
+
+    if (!strip.any && grids.length === 0) {
+        return (
+            <div className={className}>
+                <p className="m-0 text-sm text-[var(--c-muted)]">{t('timeline.rhythm.empty')}</p>
+            </div>
+        );
+    }
+
+    const heading = 'm-0 text-base font-semibold text-[var(--c-ink)]';
+    const sentence = 'm-0 text-sm text-[var(--c-ink)]';
+    const readout = 'm-0 text-sm tabular-nums text-[var(--c-muted)]';
+    // Each medicine is one block of the card, split by a hairline.
+    const block = 'flex flex-col gap-3 border-t border-[var(--c-hairline)] px-4 py-4 first:border-t-0';
+
+    // Readout for the injection strip.
+    const pickedWeek = picked?.group === 'inj' ? strip.weeks.find(w => w.key === picked.key) : null;
+    const weekText = (w: typeof strip.weeks[number]) =>
+        `${fmtShort.format(w.start)} – ${fmtShort.format(w.end)}: ${doseLabel(w.count)}${w.mg > 0 ? `, ${mgLabel(w.mg)}` : ''}`;
+
+    const injSummary = t('timeline.rhythm.weeks_logged')
+        .replace('{k}', String(strip.logged))
+        .replace('{n}', String(WEEKS_STRIP));
+
     return (
-        <div className={`w-full ${className}`}>
-            <div ref={setWrapEl} className="relative select-none touch-pan-y">
-                {weeks > 0 && (
-                    <svg
-                        width={svgW}
-                        height={svgH}
-                        /* max-w-full so a stale measurement can never widen the
-                           page; the grid crops rather than pushing a scrollbar. */
-                        className="block max-w-full"
-                        role="img"
-                        aria-label={`${t('heatmap.title')} — ${summary}`}
-                        style={{ touchAction: 'pan-y' }}
-                        onPointerMove={onPointerMove}
-                        onPointerDown={onPointerDown}
-                        onPointerLeave={onPointerLeave}
-                        onPointerCancel={() => setHoverKey(null)}
-                    >
-                        {monthLabels.map(m => (
-                            <text
-                                key={`mo-${m.col}`}
-                                className="chart-appear"
-                                x={x(m.col)} y={header - 5 * ui}
-                                fontSize={9 * ui} fill={c.axis}
-                            >
-                                {m.label}
-                            </text>
-                        ))}
-
-                        {weekdayLabels.map(w => (
-                            <text
-                                key={`wd-${w.row}`}
-                                className="chart-appear"
-                                x={gutter - 6 * ui} y={y(w.row) + cell / 2 + 3 * ui}
-                                textAnchor="end" fontSize={9 * ui} fill={c.axis}
-                            >
-                                {w.label}
-                            </text>
-                        ))}
-
-                        {/* A column at a time, so the grid fills in left to right
-                            the way the curve beside it draws itself on. */}
-                        {columns.map((column, col) => (
-                            <g
-                                key={`col-${col}`}
-                                className="chart-appear"
-                                style={{ animationDelay: `${Math.round((col / Math.max(1, weeks)) * 420)}ms` }}
-                            >
-                                {column.map(d => {
-                                    const level = levelOf(d.count);
-                                    const isToday = d.key === todayKey;
-                                    const isHover = d.key === hoverKey;
+        <div className={`flex flex-col gap-2 ${className}`}>
+            <div className="overflow-hidden rounded-[14px] border border-[var(--c-hairline)] bg-[var(--c-surface)]">
+                {strip.any && (
+                    <div className={block}>
+                        <p className={heading}>{t('timeline.rhythm.injections').replace('{n}', String(WEEKS_STRIP))}</p>
+                        <div className="flex w-full max-w-[342px] flex-col gap-1">
+                            <div role="group" aria-label={injSummary} className="grid grid-cols-[repeat(13,minmax(0,1fr))] gap-[6px]">
+                                {strip.weeks.map(w => {
+                                    const isFuture = w.start > today;
+                                    // A week with no shot reads "not logged", as the key says; it is not
+                                    // called missed, since a shot every two weeks leaves such weeks.
+                                    const state: CellState = w.count > 0 ? 'taken' : isFuture ? 'future' : 'missed';
+                                    const on = picked?.group === 'inj' && picked.key === w.key;
                                     return (
-                                        <rect
-                                            key={d.key}
-                                            x={x(col)} y={y(d.row)}
-                                            width={cell} height={cell}
-                                            rx={Math.max(2, cell * 0.22)}
-                                            fill={level === 0 ? c.empty : c.levels[level - 1]}
-                                            stroke={isHover || isToday ? c.ring : 'none'}
-                                            strokeWidth={1}
-                                            /* Empty days sit back a little. Fixed, not
-                                               keyed off hover — an outline is the hover
-                                               affordance; the fill shifting under the
-                                               pointer as well just reads as a flicker. */
-                                            opacity={level > 0 ? 1 : 0.85}
+                                        <button
+                                            key={w.key}
+                                            type="button"
+                                            data-rhythm-cell
+                                            aria-label={weekText(w)}
+                                            aria-pressed={on}
+                                            onClick={() => setPicked(on ? null : { group: 'inj', key: w.key })}
+                                            className="block aspect-square w-full max-w-5 rounded-[4px] p-0"
+                                            style={{
+                                                ...cellStyle(state, toneOf(strip.ester)),
+                                                outline: on ? '2px solid var(--c-ink)' : undefined,
+                                                outlineOffset: on ? 1 : undefined,
+                                            }}
                                         />
                                     );
                                 })}
-                            </g>
-                        ))}
-                    </svg>
-                )}
-
-                {hover && (
-                    <div
-                        ref={setTipEl}
-                        className="absolute z-20 pointer-events-none px-2.5 py-1.5 rounded-md bg-[var(--color-m3-surface-bright)] dark:bg-[var(--color-m3-dark-surface-container)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]"
-                        style={{ left: tipLeft, top: tipTop }}
-                    >
-                        <div className="text-[0.625rem] whitespace-nowrap text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                            {dayLabel(hover.date)}
-                        </div>
-                        <div className="text-xs font-medium whitespace-nowrap text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                            {hover.count > 0 ? doseLabel(hover.count) : t('heatmap.none')}
-                        </div>
-                        {hoverMg.map(([ester, mg]) => (
-                            <div key={ester} className="text-[0.625rem] whitespace-nowrap tabular-nums text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                                {ester} · {mg.toFixed(2)} mg
                             </div>
-                        ))}
+                            <div aria-hidden="true" className="flex justify-between gap-3 text-xs font-medium text-[var(--c-muted)]">
+                                <span>{fmtShort.format(strip.weeks[0].start)}</span>
+                                <span>{fmtShort.format(today)}</span>
+                            </div>
+                        </div>
+                        <p className={sentence}>{injSummary}</p>
+                        {pickedWeek && <p className={readout} role="status">{weekText(pickedWeek)}</p>}
                     </div>
                 )}
+
+                {grids.map(g => {
+                    const name = t(`timeline.name.${g.ester}`);
+                    const tone = toneOf(g.ester);
+                    const summary = t('timeline.rhythm.days_logged')
+                        .replace('{k}', String(g.logged))
+                        .replace('{n}', String(g.elapsed));
+                    const recentMissed = g.missed.slice(-3).map(d => fmtDay.format(d));
+                    const pickedCell = picked?.group === g.ester
+                        ? g.rows.flatMap(r => r.cells).find(c => c.key === picked.key) ?? null
+                        : null;
+                    const cellText = (c: { date: Date; log: DayLog | null }) =>
+                        `${fmtDay.format(c.date)}: ${c.log ? `${doseLabel(c.log.count)}, ${mgLabel(c.log.mg)}` : t('heatmap.none')}`;
+                    return (
+                        <div key={g.ester} className={block}>
+                            <p className={heading}>
+                                {t('timeline.rhythm.daily').replace('{name}', name).replace('{n}', String(WEEKS_GRID))}
+                            </p>
+                            <div
+                                role="group"
+                                aria-label={`${name}. ${summary}`}
+                                className="grid w-full max-w-[342px] grid-cols-[48px_repeat(7,minmax(0,1fr))] items-center gap-[6px]"
+                            >
+                                <span aria-hidden="true" />
+                                {weekdayHeaders.map(w => (
+                                    <span key={w} aria-hidden="true" className="truncate text-center text-xs font-medium text-[var(--c-muted)]">{w}</span>
+                                ))}
+                                {g.rows.map(row => (
+                                    <div key={row.label} className="contents">
+                                        <span aria-hidden="true" className="whitespace-nowrap text-xs font-medium text-[var(--c-muted)]">{row.label}</span>
+                                        {row.cells.map(c => {
+                                            const on = picked?.group === g.ester && picked.key === c.key;
+                                            const isTonight = c.state === 'future' && c.date.getTime() === today.getTime();
+                                            const style = isTonight
+                                                ? { border: `1.5px dashed ${tone}`, background: 'transparent' }
+                                                : cellStyle(c.state, tone);
+                                            return (
+                                                <button
+                                                    key={c.key}
+                                                    type="button"
+                                                    data-rhythm-cell
+                                                    aria-label={cellText(c)}
+                                                    aria-pressed={on}
+                                                    onClick={() => setPicked(on ? null : { group: g.ester, key: c.key })}
+                                                    className="block h-6 w-full rounded-[4px] p-0"
+                                                    style={{
+                                                        ...style,
+                                                        outline: on ? '2px solid var(--c-ink)' : undefined,
+                                                        outlineOffset: on ? 1 : undefined,
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                            <p className={sentence}>
+                                {summary}
+                                {recentMissed.length > 0 && (
+                                    <> {t('timeline.rhythm.missed').replace('{days}', joinDays(lang, recentMissed))}</>
+                                )}
+                            </p>
+                            {pickedCell && <p className={readout} role="status">{cellText(pickedCell)}</p>}
+                        </div>
+                    );
+                })}
+
+                {/* Key: the three kinds of square, drawn, then their words. */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--c-hairline)] px-4 py-3 text-sm text-[var(--c-muted)]">
+                    {(['taken', 'missed', 'future'] as const).map(state => (
+                        <span key={state} className="inline-flex items-center gap-2">
+                            <span
+                                aria-hidden="true"
+                                className="inline-block h-3.5 w-3.5 rounded-[4px]"
+                                style={cellStyle(state, 'var(--c-accent)')}
+                            />
+                            {t(`timeline.rhythm.key.${state}`)}
+                        </span>
+                    ))}
+                </div>
             </div>
+            <p className="list-group-footer !pt-0">{t('timeline.rhythm.tap_hint')}</p>
         </div>
     );
 };

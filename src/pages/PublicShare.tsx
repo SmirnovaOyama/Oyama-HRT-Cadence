@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Clock3, Eye, EyeOff, Loader2, LockKeyhole } from 'lucide-react';
+import { Attention, Clock, Info, Lock, Sync } from '../components/icons';
+import { Button, ListGroup, ListRow } from '../components/ui';
+import { BusySpinner, Card, ErrorNote, Field, Loading, Note, Panel, PasswordInput } from './account/shared';
 import { DoseEvent, Ester, ExtraKey, getToE2Factor, isTestosteroneEster, Route } from '../../logic';
 import ResultChart from '../components/ResultChart';
 import { useTranslation } from '../contexts/LanguageContext';
 import { getShareCopy } from '../i18n/share';
+import { listComma } from '../i18n/listSeparator';
 import { LOCALE_MAP } from '../utils/helpers';
 import { LockedShare, ShareApiError, ShareDetails, sharingService } from '../services/sharing';
 
@@ -26,7 +29,6 @@ const PublicShare: React.FC<PublicShareProps> = ({ token }) => {
     const copy = getShareCopy(lang);
     const [state, setState] = useState<ShareState>({ kind: 'loading' });
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
     const [unlocking, setUnlocking] = useState(false);
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const unlockedPasswordRef = useRef('');
@@ -39,7 +41,7 @@ const PublicShare: React.FC<PublicShareProps> = ({ token }) => {
     };
 
     useEffect(() => {
-        document.title = `${copy.publicTitle} · HRT Tracker`;
+        document.title = `${copy.publicTitle} – HRT Tracker`;
         let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
         const created = !robots;
         if (!robots) {
@@ -157,10 +159,9 @@ const PublicShare: React.FC<PublicShareProps> = ({ token }) => {
     if (state.kind === 'loading') {
         return (
             <PublicShell>
-                <div className="flex min-h-[65vh] flex-col items-center justify-center px-6 text-center" aria-live="polite">
-                    <Loader2 size={24} strokeWidth={1.5} className="mb-4 animate-spin text-[var(--color-m3-primary)]" aria-hidden="true" />
-                    <p className="text-sm text-muted">{copy.loading}</p>
-                </div>
+                <main className="flex min-h-[65vh] items-center justify-center">
+                    <Loading label={copy.loading} />
+                </main>
             </PublicShell>
         );
     }
@@ -168,27 +169,22 @@ const PublicShare: React.FC<PublicShareProps> = ({ token }) => {
     if (state.kind === 'locked') {
         return (
             <PublicShell>
-                <main className="mx-auto flex min-h-[70vh] max-w-md items-center px-6 py-16">
-                    <div className="w-full rounded-xl border border-[var(--color-m3-outline-variant)] bg-[var(--color-m3-surface-bright)] p-6 shadow-[var(--shadow-m3-1)]">
-                        <div className="mb-5 flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-m3-primary-container)] text-[var(--color-m3-on-primary-container)]">
-                            <LockKeyhole size={18} strokeWidth={1.75} />
+                <main className="mx-auto flex min-h-[70vh] max-w-md items-center px-4 py-16">
+                    <Card className="w-full">
+                        <Lock size={28} className="text-[var(--c-muted)]" aria-hidden="true" />
+                        <div className="flex flex-col gap-2">
+                            <h1 className="m-0 text-xl font-semibold text-[var(--c-ink)]">{copy.unlockTitle}</h1>
+                            <p className="m-0 text-base text-[var(--c-muted)]">{copy.unlockDescription}</p>
                         </div>
-                        <h1 className="text-xl font-semibold text-body">{copy.unlockTitle}</h1>
-                        <p className="mt-2 text-sm leading-relaxed text-muted">{copy.unlockDescription}</p>
-                        <form onSubmit={handleUnlock} className="mt-6">
-                            <label htmlFor="shared-record-password" className="mb-1.5 block text-xs font-medium text-muted">
-                                {copy.passwordLabel}
-                            </label>
-                            <div className="relative">
-                                <input
+                        <form onSubmit={handleUnlock} className="flex flex-col gap-4">
+                            <Field label={copy.passwordLabel} htmlFor="shared-record-password">
+                                <PasswordInput
                                     id="shared-record-password"
-                                    type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(event) => {
                                         setPassword(event.target.value);
                                         setPasswordError(null);
                                     }}
-                                    className="input-base pr-11"
                                     autoComplete="current-password"
                                     minLength={8}
                                     maxLength={128}
@@ -197,23 +193,14 @@ const PublicShare: React.FC<PublicShareProps> = ({ token }) => {
                                     aria-invalid={!!passwordError}
                                     aria-describedby={passwordError ? 'share-password-error' : undefined}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(value => !value)}
-                                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted hover:text-body"
-                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                >
-                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                            </div>
-                            {passwordError && (
-                                <p id="share-password-error" className="mt-2 text-sm text-red-600" role="alert">{passwordError}</p>
-                            )}
-                            <button type="submit" className="btn-primary mt-4 w-full" disabled={unlocking || password.length < 8}>
+                            </Field>
+                            <ErrorNote id="share-password-error">{passwordError}</ErrorNote>
+                            <Button type="submit" variant="primary" block disabled={unlocking || password.length < 8}>
+                                {unlocking && <BusySpinner />}
                                 {unlocking ? copy.unlocking : copy.unlock}
-                            </button>
+                            </Button>
                         </form>
-                    </div>
+                    </Card>
                 </main>
             </PublicShell>
         );
@@ -223,16 +210,14 @@ const PublicShare: React.FC<PublicShareProps> = ({ token }) => {
         const expired = state.kind === 'expired';
         return (
             <PublicShell>
-                <main className="mx-auto flex min-h-[70vh] max-w-md items-center px-6 py-16 text-center">
-                    <div className="w-full">
-                        <AlertCircle size={28} strokeWidth={1.5} className="mx-auto mb-4 text-muted" />
-                        <h1 className="text-xl font-semibold text-body">
-                            {expired ? copy.expiredTitle : copy.unavailableTitle}
-                        </h1>
-                        <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
-                            {expired ? copy.expiredDescription : copy.unavailableDescription}
-                        </p>
-                    </div>
+                <main className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center gap-3 px-4 py-16 text-center">
+                    <Attention size={28} className="text-[var(--c-attention)]" />
+                    <h1 className="m-0 text-xl font-semibold text-[var(--c-ink)]">
+                        {expired ? copy.expiredTitle : copy.unavailableTitle}
+                    </h1>
+                    <p className="m-0 max-w-sm text-base text-[var(--c-muted)]">
+                        {expired ? copy.expiredDescription : copy.unavailableDescription}
+                    </p>
                 </main>
             </PublicShell>
         );
@@ -242,7 +227,7 @@ const PublicShare: React.FC<PublicShareProps> = ({ token }) => {
 };
 
 const PublicShell = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-[100dvh] bg-[var(--color-m3-surface)] text-[var(--color-m3-on-surface)] selection:bg-[var(--color-m3-primary-container)]">
+    <div className="min-h-[100dvh] bg-[var(--c-paper)] text-[var(--c-ink)]">
         {children}
     </div>
 );
@@ -286,127 +271,124 @@ const SharedRecord = ({ details }: { details: ShareDetails }) => {
 
     return (
         <PublicShell>
-            <main className="mx-auto max-w-5xl px-6 pb-20 pt-10 md:px-8 md:pt-14">
-                <section className="border-b border-[var(--color-m3-outline-variant)] pb-8">
-                    <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-                        <div>
-                            <h1 className="text-3xl font-medium tracking-tight text-body md:text-4xl">{copy.publicTitle}</h1>
-                            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">{copy.disclaimer}</p>
-                        </div>
-                        {details.passwordRequired && (
-                            <div className="flex shrink-0 flex-wrap gap-2 text-xs text-muted">
-                                <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-m3-outline-variant)] px-2.5 py-1.5">
-                                    <LockKeyhole size={12} /> {copy.protected}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                    <dl className="mt-6 flex flex-wrap gap-x-7 gap-y-2 text-xs text-muted">
-                        <div className="flex items-center gap-1.5">
-                            <Clock3 size={13} />
-                            <dt>{copy.sharedOn}</dt>
-                            <dd className="text-body">{formatDateTime(details.createdAt)}</dd>
-                        </div>
+            {/* A content page: one column on phones, and from xl the chart with
+                its note on the left and the history on the right, instead of
+                one long column with empty ground beside it. */}
+            <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 pb-20 pt-6 md:px-8 md:pt-12">
+                <header className="flex flex-col gap-1">
+                    <p className="m-0 text-sm text-[var(--c-muted)]">{copy.publicEyebrow}</p>
+                    <h1 className="m-0 text-3xl font-bold text-[var(--c-ink)]">{copy.publicTitle}</h1>
+                    {/* One muted line of state: when, and whether it is live or locked. */}
+                    <p className="m-0 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--c-muted)]">
+                        <span className="inline-flex items-center gap-1.5">
+                            <Clock size={18} className="flex-none" />
+                            <span>{copy.sharedOn} {formatDateTime(details.createdAt)}</span>
+                        </span>
                         {details.live && (
-                            <div className="flex items-center gap-1.5 text-[var(--color-m3-primary)]">
-                                <dt>{copy.liveBadge}</dt>
-                                <dd>{copy.updatedOn} {formatDateTime(details.updatedAt)}</dd>
+                            <span className="inline-flex items-center gap-1.5">
+                                <Sync size={18} className="flex-none text-[var(--c-accent)]" />
+                                <span>{copy.liveBadge}, {copy.updatedOn} {formatDateTime(details.updatedAt)}</span>
+                            </span>
+                        )}
+                        {details.passwordRequired && (
+                            <span className="inline-flex items-center gap-1.5">
+                                <Lock size={18} className="flex-none" />
+                                <span>{copy.protected}</span>
+                            </span>
+                        )}
+                    </p>
+                </header>
+
+                <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] xl:items-start xl:gap-10">
+                    <section aria-labelledby="shared-chart-title" className="min-w-0">
+                        <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+                            <h2 id="shared-chart-title" className="m-0 text-xl font-semibold text-[var(--c-ink)]">{copy.chartTitle}</h2>
+                            <span className="text-sm text-[var(--c-muted)]">{timeZone}</span>
+                        </div>
+                        <ResultChart
+                            sim={snapshot.simulation}
+                            events={snapshot.events}
+                            mode={snapshot.mode}
+                            timeZone={timeZone}
+                            title={t('chart.title')}
+                        />
+                        <p className="m-0 mt-3 flex items-start gap-2 px-1 text-sm text-[var(--c-muted)]">
+                            <Info size={20} className="mt-px flex-none" />
+                            <span>{copy.disclaimer}</span>
+                        </p>
+                    </section>
+
+                    <section aria-labelledby="shared-history-title" className="min-w-0">
+                        <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+                            <h2 id="shared-history-title" className="m-0 text-xl font-semibold text-[var(--c-ink)]">{copy.historyTitle}</h2>
+                            <span className="text-sm tabular-nums text-[var(--c-muted)]">{snapshot.events.length}{'\u00A0'}{copy.records}</span>
+                        </div>
+
+                        {groups.length === 0 ? (
+                            <Panel><Note>{t('timeline.empty')}</Note></Panel>
+                        ) : (
+                            <div className="flex flex-col gap-6">
+                                {groups.map(group => (
+                                    <ListGroup key={group.label} header={group.label}>
+                                        {group.events.map(event => (
+                                            <DoseHistoryRow
+                                                key={event.id}
+                                                event={event}
+                                                time={timeFormatter.format(new Date(event.timeH * 3_600_000))}
+                                            />
+                                        ))}
+                                    </ListGroup>
+                                ))}
                             </div>
                         )}
-                    </dl>
-                </section>
-
-                <section className="pb-5 pt-8" aria-labelledby="shared-chart-title">
-                    <div className="mb-4 flex items-center justify-between gap-4">
-                        <h2 id="shared-chart-title" className="text-lg font-semibold text-body">{copy.chartTitle}</h2>
-                        <span className="text-xs text-muted">{timeZone}</span>
-                    </div>
-                    <ResultChart
-                        sim={snapshot.simulation}
-                        events={snapshot.events}
-                        mode={snapshot.mode}
-                        timeZone={timeZone}
-                        title={t('chart.title')}
-                    />
-                </section>
-
-                <section aria-labelledby="shared-history-title">
-                    <div className="mb-6 flex items-end justify-between gap-4">
-                        <h2 id="shared-history-title" className="text-lg font-semibold text-body">{copy.historyTitle}</h2>
-                        <span className="text-xs tabular-nums text-muted">{snapshot.events.length} {copy.records}</span>
-                    </div>
-
-                    {groups.length === 0 ? (
-                        <p className="py-12 text-center text-sm text-muted">{t('timeline.empty')}</p>
-                    ) : (
-                        <div className="grid gap-x-12 lg:grid-cols-2">
-                            {groups.map(group => (
-                                <div key={group.label} className="mb-7 break-inside-avoid">
-                  <h3 className="mb-1 border-b border-[var(--color-m3-outline-variant)] pb-2 text-xs font-semibold text-muted">
-                                        {group.label}
-                                    </h3>
-                                    {group.events.map(event => (
-                                        <DoseHistoryRow
-                                            key={event.id}
-                                            event={event}
-                                            time={timeFormatter.format(new Date(event.timeH * 3_600_000))}
-                                        />
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </section>
-
+                    </section>
+                </div>
             </main>
         </PublicShell>
     );
 };
 
+const NBSP = '\u00A0';
+
+/**
+ * One dose: the ester as the title and one line under it with the time, the
+ * route and the amount. No trailing value as well (format_rules.md 2). The
+ * E2 or T equivalent is extra detail, so it joins the line only where there is
+ * room for it.
+ */
 const DoseHistoryRow = ({ event, time }: { event: DoseEvent; time: string }) => {
-    const { t } = useTranslation();
+    const { lang, t } = useTranslation();
+    const comma = listComma(lang);
     const isRemoval = event.route === Route.patchRemove;
     const releaseRate = event.extras[ExtraKey.releaseRateUGPerDay];
     const wearHours = event.extras[ExtraKey.patchWearH];
 
+    const parts: string[] = [time, t(`route.${event.route}`)];
+    if (releaseRate) parts.push(`${releaseRate}${NBSP}µg/d`);
+    else if (!isRemoval) parts.push(`${event.doseMG.toFixed(2)}${NBSP}mg`);
+    if (event.route === Route.patchApply && typeof wearHours === 'number' && wearHours > 0) {
+        parts.push(`${formatWearDays(wearHours / 24)}${NBSP}${t('unit.day_short')}`);
+    }
+
+    let equivalent: string | null = null;
+    if (!releaseRate && !isRemoval) {
+        if (event.ester !== Ester.E2 && event.ester !== Ester.CPA && !isTestosteroneEster(event.ester)) {
+            equivalent = `${t('label.e2')} eq: ${(event.doseMG * getToE2Factor(event.ester)).toFixed(2)}${NBSP}mg`;
+        } else if (isTestosteroneEster(event.ester) && event.ester !== Ester.T) {
+            equivalent = `${t('label.t')} eq: ${(event.doseMG * getToE2Factor(event.ester)).toFixed(2)}${NBSP}mg`;
+        }
+    }
+
     return (
-        <div className="flex items-start gap-3 border-b border-[var(--color-m3-outline-variant)] py-3.5 last:border-b-0">
-            <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-m3-primary)]" aria-hidden="true" />
-            <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                    <p className="truncate text-sm font-medium text-body">
-                        {isRemoval ? t('route.patchRemove') : t(`ester.${event.ester}`)}
-                    </p>
-                    <time className="shrink-0 text-xs tabular-nums text-muted">{time}</time>
-                </div>
-                <div className="mt-1 flex flex-wrap items-baseline gap-x-2 text-xs text-muted">
-                    <span>{t(`route.${event.route}`)}</span>
-                    {releaseRate ? (
-                        <>
-                            <span aria-hidden="true">·</span>
-                            <span className="font-medium text-body">{releaseRate} µg/d</span>
-                        </>
-                    ) : !isRemoval && (
-                        <>
-                            <span aria-hidden="true">·</span>
-                            <span className="font-medium text-body">{event.doseMG.toFixed(2)} mg</span>
-                            {event.ester !== Ester.E2 && event.ester !== Ester.CPA && !isTestosteroneEster(event.ester) && (
-                                <span>({t('label.e2')} eq: {(event.doseMG * getToE2Factor(event.ester)).toFixed(2)} mg)</span>
-                            )}
-                            {isTestosteroneEster(event.ester) && event.ester !== Ester.T && (
-                                <span>({t('label.t')} eq: {(event.doseMG * getToE2Factor(event.ester)).toFixed(2)} mg)</span>
-                            )}
-                        </>
-                    )}
-                    {event.route === Route.patchApply && typeof wearHours === 'number' && wearHours > 0 && (
-                        <>
-                            <span aria-hidden="true">·</span>
-                            <span>{formatWearDays(wearHours / 24)} {t('unit.day_short')}</span>
-                        </>
-                    )}
-                </div>
-            </div>
-        </div>
+        <ListRow
+            title={<span className="block truncate">{isRemoval ? t('route.patchRemove') : t(`ester.${event.ester}`)}</span>}
+            sub={
+                <span className="block truncate tabular-nums">
+                    {parts.join(`${comma} `)}
+                    {equivalent && <span className="hidden sm:inline"> ({equivalent})</span>}
+                </span>
+            }
+        />
     );
 };
 

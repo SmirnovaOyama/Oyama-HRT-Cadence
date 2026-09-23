@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useEscape } from '../hooks/useEscape';
+import { Button } from './ui';
+import { BusySpinner, ErrorNote, PasswordInput } from '../pages/account/shared';
 
 interface PasswordInputModalProps {
     isOpen: boolean;
@@ -17,6 +19,9 @@ interface PasswordInputModalProps {
 const PasswordInputModal = ({ isOpen, onClose, onConfirm, title, description, error, loading, masked }: PasswordInputModalProps) => {
     const { t } = useTranslation();
     const [password, setPassword] = useState("");
+    const titleId = useId();
+    const descId = useId();
+    const inputId = useId();
 
     useEscape(onClose, isOpen);
 
@@ -26,42 +31,54 @@ const PasswordInputModal = ({ isOpen, onClose, onConfirm, title, description, er
 
     if (!isOpen) return null;
 
-    const submit = () => { if (password && !loading) onConfirm(password); };
+    const submit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (password && !loading) onConfirm(password);
+    };
+
+    const inputProps = {
+        id: inputId,
+        value: password,
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value),
+        'aria-labelledby': titleId,
+        'aria-describedby': descId,
+        placeholder: t('auth.password'),
+        autoComplete: 'current-password',
+        autoFocus: true,
+    };
 
     return (
-        <div className="modal-overlay z-[60] p-4">
+        <div className="modal-overlay z-[60]">
             <div className="modal-shell">
-                <div className="modal-card">
-                    <h3 className="modal-title text-center">{title ?? t('import.password_title')}</h3>
-                    <p className="text-xs text-muted mb-4 text-center leading-relaxed">{description ?? t('import.password_desc')}</p>
-
-                    <input
-                        type={masked ? 'password' : 'text'}
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') submit(); }}
-                        className="input-base font-mono text-center mb-2"
-                        style={{ fontSize: '16px' }}
-                        placeholder={t('auth.password')}
-                        autoComplete="current-password"
-                        autoFocus
-                    />
-
-                    {error && (
-                        <p className="text-xs text-red-500 dark:text-red-400 mb-2 text-center">{error}</p>
-                    )}
-
-                    <div className="flex gap-2 mt-2">
-                        <button onClick={onClose} className="btn-secondary flex-1">{t('btn.cancel')}</button>
-                        <button
-                            onClick={submit}
-                            disabled={!password || loading}
-                            className="btn-primary flex-1"
-                        >
-                            {t('btn.ok')}
-                        </button>
+                <form
+                    onSubmit={submit}
+                    className="modal-card flex flex-col gap-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby={titleId}
+                    aria-describedby={descId}
+                >
+                    <div className="flex flex-col gap-1">
+                        <h2 id={titleId} className="modal-title m-0">{title ?? t('account.password_prompt.title')}</h2>
+                        <p id={descId} className="m-0 text-sm text-[var(--c-muted)]">{description ?? t('import.password_desc')}</p>
                     </div>
-                </div>
+
+                    {masked
+                        ? <PasswordInput {...inputProps} />
+                        : <input type="text" className="input-base font-mono" autoCapitalize="off" autoCorrect="off" spellCheck={false} {...inputProps} />}
+
+                    <ErrorNote>{error}</ErrorNote>
+
+                    <div className="flex gap-3">
+                        <Button variant="secondary" compact className="flex-1" onClick={onClose}>
+                            {t('btn.cancel')}
+                        </Button>
+                        <Button type="submit" variant="primary" compact className="flex-1" disabled={!password || loading}>
+                            {loading && <BusySpinner />}
+                            {t('btn.ok')}
+                        </Button>
+                    </div>
+                </form>
             </div>
         </div>
     );

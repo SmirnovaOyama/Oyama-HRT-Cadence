@@ -3,54 +3,96 @@
 @variant dark (&:is(.dark *));
 
 @theme {
-    --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, "Noto Sans Hebrew", "Noto Sans Arabic", sans-serif;
-    --font-display: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, "Noto Sans Hebrew", "Noto Sans Arabic", sans-serif;
+    /* Apple system fonts only (design/cadence/spec/fonts_buttons_v2.md). No
+       web fonts: -apple-system picks SF Pro Text or Display by size and
+       applies Apple's own tracking, so nothing here sets letter-spacing. */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 
-    /* Primary — Claude terracotta/orange */
-    --color-m3-primary: #CC785C;
-    --color-m3-primary-light: #D8927C;
-    --color-m3-primary-container: #FCEEE8;
+    /* Type scale, Apple HIG sizes (design/cadence/spec/typescale.md). rem, so
+       the desktop --ui-scale root scaling still enlarges them. The smallest
+       step is 13px: nothing renders below it at the base scale. */
+    --text-xs: 0.8125rem;           /* 13 */
+    --text-xs--line-height: 1.125rem;   /* 18 */
+    --text-sm: 0.9375rem;           /* 15 */
+    --text-sm--line-height: 1.375rem;   /* 22 */
+    --text-base: 1.0625rem;         /* 17 */
+    --text-base--line-height: 1.625rem; /* 26 */
+    --text-lg: 1.25rem;             /* 20 */
+    --text-lg--line-height: 1.625rem;   /* 26 */
+    --text-xl: 1.375rem;            /* 22 */
+    --text-xl--line-height: 1.75rem;    /* 28 */
+    --text-2xl: 1.625rem;           /* 26 */
+    --text-2xl--line-height: 2rem;      /* 32 */
+    --text-3xl: 2rem;               /* 32 */
+    --text-3xl--line-height: 2.375rem;  /* 38 */
+    --text-4xl: 2.5rem;             /* 40 */
+    --text-4xl--line-height: 2.75rem;   /* 44 */
+    --text-5xl: 3rem;               /* 48 */
+    --text-5xl--line-height: 3.25rem;   /* 52 */
+
+    /* The m3 names are kept because the whole app uses them; the values are
+       the Cadence palette (design/cadence/spec/tokens.md). Roles, from how the
+       app uses each one:
+         surface, surface-dim        page background        -> paper
+         surface-bright, -lowest     cards, sheets, inputs  -> surface (white)
+         surface-container-low      quiet hover, panels    -> plate
+         surface-container          hover, tiles, selected -> secondary tint
+         surface-container-high     pressed, tracks        -> plate-strong
+         outline                    control borders, icons -> control
+         outline-variant            dividers, card borders -> hairline
+       primary and primary-light also change with the theme: see .dark below. */
+
+    /* Primary: Cadence accent (terracotta) */
+    --color-m3-primary: #A34A28;
+    /* Hover fill of primary buttons in light. In dark it is the accent text
+       colour, because the app only ever uses it as dark:text-… there. */
+    --color-m3-primary-light: #8F3F20;
+    --color-m3-primary-container: #F6DFD2;
     --color-m3-on-primary: #FFFFFF;
-    --color-m3-on-primary-container: #7A3920;
+    --color-m3-on-primary-container: #6E2A12;
 
     /* Accent */
-    --color-m3-accent: #CC785C;
-    --color-m3-accent-light: #D8927C;
-    --color-m3-accent-container: #FCEEE8;
+    --color-m3-accent: #A34A28;
+    --color-m3-accent-light: #8F3F20;
+    --color-m3-accent-container: #F6DFD2;
     --color-m3-on-accent: #FFFFFF;
-    --color-m3-on-accent-container: #7A3920;
+    --color-m3-on-accent-container: #6E2A12;
 
-    /* Surfaces — white page, warm neutrals for everything raised off it */
-    --color-m3-surface: #FFFFFF;
-    --color-m3-surface-dim: #FFFFFF;
+    /* Surfaces: warm paper page, white for what sits on it */
+    --color-m3-surface: #FBF8F3;
+    --color-m3-surface-dim: #FBF8F3;
     --color-m3-surface-bright: #FFFFFF;
     --color-m3-surface-container-lowest: #FFFFFF;
-    --color-m3-surface-container-low: #F7F6F3;
-    --color-m3-surface-container: #EDECEA;
-    --color-m3-surface-container-high: #E5E4E0;
-    --color-m3-surface-container-highest: #DDDBD7;
-    --color-m3-on-surface: #1A1916;
-    --color-m3-on-surface-variant: #6B6860;
-    --color-m3-outline: #9E9B94;
-    --color-m3-outline-variant: #E3E1DC;
+    --color-m3-surface-container-low: #F3EEE6;
+    --color-m3-surface-container: #EFE8DD;
+    --color-m3-surface-container-high: #E9E2D6;
+    --color-m3-surface-container-highest: #E2DACB;
+    --color-m3-on-surface: #1F1B16;
+    --color-m3-on-surface-variant: #5F574C;
+    --color-m3-outline: #8F8578;
+    --color-m3-outline-variant: #E2DACB;
 
-    /* Dark primary container — warm terracotta on dark */
-    --color-m3-dark-primary-container: #452B1F;
-    --color-m3-dark-on-primary-container: #F2D3C2;
+    /* Dark primary container */
+    --color-m3-dark-primary-container: #4A2616;
+    --color-m3-dark-on-primary-container: #FFD9C7;
 
-    /* Dark surfaces — warm dark */
-    --color-m3-dark-surface: #1C1B18;
-    --color-m3-dark-surface-dim: #141311;
-    --color-m3-dark-surface-bright: #2A2925;
-    --color-m3-dark-surface-container-lowest: #0D0C0A;
-    --color-m3-dark-surface-container-low: #1C1B18;
-    --color-m3-dark-surface-container: #272521;
-    --color-m3-dark-surface-container-high: #3A3835;
-    --color-m3-dark-surface-container-highest: #4D4B47;
-    --color-m3-dark-on-surface: #E8E6E1;
-    --color-m3-dark-on-surface-variant: #A8A59E;
-    --color-m3-dark-outline: #767370;
-    --color-m3-dark-outline-variant: #3A3835;
+    /* Dark surfaces. dark-surface is the page (paper); dark-surface-container-low
+       is what inputs sit on (surface); dark-surface-container is cards, the
+       floating bar, tooltips and hovers (plate). */
+    --color-m3-dark-surface: #16130F;
+    --color-m3-dark-surface-dim: #16130F;
+    --color-m3-dark-surface-bright: #26211B;
+    --color-m3-dark-surface-container-lowest: #16130F;
+    --color-m3-dark-surface-container-low: #1E1A16;
+    --color-m3-dark-surface-container: #26211B;
+    --color-m3-dark-surface-container-high: #332C24;
+    --color-m3-dark-surface-container-highest: #3A332B;
+    --color-m3-dark-on-surface: #F1EBE2;
+    --color-m3-dark-on-surface-variant: #B8AD9E;
+    --color-m3-dark-outline: #857B6E;
+    --color-m3-dark-outline-variant: #3A332B;
 
     /* M3 Shape Scale */
     --radius-xs: 4px;
@@ -60,10 +102,13 @@
     --radius-xl: 28px;
     --radius-full: 9999px;
 
-    /* Elevation — kept minimal */
-    --shadow-m3-1: 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow-m3-2: 0 1px 3px rgba(0, 0, 0, 0.06);
-    --shadow-m3-3: 0 2px 8px rgba(0, 0, 0, 0.08);
+    /* No shadows anywhere (owner's rule). Clearing the namespaces removes
+       Tailwind's shadow-*, inset-shadow-*, drop-shadow-* and text-shadow-*
+       presets, so a stray `shadow` or `shadow-sm` class renders nothing. */
+    --shadow-*: initial;
+    --inset-shadow-*: initial;
+    --drop-shadow-*: initial;
+    --text-shadow-*: initial;
 
     /* Motion — subtle and quick */
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -120,7 +165,9 @@
     input:not([type="datetime-local"]):not([type="date"]):not([type="time"]):not([type="month"]):not([type="week"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
     select,
     textarea {
-        font-size: 16px !important;
+        /* 17px is the HIG body size, and anything at 16px or above keeps
+           iOS from zooming in on focus. */
+        font-size: 17px !important;
     }
 }
 
@@ -138,7 +185,7 @@
    else they do not follow the root font size. Zoom scales the whole glyph,
    stroke included, keeping them in proportion with the type beside them.
    Excludes the chart, which lays itself out in measured pixels. */
-svg.lucide,
+svg.cadence-icon,
 .pm {
     zoom: var(--ui-scale);
 }
@@ -327,18 +374,107 @@ html.mono {
     filter: grayscale(1);
 }
 
-html.dark body {
-    background: var(--color-m3-dark-surface);
+/* ── Cadence tokens ────────────────────────────────────────────────
+   Plain names for new code (design/cadence/spec/tokens.md, and the button
+   values from spec/fonts_buttons_v2.md). The theme class sits on <html>, so
+   everything below it picks up the dark values. */
+:root {
+    color-scheme: light;
+
+    --c-paper: #FBF8F3;
+    --c-plate: #F3EEE6;
+    --c-plate-strong: #E9E2D6;
+    --c-surface: #FFFFFF;
+    --c-hairline: #E2DACB;
+    --c-rule: #CBBFAE;
+    --c-control: #8F8578;
+    --c-ink: #1F1B16;
+    --c-muted: #5F574C;
+    --c-accent: #A34A28;
+    --c-accent-hover: #8F3F20;
+    --c-accent-container: #F6DFD2;
+    --c-on-accent-container: #6E2A12;
+    --c-second: #7A4A8C;
+    --c-second-tint: #EFE4F2;
+    --c-target: #2F6B45;
+    --c-target-fill: #DCEBDF;
+    --c-attention: #8A5A00;
+    --c-attention-fill: #F5E6C4;
+    --c-danger: #A3261B;
+    --c-danger-fill: #F6DEDA;
+    --c-scrim: rgba(31, 27, 22, 0.32);
+
+    --c-btn-primary: #A34A28;
+    --c-btn-primary-hover: #8F3F20;
+    --c-btn-secondary: #EFE8DD;
+    --c-btn-secondary-hover: #E9E2D6;
+    /* Secondary on a tinted surface (plate, the desktop rail) */
+    --c-btn-on-tint: #FFFFFF;
+    --c-btn-on-tint-hover: #FBF8F3;
+
+    --c-switch-thumb: #FFFFFF;
+    --c-switch-thumb-on: #FFFFFF;
+}
+
+.dark {
+    color-scheme: dark;
+
+    --c-paper: #16130F;
+    --c-plate: #26211B;
+    --c-plate-strong: #332C24;
+    --c-surface: #1E1A16;
+    --c-hairline: #3A332B;
+    --c-rule: #574E42;
+    --c-control: #857B6E;
+    --c-ink: #F1EBE2;
+    --c-muted: #B8AD9E;
+    --c-accent: #E48A63;
+    --c-accent-hover: #EFA17F;
+    --c-accent-container: #4A2616;
+    --c-on-accent-container: #FFD9C7;
+    --c-second: #CFA6DE;
+    --c-second-tint: #3A2A42;
+    --c-target: #8FCFA3;
+    --c-target-fill: #1E3A28;
+    --c-attention: #E8C170;
+    --c-attention-fill: #3D2F10;
+    --c-danger: #F2998F;
+    --c-danger-fill: #3E1D19;
+    --c-scrim: rgba(0, 0, 0, 0.55);
+
+    --c-btn-primary: #B5532F;
+    --c-btn-primary-hover: #A34A28;
+    --c-btn-secondary: #332C24;
+    --c-btn-secondary-hover: #3A332B;
+    --c-btn-on-tint: #332C24;
+    --c-btn-on-tint-hover: #3A332B;
+
+    --c-switch-thumb: #B8AD9E;
+    --c-switch-thumb-on: #2A1206;
+
+    /* The app writes the light primary unprefixed and relies on it in dark too
+       (text-[…primary] with no dark: variant, borders, focus rings, and
+       bg-[…primary] text-white buttons). #B5532F is Cadence's dark primary
+       fill: white on it is 4.95:1 and it is 3.7:1 on the dark page, where
+       #A34A28 would be 3.1:1. primary-light is only used as dark:text-… in
+       dark mode, so it becomes the dark accent. */
+    --color-m3-primary: #B5532F;
+    --color-m3-primary-light: #E48A63;
+    --color-m3-accent: #B5532F;
+    --color-m3-accent-light: #E48A63;
 }
 
 body {
     font-family: var(--font-sans);
-    background: var(--color-m3-surface);
+    background: var(--c-paper);
+    color: var(--c-ink);
     height: 100%;
     margin: 0;
     overscroll-behavior-y: contain;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: color var(--duration-base) var(--ease-standard),
+                background-color var(--duration-base) var(--ease-standard);
 }
 
 #root {
@@ -355,13 +491,109 @@ body {
     padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* The main scroller. The mobile tab bar is docked below it in the same flex
+   column, so the scroller already ends at the bar; this is the 24px of air
+   the boards leave between the last content and the bar (C2). */
 .scroll-pb-nav {
-    /* floating nav: bar height + bottom gap + breathing room */
-    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 24px;
 }
 @media (min-width: 768px) {
     .scroll-pb-nav {
         padding-bottom: 0;
+    }
+}
+
+/* ── Mobile tab bar (boards Main / TodayDark, recipe C16) ─────────
+   Docked, flat: white with a top hairline, no shadow. Five slots, the Log
+   button in a fixed 76px centre column. Height 76 plus the home indicator. */
+/* In the components layer so `md:hidden` on the element wins. */
+@layer components {
+    .tabbar {
+        flex: none;
+        display: grid;
+        grid-template-columns: 1fr 1fr 76px 1fr 1fr;
+        align-items: start;
+        box-sizing: border-box;
+        min-height: calc(76px + env(safe-area-inset-bottom, 0px));
+        padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px));
+        background: var(--c-surface);
+        border-top: 1px solid var(--c-hairline);
+    }
+
+    .tabbar-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        min-height: 58px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--c-muted);
+        font-family: inherit;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .tabbar-pill {
+        display: grid;
+        place-items: center;
+        width: 56px;
+        height: 36px;
+        border-radius: 18px;
+        background: transparent;
+        color: inherit;
+        transition: background-color var(--duration-quick) var(--ease-standard),
+                    color var(--duration-quick) var(--ease-standard);
+    }
+
+    /* 13px on purpose: tab labels are one of the two places the type scale
+       allows 13 (spec/typescale.md). px, not rem, so the bar never grows. */
+    .tabbar-label {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+        line-height: 18px;
+        font-weight: 600;
+        color: inherit;
+    }
+
+    .tabbar-item[aria-current="page"] {
+        color: var(--c-on-accent-container);
+    }
+    .tabbar-item[aria-current="page"] .tabbar-pill {
+        background: var(--c-accent-container);
+    }
+    .tabbar-item:not([aria-current="page"]):not(.tabbar-log):hover {
+        color: var(--c-ink);
+    }
+
+    /* The centre Log button: a 56×36 capsule in the primary fill, label in ink. */
+    .tabbar-log {
+        color: var(--c-ink);
+    }
+    .tabbar-log .tabbar-pill {
+        background: var(--c-btn-primary);
+        color: #FFFFFF;
+    }
+    .tabbar-log:hover .tabbar-pill {
+        background: var(--c-btn-primary-hover);
+    }
+
+    .tabbar-item:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+    .tabbar-item:focus-visible {
+        outline: none;
+    }
+    .tabbar-item:focus-visible .tabbar-pill {
+        outline: 3px solid var(--c-ink);
+        outline-offset: 2px;
     }
 }
 
@@ -376,30 +608,59 @@ body {
 
 /* Shared UI utilities */
 .text-muted {
-    color: var(--color-m3-on-surface-variant);
-}
-.dark .text-muted {
-    color: var(--color-m3-dark-on-surface-variant);
+    color: var(--c-muted);
 }
 
 .text-body {
-    color: var(--color-m3-on-surface);
-}
-.dark .text-body {
-    color: var(--color-m3-dark-on-surface);
+    color: var(--c-ink);
 }
 
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding: 0;
-    background-color: rgba(0, 0, 0, 0.25);
-    animation: fade-in var(--duration-base) var(--ease-standard);
+/* ── Modals: scrim, bottom sheet, dialog (recipe C18) ──────────────
+   Markup: .modal-overlay > .modal-shell (or .modal-shell-wide) > .modal-card.
+   Below md the card is a bottom sheet: full width, flush with the bottom
+   edge, 28px top corners, a top hairline and a grab bar. From md up it is a
+   centred dialog with 16px corners and a hairline all round. Flat scrim, no
+   shadow anywhere.
+
+   The overlay's position, colour and animation sit in the components layer so
+   a utility on the element wins (`z-[60]`, `z-[100]` stack dialogs above the
+   dose sheet). Its mobile padding stays unlayered on purpose: a `p-4` written
+   for the old floating card must not lift the sheet off the bottom edge. */
+@layer components {
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        background-color: var(--c-scrim);
+        animation: fade-in var(--duration-base) var(--ease-standard);
+    }
+
+    .modal-shell,
+    .modal-shell-wide {
+        width: 100%;
+        max-width: 24rem;
+        animation: rise-in var(--duration-base) var(--ease-standard);
+    }
+
+    .modal-shell-wide {
+        max-width: 36rem;
+    }
 }
+
+@media (max-width: 767.98px) {
+    .modal-overlay {
+        padding: 0;
+    }
+
+    .modal-shell,
+    .modal-shell-wide {
+        max-width: none;
+    }
+}
+
 @media (min-width: 768px) {
     .modal-overlay {
         align-items: center;
@@ -407,198 +668,604 @@ body {
     }
 }
 
-.modal-shell {
-    width: 100%;
-    max-width: 24rem;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    animation: rise-in var(--duration-base) var(--ease-standard);
+/* A grab bar for sheets that draw their own (a sheet built without
+   .modal-card, or a full-height form). 36×4 in the rule colour, centred in a
+   20px row. */
+.sheet-grab {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
 }
-
-.modal-card {
-    background-color: var(--color-m3-surface-bright);
-    border: 1px solid var(--color-m3-outline-variant);
-    border-radius: var(--radius-md);
-    padding: 1.25rem;
-    max-height: 88vh;
-    overflow-y: auto;
-}
-.dark .modal-card {
-    background-color: var(--color-m3-dark-surface-container);
-    border-color: var(--color-m3-dark-outline-variant);
+.sheet-grab::before {
+    content: "";
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--c-rule);
 }
 @media (min-width: 768px) {
-    .modal-card {
-        border-radius: var(--radius-md);
+    .sheet-grab {
+        display: none;
     }
 }
 
-.modal-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--color-m3-on-surface);
-    margin-bottom: 0.75rem;
-}
-.dark .modal-title {
-    color: var(--color-m3-dark-on-surface);
-}
+/* ── Cadence components ────────────────────────────────────────────
+   In the components layer so a Tailwind utility on the same element wins
+   (`modal-card p-0`, `input-base pr-11`, `btn-secondary text-red-500`).
+   Flat everywhere: no box-shadow and no gradient. Depth comes from tone,
+   a 1px hairline border and spacing. Colours come from the --c-* tokens,
+   which switch with the .dark class, so no rule here needs a dark twin. */
+@layer components {
+    .modal-card {
+        position: relative;
+        background-color: var(--c-surface);
+        border: 1px solid var(--c-hairline);
+        border-radius: 16px;
+        padding: 1.25rem;
+        max-height: 88vh;
+        overflow-y: auto;
+        color: var(--c-ink);
+    }
 
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--color-m3-on-primary);
-    background-color: var(--color-m3-primary);
-    border: none;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: background-color var(--duration-quick) var(--ease-standard),
-                opacity var(--duration-quick) var(--ease-standard),
-                transform var(--duration-quick) var(--ease-standard);
-}
-.btn-primary:active:not(:disabled) {
-    transform: scale(0.98);
-}
-.btn-primary:hover:not(:disabled) {
-    background-color: var(--color-m3-primary-light);
-}
-.btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+    /* Bottom sheet below md. The home-indicator inset is a bottom border in
+       the surface colour rather than padding, so it holds even on cards that
+       zero their padding with p-0. The grab bar is drawn in the top 20px,
+       which every card's own top padding or header already leaves clear. */
+    @media (max-width: 767.98px) {
+        .modal-overlay .modal-card {
+            border-width: 1px 0 env(safe-area-inset-bottom, 0px);
+            border-color: var(--c-hairline) transparent var(--c-surface);
+            border-radius: 28px 28px 0 0;
+            padding-top: 1.75rem;
+            max-height: calc(92dvh - env(safe-area-inset-top, 0px));
+        }
+        .modal-overlay .modal-card::before {
+            content: "";
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            width: 36px;
+            height: 4px;
+            margin-left: -18px;
+            border-radius: 2px;
+            background: var(--c-rule);
+            pointer-events: none;
+        }
+        /* A card that already draws .sheet-grab gets no second bar. */
+        .modal-overlay .modal-card:has(> .sheet-grab)::before {
+            content: none;
+        }
+    }
 
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--color-m3-on-surface);
-    background-color: transparent;
-    border: 1px solid var(--color-m3-outline-variant);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: background-color var(--duration-quick) var(--ease-standard),
-                border-color var(--duration-quick) var(--ease-standard),
-                transform var(--duration-quick) var(--ease-standard);
-}
-.btn-secondary:active:not(:disabled) {
-    transform: scale(0.98);
-}
-.dark .btn-secondary {
-    color: var(--color-m3-dark-on-surface);
-    border-color: var(--color-m3-dark-outline-variant);
-}
-.btn-secondary:hover:not(:disabled) {
-    background-color: var(--color-m3-surface-container);
-}
-.dark .btn-secondary:hover:not(:disabled) {
-    background-color: var(--color-m3-dark-surface-container);
-}
+    /* Section-heading size, 22/28 600, sentence case, no tracking. */
+    .modal-title {
+        font-size: 1.375rem;
+        line-height: 1.75rem;
+        font-weight: 600;
+        color: var(--c-ink);
+        margin-bottom: 0.75rem;
+    }
 
-.input-base {
-    width: 100%;
-    padding: 0.625rem 0.75rem;
-    font-size: 0.875rem;
-    color: var(--color-m3-on-surface);
-    background-color: var(--color-m3-surface);
-    border: 1px solid var(--color-m3-outline-variant);
-    border-radius: var(--radius-sm);
-    outline: none;
-    transition: border-color var(--duration-quick) var(--ease-standard);
-}
-.dark .input-base {
-    color: var(--color-m3-dark-on-surface);
-    background-color: var(--color-m3-dark-surface-container-low);
-    border-color: var(--color-m3-dark-outline-variant);
-}
-.input-base:focus {
-    border-color: var(--color-m3-primary);
-}
-.dark .input-base:focus {
-    border-color: var(--color-m3-primary-light);
-}
+    /* ── Buttons (spec/fonts_buttons_v2.md, revision 5) ──────────
+       Every button is a capsule (the owner's pick, option B). Primary:
+       filled, one per region. Secondary: tinted fill, no border. Plain and
+       destructive: text only. Icon: a 44×44 circle. Heights are
+       px so they stay 50/44 on desktop; type is rem so it follows
+       --ui-scale (17px on a phone, about 18px on a desktop). */
+    .btn-primary,
+    .btn-secondary,
+    .btn-plain,
+    .btn-destructive,
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-sizing: border-box;
+        margin: 0;
+        border: 0;
+        font-family: inherit;
+        font-size: 1.0625rem;
+        line-height: 1.375rem;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: background-color var(--duration-quick) var(--ease-standard),
+                    color var(--duration-quick) var(--ease-standard),
+                    opacity var(--duration-quick) var(--ease-standard);
+    }
 
-.modal-shell-wide {
-    width: 100%;
-    max-width: 36rem;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    animation: rise-in var(--duration-base) var(--ease-standard);
-}
+    .btn-primary,
+    .btn-secondary {
+        min-height: 50px;
+        padding: 0 24px;
+        border-radius: 9999px;
+    }
 
-.callout {
-    padding: 0.625rem 0.75rem;
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    color: var(--color-m3-on-surface-variant);
-    background-color: var(--color-m3-surface-container-low);
-    border: 1px solid var(--color-m3-outline-variant);
-    border-radius: var(--radius-sm);
-}
-.dark .callout {
-    color: var(--color-m3-dark-on-surface-variant);
-    background-color: var(--color-m3-dark-surface-container);
-    border-color: var(--color-m3-dark-outline-variant);
-}
+    .btn-primary {
+        color: #FFFFFF;
+        background-color: var(--c-btn-primary);
+    }
+    .btn-primary:hover:not(:disabled) {
+        background-color: var(--c-btn-primary-hover);
+    }
 
-/* M3 Menu Styles */
-.m3-menu {
-    background-color: var(--color-m3-surface-container-low);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-m3-2);
-    padding: 8px 0;
-    min-width: 112px;
-    max-width: 280px;
-    z-index: 100;
-    animation: menu-in var(--duration-quick) var(--ease-standard);
-}
+    .btn-secondary {
+        color: var(--c-ink);
+        background-color: var(--c-btn-secondary);
+    }
+    .btn-secondary:hover:not(:disabled) {
+        background-color: var(--c-btn-secondary-hover);
+    }
 
-.dark .m3-menu {
-    background-color: var(--color-m3-dark-surface-container-high);
-    border-color: var(--color-m3-dark-outline-variant);
-}
+    /* Secondary sitting on plate or the desktop rail: white (dark #26211B)
+       so it still reads as a button against the tint. */
+    .btn-secondary.btn-on-tint {
+        background-color: var(--c-btn-on-tint);
+    }
+    .btn-secondary.btn-on-tint:hover:not(:disabled) {
+        background-color: var(--c-btn-on-tint-hover);
+    }
 
-.m3-menu-item {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding: 12px 16px;
-    gap: 12px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--color-m3-on-surface);
-    transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1);
-    position: relative;
-    overflow: hidden;
-}
+    .btn-plain,
+    .btn-destructive {
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 9999px;
+        background-color: transparent;
+    }
+    .btn-plain {
+        color: var(--c-accent);
+    }
+    .btn-plain:hover:not(:disabled) {
+        color: var(--c-accent-hover);
+    }
+    .btn-destructive {
+        color: var(--c-danger);
+    }
+    .btn-destructive:hover:not(:disabled) {
+        opacity: 0.8;
+    }
 
-.dark .m3-menu-item {
-    color: var(--color-m3-dark-on-surface);
-}
+    .btn-icon {
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border-radius: 9999px;
+        color: var(--c-ink);
+        background-color: transparent;
+    }
+    .btn-icon:hover:not(:disabled) {
+        background-color: var(--c-plate);
+    }
 
-.m3-menu-item:hover {
-    background-color: var(--color-m3-surface-container-high);
-}
+    /* Inside cards, sidebars and inline pairs. */
+    .btn-primary.btn-compact,
+    .btn-secondary.btn-compact {
+        min-height: 44px;
+        padding: 0 20px;
+        border-radius: 9999px;
+    }
 
-.dark .m3-menu-item:hover {
-    background-color: var(--color-m3-dark-surface-container-highest);
-}
+    .btn-block {
+        display: flex;
+        width: 100%;
+    }
 
-.m3-menu-item.selected {
-    background-color: var(--color-m3-secondary-container);
-    color: var(--color-m3-on-secondary-container);
-}
+    .btn-primary:active:not(:disabled),
+    .btn-secondary:active:not(:disabled),
+    .btn-plain:active:not(:disabled),
+    .btn-destructive:active:not(:disabled),
+    .btn-icon:active:not(:disabled) {
+        opacity: 0.7;
+    }
 
-.dark .m3-menu-item.selected {
-    background-color: var(--color-m3-dark-secondary-container);
-    color: var(--color-m3-dark-on-secondary-container);
+    .btn-primary:disabled,
+    .btn-secondary:disabled,
+    .btn-plain:disabled,
+    .btn-destructive:disabled,
+    .btn-icon:disabled,
+    .btn-primary[aria-disabled="true"],
+    .btn-secondary[aria-disabled="true"],
+    .btn-plain[aria-disabled="true"],
+    .btn-destructive[aria-disabled="true"],
+    .btn-icon[aria-disabled="true"] {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .btn-primary:focus-visible,
+    .btn-secondary:focus-visible,
+    .btn-plain:focus-visible,
+    .btn-destructive:focus-visible,
+    .btn-icon:focus-visible {
+        outline: 3px solid var(--c-ink);
+        outline-offset: 2px;
+    }
+
+    .btn-primary svg,
+    .btn-secondary svg,
+    .btn-plain svg,
+    .btn-destructive svg,
+    .btn-icon svg {
+        flex: none;
+    }
+
+    /* Text buttons are words only (format_rules): a chevron after "How is
+       this estimated" or "Timeline" reads as a list row. Drill-in chevrons
+       belong to ListRow. */
+    .btn-plain .cadence-icon-chevron-right,
+    .btn-plain .cadence-icon-chevron-left,
+    .btn-destructive .cadence-icon-chevron-right,
+    .btn-destructive .cadence-icon-chevron-left {
+        display: none;
+    }
+
+    /* ── Inputs ─────────────────────────────────────────────────
+       Fields keep a border because they are operable: 1px control. Focus
+       thickens it to a 2px ink edge with an inset outline (no glow). */
+    .input-base {
+        display: block;
+        width: 100%;
+        min-height: 48px;
+        box-sizing: border-box;
+        padding: 11px 14px;
+        font-family: inherit;
+        font-size: 1.0625rem;
+        line-height: 1.5rem;
+        color: var(--c-ink);
+        background-color: var(--c-surface);
+        border: 1px solid var(--c-control);
+        border-radius: 12px;
+        outline: none;
+        transition: border-color var(--duration-quick) var(--ease-standard);
+    }
+    .input-base::placeholder {
+        color: var(--c-muted);
+        opacity: 1;
+    }
+    .input-base:focus {
+        border-color: var(--c-ink);
+        outline: 1px solid var(--c-ink);
+        outline-offset: -2px;
+    }
+    .input-base:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* A quiet note on plate: tone, not a border, sets it apart. */
+    .callout {
+        padding: 12px 16px;
+        font-size: 0.9375rem;
+        line-height: 1.375rem;
+        color: var(--c-muted);
+        background-color: var(--c-plate);
+        border: 0 solid var(--c-hairline);
+        border-radius: 12px;
+    }
+
+    /* ── Menus ──────────────────────────────────────────────────
+       Floating menus get a 1px hairline border instead of a shadow. */
+    .m3-menu {
+        background-color: var(--c-surface);
+        border: 1px solid var(--c-hairline);
+        border-radius: 14px;
+        padding: 6px 0;
+        min-width: 112px;
+        max-width: 280px;
+        z-index: 100;
+        overflow: hidden;
+        animation: menu-in var(--duration-quick) var(--ease-standard);
+    }
+
+    .m3-menu-item {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 16px;
+        gap: 12px;
+        cursor: pointer;
+        font-size: 1.0625rem;
+        line-height: 1.5rem;
+        font-weight: 400;
+        text-align: start;
+        color: var(--c-ink);
+        background-color: transparent;
+        transition: background-color var(--duration-quick) var(--ease-standard);
+        position: relative;
+        overflow: hidden;
+    }
+    .m3-menu-item:hover {
+        background-color: var(--c-plate);
+    }
+    /* Selection is the accent colour (and a trailing check where the item
+       draws one), never a fill or bold. */
+    .m3-menu-item.selected {
+        color: var(--c-accent);
+    }
+
+    /* ── Inset grouped list (spec/listview_v3.md, spec/format_rules.md) ─
+       The group's hairline border stands in for the elevation Apple would
+       use. Rows are real buttons or links; separators are inset so they
+       start at the text column and never run full width. Rhythm: 8px from a
+       header to its group, 8px from a group to its footer, 24px between
+       groups (.list-stack) and 32px between content sections
+       (.section-stack). */
+    .list-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+    .section-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+    }
+
+    .list-group {
+        display: block;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        background-color: var(--c-surface);
+        border: 1px solid var(--c-hairline);
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .list-group-header {
+        display: block;
+        margin: 0 0 8px;
+        padding: 0 16px;
+        font-size: 0.9375rem;
+        line-height: 1.25rem;
+        font-weight: 600;
+        color: var(--c-muted);
+    }
+
+    .list-group-footer {
+        display: block;
+        margin: 0;
+        padding: 8px 16px 0;
+        font-size: 0.9375rem;
+        line-height: 1.375rem;
+        color: var(--c-muted);
+    }
+
+    .list-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: 52px;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 12px 16px;
+        border: 0;
+        border-radius: 0;
+        background-color: transparent;
+        font-family: inherit;
+        font-size: 1.0625rem;
+        line-height: 1.5rem;
+        font-weight: 400;
+        color: var(--c-ink);
+        text-align: start;
+        text-decoration: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    button.list-row,
+    a.list-row {
+        cursor: pointer;
+    }
+    button.list-row:hover:not(:disabled),
+    a.list-row:hover {
+        background-color: var(--c-plate);
+    }
+    button.list-row:active:not(:disabled),
+    a.list-row:active {
+        background-color: var(--c-plate-strong);
+    }
+    .list-row:focus-visible {
+        outline: 3px solid var(--c-ink);
+        outline-offset: -3px;
+    }
+    .list-row:disabled,
+    .list-row[aria-disabled="true"] {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    /* With a sub-line or a 40px icon tile. */
+    .list-row-tall {
+        min-height: 64px;
+    }
+
+    .list-row-leading {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .list-row-text {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .list-row-title {
+        display: block;
+        font-size: 1.0625rem;
+        line-height: 1.5rem;
+        font-weight: 400;
+        color: var(--c-ink);
+    }
+
+    /* One line of state. .list-row-sub-wrap (ListRow wrapSub) lets it wrap,
+       for the rare content row that needs it. */
+    .list-row-sub {
+        display: block;
+        overflow: hidden;
+        font-size: 0.9375rem;
+        line-height: 1.375rem;
+        color: var(--c-muted);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+    .list-row-sub.list-row-sub-wrap {
+        white-space: normal;
+        text-overflow: clip;
+        overflow-wrap: anywhere;
+    }
+
+    .list-row-value {
+        flex: none;
+        font-size: 1.0625rem;
+        line-height: 1.5rem;
+        color: var(--c-muted);
+        text-align: end;
+        white-space: nowrap;
+    }
+
+    /* With a trailing value the title keeps its natural width on one line
+       and the value takes what is left, right-aligned. The value is cut
+       with an ellipsis first; the title only if even that is not enough. */
+    .list-row-has-value .list-row-text {
+        flex: 0 1 auto;
+    }
+    .list-row-has-value .list-row-title {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+    /* A sub-line beside a value is against the rules (ListRow warns); if one
+       slips through, only the title sets the column width. */
+    .list-row-has-value .list-row-sub {
+        contain: inline-size;
+    }
+    .list-row-has-value .list-row-value {
+        flex: 1 1 0%;
+        min-width: min(4.5em, 40%);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Destructive group at the bottom of a page (format_rules 6). */
+    .list-row-destructive .list-row-title {
+        color: var(--c-danger);
+    }
+    .list-row-accent .list-row-title {
+        color: var(--c-accent);
+    }
+
+    .list-row-check {
+        display: inline-flex;
+        flex: none;
+        color: var(--c-accent);
+    }
+
+    .list-row-chevron {
+        display: inline-flex;
+        flex: none;
+        color: var(--c-muted);
+    }
+
+    .list-sep,
+    .list-sep-icon {
+        display: block;
+        height: 1px;
+        margin: 0;
+        margin-inline-start: 16px;
+        border: 0;
+        background-color: var(--c-hairline);
+    }
+    /* After rows with a 40px icon tile: 16 + 40 + 12 gap. */
+    .list-sep-icon,
+    .list-sep.list-sep-icon {
+        margin-inline-start: 68px;
+    }
+
+    /* ── Switch (spec/components.md C13) ────────────────────────
+       52×32 track with a flat 24px thumb. The ::before stretches the hit
+       area to 44px tall without changing the drawn size. */
+    .switch {
+        position: relative;
+        display: inline-block;
+        flex: none;
+        width: 52px;
+        height: 32px;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        border: 1px solid var(--c-control);
+        border-radius: 16px;
+        background-color: var(--c-plate-strong);
+        cursor: pointer;
+        vertical-align: middle;
+        -webkit-tap-highlight-color: transparent;
+        transition: background-color var(--duration-base) var(--ease-standard),
+                    border-color var(--duration-base) var(--ease-standard);
+    }
+    .switch::before {
+        content: "";
+        position: absolute;
+        inset: -7px -1px;
+    }
+    .switch[aria-checked="true"] {
+        background-color: var(--c-accent);
+        border-color: var(--c-accent);
+    }
+    .switch:focus-visible {
+        outline: 3px solid var(--c-ink);
+        outline-offset: 2px;
+    }
+    .switch:disabled,
+    .switch[aria-disabled="true"] {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .switch-thumb {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 24px;
+        height: 24px;
+        box-sizing: border-box;
+        border: 1px solid var(--c-control);
+        border-radius: 12px;
+        background-color: var(--c-switch-thumb);
+        pointer-events: none;
+        transition: transform var(--duration-base) var(--ease-standard),
+                    background-color var(--duration-base) var(--ease-standard),
+                    border-color var(--duration-base) var(--ease-standard);
+    }
+    .switch[aria-checked="true"] .switch-thumb {
+        transform: translateX(20px);
+        border-color: var(--c-accent);
+        background-color: var(--c-switch-thumb-on);
+    }
+    /* Dark thumbs carry the state by fill alone. */
+    .dark .switch-thumb,
+    .dark .switch[aria-checked="true"] .switch-thumb {
+        border-color: transparent;
+    }
+    [dir="rtl"] .switch[aria-checked="true"] .switch-thumb {
+        transform: translateX(-20px);
+    }
+    [dir="rtl"] .switch-thumb {
+        left: auto;
+        right: 3px;
+    }
 }
 
 .dropdown-in {
@@ -625,21 +1292,33 @@ body {
    are listed, never layout ones, so this can't cause reflow jank. Components
    that need transform motion opt in with the utilities underneath.
 
-   .btn-primary and friends declare their own transition and win on
-   specificity, so their existing timing is untouched. */
-a,
-button,
-summary,
-label,
-select,
-[role="button"],
-[role="tab"],
-[role="switch"],
-[role="option"] {
-    transition: background-color var(--duration-quick) var(--ease-standard),
-                border-color var(--duration-quick) var(--ease-standard),
-                color var(--duration-quick) var(--ease-standard),
-                opacity var(--duration-quick) var(--ease-standard);
+   It lives in the base layer, so .btn-primary and friends (components) and
+   any transition-* utility on an element override it. */
+@layer base {
+    a,
+    button,
+    summary,
+    label,
+    select,
+    [role="button"],
+    [role="tab"],
+    [role="switch"],
+    [role="option"] {
+        transition: background-color var(--duration-quick) var(--ease-standard),
+                    border-color var(--duration-quick) var(--ease-standard),
+                    color var(--duration-quick) var(--ease-standard),
+                    opacity var(--duration-quick) var(--ease-standard);
+    }
+
+    /* Keyboard focus: a 3px ink outline 2px out (ink flips to #F1EBE2 in
+       dark). Text fields are left out; .input-base draws its own focus edge.
+       A focus-visible:outline-none utility on an element still wins. */
+    :where(a, button, summary, select, [tabindex], [role="button"], [role="tab"],
+           [role="switch"], [role="radio"], [role="checkbox"], [role="option"],
+           [role="menuitem"]):focus-visible {
+        outline: 3px solid var(--c-ink);
+        outline-offset: 2px;
+    }
 }
 
 /* Toggle switches: the knob slid instantly between its two offsets and the
@@ -866,6 +1545,9 @@ select,
 .px-zzz         { animation: px-zzz 4.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
+    .tabbar-pill {
+        transition: none;
+    }
     .modal-overlay,
     .modal-shell,
     .modal-shell-wide,
@@ -905,15 +1587,18 @@ select,
     .px-float-b {
         opacity: 0;
     }
+    body,
     .btn-primary,
     .btn-secondary,
+    .btn-plain,
+    .btn-destructive,
+    .btn-icon,
     .input-base,
-    .m3-menu-item {
+    .m3-menu-item,
+    .list-row,
+    .switch,
+    .switch-thumb {
         transition: none;
-    }
-    .btn-primary:active:not(:disabled),
-    .btn-secondary:active:not(:disabled) {
-        transform: none;
     }
     /* Ambient motion: everything still lands in the same end state, it just
        gets there immediately. Collapsibles keep grid-template-rows so they

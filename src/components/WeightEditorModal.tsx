@@ -3,6 +3,8 @@ import { isPlausibleBodyWeightKG } from '../../logic';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useDialog } from '../contexts/DialogContext';
 import { useEscape } from '../hooks/useEscape';
+import { Button } from './ui';
+import DoseStepper from './dose_form/DoseStepper';
 
 const WeightEditorModal = ({ isOpen, onClose, currentWeight, onSave }: any) => {
     const { t } = useTranslation();
@@ -36,39 +38,31 @@ const WeightEditorModal = ({ isOpen, onClose, currentWeight, onSave }: any) => {
     return (
         <div className="modal-overlay">
             <div className="modal-shell">
-                <div className="modal-card">
+                <div className="modal-card bg-[var(--c-paper)]" role="dialog" aria-modal="true">
                     <h3 className="modal-title">{t('modal.weight.title')}</h3>
 
-                    <div className="flex justify-center mb-5">
-                        <div className="flex items-end gap-2">
-                            <input
-                                type="number"
-                                inputMode="decimal"
+                    <div className="mb-6">
+                        <div className="list-group">
+                            <DoseStepper
                                 value={weightStr}
-                                onChange={(e) => setWeightStr(e.target.value)}
-                                className="text-2xl font-medium tabular-nums w-20 text-center bg-transparent border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] focus:border-[var(--color-m3-primary)] outline-none pb-1 text-body"
+                                onChange={setWeightStr}
+                                step={0.5}
+                                min={0}
+                                unit="kg"
+                                label={t('modal.weight.title')}
                                 placeholder="0.0"
-                                autoFocus
                             />
-                            <span className="text-sm text-muted pb-1">kg</span>
                         </div>
+                        <p className="list-group-footer m-0">{t('modal.weight.desc')}</p>
                     </div>
 
-                    <p className="callout mb-5">
-                        {t('modal.weight.desc')}
-                    </p>
-
-                    <div className="flex gap-2">
-                        <button onClick={onClose} className="btn-secondary flex-1">
+                    <div className="flex gap-3">
+                        <Button variant="secondary" className="flex-1 basis-0" onClick={onClose}>
                             {t('btn.cancel')}
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="btn-primary flex-1"
-                        >
+                        </Button>
+                        <Button variant="primary" className="flex-1 basis-0" onClick={handleSave} disabled={isSaving}>
                             {t('btn.save')}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { DoseEvent, LabResult } from '../../logic';
-import { Lock, Copy, Check } from 'lucide-react';
 import { exportToCSV, exportToPDF } from '../services/export';
+import { Button, ListGroup, ListRow, Switch } from './ui';
+import { Field, Note, Panel, PasswordInput } from '../pages/account/shared';
 
 interface ExportSectionProps {
     events: DoseEvent[];
@@ -12,26 +13,25 @@ interface ExportSectionProps {
     onQuickExport?: () => void;
 }
 
-const rowBase = "flex items-start justify-between py-[18px] border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]";
-const rowLabel = "text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]";
-const rowDesc = "text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mt-0.5";
-const actionBtn = "text-sm font-medium text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)] shrink-0 ml-6 mt-0.5";
-
+/** The export page's body: an encrypted or plain JSON backup as the main
+ *  action, then the other formats as a list of rows that act on tap. */
 const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, weight, onExport, onQuickExport }) => {
     const { t, lang } = useTranslation();
-    const [showEncrypted, setShowEncrypted] = useState(false);
+    const [encrypt, setEncrypt] = useState(true);
     const [password, setPassword] = useState('');
     const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [jsonCopied, setJsonCopied] = useState(false);
+    const encryptLabelId = useId();
+    const passwordId = useId();
 
     const hasData = events.length > 0 || labResults.length > 0;
 
-    const handleJsonExport = async () => {
-        await onExport(false);
-    };
-
-    const handleEncryptedExport = async () => {
+    const handleSave = async () => {
+        if (!encrypt) {
+            await onExport(false);
+            return;
+        }
         const pw = await onExport(true, password || undefined);
         if (pw) setGeneratedPassword(pw);
     };
@@ -64,139 +64,89 @@ const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, weigh
 
     if (!hasData) {
         return (
-            <p className="py-8 text-sm text-center text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                {t('drawer.empty_export')}
-            </p>
+            <Panel>
+                <Note>{t('drawer.empty_export')}</Note>
+            </Panel>
         );
     }
 
     return (
-        <div>
-            {/* JSON */}
-            <div className={rowBase}>
-                <div>
-                    <p className={rowLabel}>JSON</p>
-                    <p className={rowDesc}>{t('drawer.save_hint')}</p>
-                </div>
-                <button onClick={handleJsonExport} className={actionBtn}>
-                    {t('export.btn_json')}
-                </button>
-            </div>
-
-            {/* Copy JSON */}
-            {onQuickExport && (
-                <div className={rowBase}>
-                    <div>
-                        <p className={rowLabel}>{t('export.btn_copy_json')}</p>
-                        <p className={rowDesc}>{t('export.copy_desc')}</p>
-                    </div>
-                    <button onClick={handleCopyJson} className={`${actionBtn} flex items-center gap-1`}>
-                        {jsonCopied
-                            ? <><Check size={13} />{t('export.copied')}</>
-                            : <><Copy size={13} />{t('btn.copy')}</>
-                        }
-                    </button>
-                </div>
-            )}
-
-            {/* Encrypted JSON */}
-            <div className={rowBase}>
-                <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className={rowLabel}>{`JSON (${t('export.encrypt_label')})`}</p>
-                            <p className={rowDesc}>{t('export.encrypt_ask_desc')}</p>
-                        </div>
-                        <button
-                            onClick={() => { setShowEncrypted(v => !v); setGeneratedPassword(null); }}
-                            className={actionBtn}
-                        >
-                            {showEncrypted ? t('btn.cancel') : t('export.btn_encrypted')}
-                        </button>
-                    </div>
-
-                    {showEncrypted && (
-                        <div className="mt-4 space-y-3">
-                            <div className="relative">
-                                <input
-                                    type="password"
-                                    name="export-encryption-password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder={t('export.password_placeholder')}
-                                    className="w-full py-2.5 px-3 pl-9 text-sm bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container-low)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-lg outline-none focus:border-[var(--color-m3-primary)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] placeholder:text-[var(--color-m3-on-surface-variant)]"
-                                    autoComplete="new-password"
-                                    autoCorrect="off"
-                                    autoCapitalize="off"
-                                    spellCheck={false}
-                                />
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-m3-on-surface-variant)]" size={14} />
-                            </div>
-                            <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                                {t('export.password_hint_random')}
-                            </p>
-                            <button
-                                onClick={handleEncryptedExport}
-                                className="w-full py-2.5 text-sm font-medium bg-[var(--color-m3-primary)] hover:opacity-90 text-white rounded-lg"
-                            >
-                                {t('export.btn_encrypted')}
-                            </button>
-
-                            {generatedPassword && (
-                                <div className="mt-2 border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-lg p-3 space-y-2">
-                                    <p className="text-xs font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                                        {t('export.password_title')}
-                                    </p>
-                                    <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                                        {t('export.password_desc')}
-                                    </p>
-                                    <div className="flex items-center gap-2 bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)] rounded-md px-3 py-2">
-                                        <span className="font-mono text-sm text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] flex-1 select-all break-all">
-                                            {generatedPassword}
-                                        </span>
-                                        <button onClick={handleCopyPassword} className="shrink-0 p-1">
-                                            {copied
-                                                ? <Check size={14} className="text-emerald-500" />
-                                                : <Copy size={14} className="text-[var(--color-m3-on-surface-variant)]" />}
-                                        </button>
-                                    </div>
-                                    <button
-                                        onClick={() => { setGeneratedPassword(null); setShowEncrypted(false); }}
-                                        className="w-full py-1.5 text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]"
-                                    >
-                                        {t('btn.ok')}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* CSV */}
-            <div className={rowBase}>
-                <div>
-                    <p className={rowLabel}>CSV</p>
-                    <p className={rowDesc}>{t('export.csv_desc')}</p>
-                </div>
-                <button onClick={handleCsvExport} className={actionBtn}>
-                    {t('export.btn_csv')}
-                </button>
-            </div>
-
-            {/* PDF */}
-            <div className={`${rowBase} border-b-0`}>
-                <div>
-                    <p className={rowLabel}>PDF</p>
-                    <p className={rowDesc}>{t('export.pdf_desc')}</p>
-                </div>
-                <button
-                    onClick={() => exportToPDF({ events, labResults, weight, lang, t })}
-                    className={actionBtn}
+        <div className="flex flex-col gap-6">
+            <section className="flex flex-col gap-6">
+                <ListGroup
+                    header={t('account.export.backup_header')}
+                    footer={encrypt ? t('account.export.encrypt_sub') : undefined}
                 >
-                    {t('export.btn_pdf')}
-                </button>
-            </div>
+                    <ListRow
+                        title={<span id={encryptLabelId}>{t('account.export.encrypt')}</span>}
+                        trailing={
+                            <Switch
+                                checked={encrypt}
+                                onChange={(v) => { setEncrypt(v); setGeneratedPassword(null); }}
+                                aria-labelledby={encryptLabelId}
+                            />
+                        }
+                    />
+                </ListGroup>
+
+                {encrypt && (
+                    <Field label={t('account.field.file_password')} htmlFor={passwordId}>
+                        <PasswordInput
+                            id={passwordId}
+                            name="export-encryption-password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder={t('export.password_placeholder')}
+                            autoComplete="new-password"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                        />
+                    </Field>
+                )}
+
+                <Button variant="primary" block onClick={handleSave}>
+                    {t('account.export.save')}
+                </Button>
+
+                {generatedPassword && (
+                    <Panel aria-live="polite">
+                        <div className="flex flex-col gap-1">
+                            <p className="m-0 text-base font-semibold text-[var(--c-ink)]">{t('account.export.password_title')}</p>
+                            <Note>{t('export.password_desc')}</Note>
+                        </div>
+                        <p className="m-0 select-all break-all rounded-xl bg-[var(--c-surface)] px-4 py-3 font-mono text-base text-[var(--c-ink)]">
+                            {generatedPassword}
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <Button variant="secondary" compact onTint onClick={handleCopyPassword}>
+                                {copied ? t('account.copied') : t('btn.copy')}
+                            </Button>
+                            <Button variant="plain" onClick={() => setGeneratedPassword(null)}>
+                                {t('account.done')}
+                            </Button>
+                        </div>
+                    </Panel>
+                )}
+            </section>
+
+            <ListGroup header={t('account.export.other')}>
+                {onQuickExport && (
+                    <ListRow
+                        title={t('account.export.copy')}
+                        value={jsonCopied ? t('account.copied') : undefined}
+                        onClick={handleCopyJson}
+                    />
+                )}
+                <ListRow
+                    title={t('account.export.csv')}
+                    onClick={handleCsvExport}
+                />
+                <ListRow
+                    title={t('account.export.pdf')}
+                    onClick={() => exportToPDF({ events, labResults, weight, lang, t })}
+                />
+            </ListGroup>
         </div>
     );
 };

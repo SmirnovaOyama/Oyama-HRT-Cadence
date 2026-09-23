@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Attention, Sync } from './icons';
+import { Button } from './ui/Button';
 import { Lang, TRANSLATIONS } from '../i18n/translations';
 
 /**
@@ -54,28 +55,25 @@ class ErrorBoundary extends React.Component<Props, State> {
             }
 
             return (
-                <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center">
-                    <AlertTriangle size={32} strokeWidth={1.5} className="text-red-500 dark:text-red-400 mb-4" />
-                    <h2 className="text-lg font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] mb-2">
+                <div role="alert" className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center">
+                    <Attention size={32} className="mb-4 text-[var(--c-danger)]" />
+                    <h2 className="m-0 mb-2 text-xl font-semibold text-[var(--c-ink)]">
                         {tr('error.title')}
                     </h2>
-                    <p className="text-sm text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mb-6 max-w-md leading-relaxed">
+                    <p className="m-0 mb-6 max-w-md text-base text-[var(--c-muted)]">
                         {tr('error.body')}
                     </p>
                     {this.state.error && (
-                        <div className="callout mb-6 text-left w-full max-w-md overflow-x-auto">
-                            <code className="text-xs text-red-600 dark:text-red-400 font-mono">
+                        <div className="mb-6 w-full max-w-md overflow-x-auto rounded-xl border border-[var(--c-hairline)] bg-[var(--c-plate)] p-4 text-left">
+                            <code className="font-mono text-sm text-[var(--c-danger)]">
                                 {this.state.error.toString()}
                             </code>
                         </div>
                     )}
-                    <button
-                        onClick={this.handleReload}
-                        className="btn-primary"
-                    >
-                        <RefreshCw size={15} strokeWidth={1.5} />
+                    <Button variant="primary" onClick={this.handleReload}>
+                        <Sync size={20} />
                         {tr('error.reload')}
-                    </button>
+                    </Button>
                 </div>
             );
         }

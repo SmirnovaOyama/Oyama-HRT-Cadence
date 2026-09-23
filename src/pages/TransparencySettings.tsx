@@ -1,6 +1,8 @@
 import { formatRelative } from '../utils/helpers';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { BackHeader, ListGroup, ListRow } from '../components/ui';
+import { YouPage } from './you/shared';
+import { ErrorNote, Groups, Lead, Loading } from './account/shared';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface TransparencyStats {
@@ -17,8 +19,6 @@ interface TransparencyStats {
 }
 
 const REFRESH_INTERVAL_MS = 30_000;
-
-const rowBase = "flex items-baseline justify-between py-[18px] border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]";
 
 interface TransparencySettingsProps {
     onBack: () => void;
@@ -61,126 +61,60 @@ const TransparencySettings: React.FC<TransparencySettingsProps> = ({ onBack }) =
 
     const now = stats?.server_time ?? Math.floor(Date.now() / 1000);
 
+    const count = (n: number | undefined) => <span className="tabular-nums">{(n ?? 0).toLocaleString()}</span>;
+    const recent = stats?.recent_registrations ?? [];
+    const updated = lastUpdated
+        ? t('transparency.last_updated').replace('{t}', new Date(lastUpdated).toLocaleTimeString())
+        : undefined;
+
     return (
-        <div className="pb-32">
-            {/* Header */}
-            <div className="sticky top-0 z-20 bg-[var(--color-m3-surface-dim)] dark:bg-[var(--color-m3-dark-surface)] px-6 md:px-8 pt-8 pb-3 flex items-center">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-3 -ml-2 px-2 py-1.5 rounded-lg hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)]"
-                >
-                    <ArrowLeft size={18} className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0" />
-                    <span className="text-xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                        {t('transparency.title')}
-                    </span>
-                </button>
-            </div>
+        <YouPage>
+            <BackHeader parentLabel={t('you.title')} onBack={onBack} title={t('transparency.title')} />
+            <Lead className="mt-2" note={t('account.transparency.lead_note')}>{t('account.transparency.lead')}</Lead>
 
-            {lastUpdated && (
-                <p className="px-6 md:px-8 text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mb-6">
-                    {t('transparency.last_updated').replace('{t}', new Date(lastUpdated).toLocaleTimeString())}
-                </p>
-            )}
+            <Groups className="mt-6">
+                <ErrorNote>{error}</ErrorNote>
 
-            <div className="px-6 md:px-8 max-w-2xl">
-                {error && (
-                    <p className="mb-4 text-sm text-red-500 dark:text-red-400">
-                        {error}
-                    </p>
+                {!stats && loading ? (
+                    <Loading label={t('transparency.loading')} />
+                ) : !stats ? null : (
+                    <>
+                        <ListGroup header={t('account.transparency.numbers')} footer={updated}>
+                            <ListRow title={t('transparency.stat.total_users')} value={count(stats.total_users)} />
+                            <ListRow title={t('transparency.stat.total_backups')} value={count(stats.total_backups)} />
+                        </ListGroup>
+                        <ListGroup header={t('account.transparency.new_users')}>
+                            <ListRow title={t('account.transparency.last_24h')} value={count(stats.new_users_24h)} />
+                            <ListRow title={t('account.transparency.last_7d')} value={count(stats.new_users_7d)} />
+                        </ListGroup>
+                        <ListGroup header={t('transparency.stat.self_deleted')}>
+                            <ListRow title={t('account.transparency.all_time')} value={count(stats.self_deleted_count)} />
+                            <ListRow title={t('account.transparency.last_7d')} value={count(stats.self_deleted_7d)} />
+                        </ListGroup>
+                        <ListGroup header={t('transparency.stat.admin_deleted')}>
+                            <ListRow title={t('account.transparency.all_time')} value={count(stats.admin_deleted_count)} />
+                            <ListRow title={t('account.transparency.last_7d')} value={count(stats.admin_deleted_7d)} />
+                        </ListGroup>
+                    </>
                 )}
 
-                {/* Stats */}
-                <h2 className="text-xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] mb-6">
-                    {t('transparency.title')}
-                </h2>
-
-                <div>
-                    <div className={rowBase}>
-                        <span className="text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                            {t('transparency.stat.total_users')}
-                        </span>
-                        <span className="text-2xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] tabular-nums">
-                            {(stats?.total_users ?? 0).toLocaleString()}
-                        </span>
-                    </div>
-
-                    <div className={rowBase}>
-                        <span className="text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                            {t('transparency.stat.total_backups')}
-                        </span>
-                        <span className="text-2xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] tabular-nums">
-                            {(stats?.total_backups ?? 0).toLocaleString()}
-                        </span>
-                    </div>
-
-                    <div className={rowBase}>
-                        <div>
-                            <p className="text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                                {t('transparency.stat.new_users_24h')}
-                            </p>
-                            <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mt-0.5">
-                                {t('transparency.stat.new_users_7d').replace('{n}', String(stats?.new_users_7d ?? 0))}
-                            </p>
-                        </div>
-                        <span className="text-2xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] tabular-nums">
-                            {(stats?.new_users_24h ?? 0).toLocaleString()}
-                        </span>
-                    </div>
-
-                    <div className={rowBase}>
-                        <div>
-                            <p className="text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                                {t('transparency.stat.self_deleted')}
-                            </p>
-                            <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mt-0.5">
-                                {t('transparency.stat.delta_7d').replace('{n}', String(stats?.self_deleted_7d ?? 0))}
-                            </p>
-                        </div>
-                        <span className="text-2xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] tabular-nums">
-                            {(stats?.self_deleted_count ?? 0).toLocaleString()}
-                        </span>
-                    </div>
-
-                    <div className={`${rowBase} border-b-0`}>
-                        <div>
-                            <p className="text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                                {t('transparency.stat.admin_deleted')}
-                            </p>
-                            <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mt-0.5">
-                                {t('transparency.stat.delta_7d').replace('{n}', String(stats?.admin_deleted_7d ?? 0))}
-                            </p>
-                        </div>
-                        <span className="text-2xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] tabular-nums">
-                            {(stats?.admin_deleted_count ?? 0).toLocaleString()}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Recent registrations */}
-                <h2 className="text-xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] mt-10 mb-6">
-                    {t('transparency.recent.title')}
-                </h2>
-
-                <div className="divide-y divide-[var(--color-m3-outline-variant)] dark:divide-[var(--color-m3-dark-outline-variant)]">
-                    {(stats?.recent_registrations ?? []).length === 0 && !loading ? (
-                        <p className="py-6 text-sm text-center text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                            {t('transparency.recent.empty')}
-                        </p>
-                    ) : (
-                        (stats?.recent_registrations ?? []).map((r, idx) => (
-                            <div key={`${r.anon_id}-${r.created_at}-${idx}`} className="flex items-center justify-between py-3">
-                                <span className="font-mono text-sm text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                                    user_{r.anon_id}***
-                                </span>
-                                <span className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] tabular-nums">
-                                    {formatRelative(r.created_at, now, t)}
-                                </span>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
-        </div>
+                {!stats ? null : recent.length === 0 && !loading ? (
+                    <ListGroup header={t('transparency.recent.title')}>
+                        <ListRow title={<span className="text-[var(--c-muted)]">{t('transparency.recent.empty')}</span>} />
+                    </ListGroup>
+                ) : recent.length > 0 && (
+                    <ListGroup header={t('transparency.recent.title')} footer={t('account.transparency.recent_footer')}>
+                        {recent.map((r, idx) => (
+                            <ListRow
+                                key={`${r.anon_id}-${r.created_at}-${idx}`}
+                                title={<span className="font-mono">user_{r.anon_id}***</span>}
+                                value={formatRelative(r.created_at, now, t)}
+                            />
+                        ))}
+                    </ListGroup>
+                )}
+            </Groups>
+        </YouPage>
     );
 };
 

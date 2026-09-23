@@ -1,4 +1,4 @@
-import { Syringe, Pill, Droplet, Sticker, X, FlaskConical, Atom, Shield, Hexagon, Orbit, Dna, Shell } from 'lucide-react';
+import { Syringe, Pill, Droplet, Sticker, X, FlaskConical, Atom, Shield, Hexagon, Orbit, Dna, Shell } from '../components/icons';
 import { Route, DoseEvent, Ester, getBioavailabilityMultiplier, getToE2Factor, ExtraKey } from '../../logic';
 import { Lang } from '../i18n/translations';
 

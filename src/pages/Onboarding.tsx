@@ -5,6 +5,8 @@ import OnboardingCurve, { useOnboardingCurve, BEATS, type Beat, type CurveData }
 import { useTranslation } from '../contexts/LanguageContext';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import { Lang, TRANSLATIONS } from '../i18n/translations';
+import { Button, ListGroup, ListRow } from '../components/ui';
+import { LIST_CHECK } from './you/shared';
 
 const ONBOARDING_KEY = 'app-onboarded';
 
@@ -36,12 +38,14 @@ export const markOnboardingSeen = (): void => {
     localStorage.setItem(ONBOARDING_KEY, 'true');
 };
 
-const divider = 'border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]';
-
-/** The tick beside a chosen language or mode, in the primary colour. */
-const Tick: React.FC = () => (
-    <PixelMark name="check" size={16} className="shrink-0 text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)]" />
-);
+/**
+ * A hairline under the language list while any rows are still below the fold.
+ * The list's scrollbar is hidden like every other scroller in the app, so
+ * without a cue a row can end flush against the footer and read as the end of
+ * the languages — on a short screen that quietly hides two of them. A flat
+ * edge line, like an iOS scroll edge, rather than a fade: no gradients.
+ */
+const scrollEdge = 'border-b border-[var(--c-rule)]';
 
 /**
  * The three slots of the "how it works" step, and the only step that splits in
@@ -84,19 +88,19 @@ const DoseRings: React.FC<{ count: number; at: number }> = ({ count, at }) => {
             height={18}
             aria-hidden="true"
             focusable="false"
-            className="text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)]"
+            className="text-[var(--c-accent)]"
         >
             <line
                 x1={PAD} y1={MID} x2={width - PAD} y2={MID}
                 strokeWidth={1}
-                className="stroke-[var(--color-m3-outline-variant)] dark:stroke-[var(--color-m3-dark-outline-variant)]"
+                className="stroke-[var(--c-rule)]"
             />
             {Array.from({ length: count }, (_, i) => (
                 <circle
                     key={i}
                     className={`onb-ring ${i <= at
                         ? 'fill-current stroke-current'
-                        : 'fill-[var(--color-m3-surface-dim)] stroke-[var(--color-m3-outline-variant)] dark:fill-[var(--color-m3-dark-surface)] dark:stroke-[var(--color-m3-dark-outline-variant)]'}`}
+                        : 'fill-[var(--c-paper)] stroke-[var(--c-rule)]'}`}
                     cx={PAD + i * GAP}
                     cy={MID}
                     r={i === at ? 4.2 : 3}
@@ -107,13 +111,13 @@ const DoseRings: React.FC<{ count: number; at: number }> = ({ count, at }) => {
     );
 };
 
-/**
- * Softens the last rows of the language list while any are still below the
- * fold. The list's scrollbar is hidden like every other scroller in the app, so
- * without this a row can end flush against the footer and read as the end of
- * the languages — on a short screen that quietly hides two of them.
- */
-const FADE_OUT = 'linear-gradient(to bottom, #000 calc(100% - 2rem), transparent)';
+/** A step's large title and the sentence under it. */
+const StepTitle: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
+    <>
+        <h1 className="m-0 text-3xl font-bold text-[var(--c-ink)]">{title}</h1>
+        <p className="m-0 mt-3 text-base text-[var(--c-muted)]">{subtitle}</p>
+    </>
+);
 
 /** Read straight out of the packs to size the greeting — see the welcome step. */
 const SUBTITLE_KEY = 'onboarding.welcome_subtitle';
@@ -138,35 +142,36 @@ interface PointProps {
     onClick?: () => void;
 }
 
-const Point: React.FC<PointProps> = ({ mark, title, desc, state = 'done', duration, playKey, onClick }) => {
-    const className = `flex w-full items-start gap-3.5 py-4 text-start ${divider} last:border-b-0`;
-    const body = (
-        <>
-            {/* A fixed box, not a well: the sprites are different heights and
-                have to sit on one column, but they are drawings, and a drawing
-                in a tinted square is an icon again. */}
-            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center">
+// A function rather than a component: ListGroup reads each row's `leading`
+// prop to inset the separator under it, so the rows have to be ListRows.
+const pointRow = ({ mark, title, desc, state = 'done', duration, playKey, onClick }: PointProps) => (
+    <ListRow
+        key={mark}
+        /* A fixed box, not a tile: the sprites are different heights and have
+           to sit on one column, but they are drawings, and a drawing in a
+           tinted square is an icon again. */
+        leading={
+            <span className="flex h-10 w-10 items-center justify-center">
                 <PixelMark key={playKey} name={mark} size={28} state={state} duration={duration} />
-            </div>
-            <div>
-                <p className={`text-[0.9375rem] font-medium ${state === 'asleep' ? 'text-muted' : 'text-body'}`}>{title}</p>
-                <p className="mt-0.5 text-[0.8125rem] leading-relaxed text-muted">{desc}</p>
-            </div>
-        </>
-    );
-    return onClick
-        ? <button type="button" onClick={onClick} aria-pressed={state === 'playing'} className={className}>{body}</button>
-        : <div className={className}>{body}</div>;
-};
+            </span>
+        }
+        title={<span className={state === 'asleep' ? 'text-[var(--c-muted)]' : undefined}>{title}</span>}
+        sub={desc}
+        /* A row that replays its beat reports whether that beat is playing.
+           No check is drawn: the group has no check icon. */
+        selected={onClick ? state === 'playing' : undefined}
+        onClick={onClick}
+    />
+);
 
 /** Index of the chart step, the only one that takes two columns when there's room. */
 const CHART_STEP = 2;
 
 /** Rows of the "how it works" step, in beat order — see BEATS. */
 const HOW_ROWS: { mark: MarkName; title: string; desc: string }[] = [
-    { mark: 'syringe', title: 'onboarding.how_log', desc: 'onboarding.how_log_desc' },
-    { mark: 'chart', title: 'onboarding.how_chart', desc: 'onboarding.how_chart_desc' },
-    { mark: 'vial', title: 'onboarding.how_calibrate', desc: 'onboarding.how_calibrate_desc' },
+    { mark: 'syringe', title: 'onboarding.how_log', desc: 'account.onboarding.log_desc' },
+    { mark: 'chart', title: 'onboarding.how_chart', desc: 'account.onboarding.chart_desc' },
+    { mark: 'vial', title: 'onboarding.how_calibrate', desc: 'account.onboarding.calibrate_desc' },
 ];
 
 /**
@@ -214,8 +219,7 @@ const HowStep: React.FC<{ curve: CurveData | null }> = ({ curve }) => {
     return (
         <>
             <Head>
-                <h1 className="text-2xl font-semibold text-body">{t('onboarding.how_title')}</h1>
-                <p className="mt-3 text-sm leading-relaxed text-muted">{t('onboarding.how_subtitle')}</p>
+                <StepTitle title={t('onboarding.how_title')} subtitle={t('onboarding.how_subtitle')} />
             </Head>
             {/* The three rows below say what the app does; this says it. The
                 curve, the doses and the fit are the engine's own output, so
@@ -232,31 +236,25 @@ const HowStep: React.FC<{ curve: CurveData | null }> = ({ curve }) => {
                         caption={t('onboarding.how_chart_caption')}
                         legend={{ model: t('onboarding.how_chart_legend_model'), labs: t('onboarding.how_chart_legend_labs') }}
                         action={finished && (
-                            <button
-                                type="button"
-                                onClick={() => play(0)}
-                                className="ms-auto rounded-md px-1.5 py-0.5 text-[0.75rem] text-[var(--color-m3-primary)] hover:bg-[var(--color-m3-surface-container)] dark:text-[var(--color-m3-primary-light)] dark:hover:bg-[var(--color-m3-dark-surface-container)]"
-                            >
+                            <Button variant="plain" className="ms-auto" onClick={() => play(0)}>
                                 {t('onboarding.how_replay')}
-                            </button>
+                            </Button>
                         )}
                     />
                 </div>
             </Stage>
             <Body>
-                {HOW_ROWS.map(({ mark, title, desc }, i) => (
-                    <Point
-                        key={mark}
-                        mark={mark}
-                        title={t(title)}
-                        desc={t(desc)}
-                        state={stateOf(i)}
-                        duration={BEATS[i]}
-                        playKey={playKey}
-                        onClick={() => play(i as Beat)}
-                    />
-                ))}
-                <p className="mt-5 text-[0.8125rem] leading-relaxed text-muted">{t('onboarding.how_note')}</p>
+                <ListGroup footer={t('account.onboarding.how_note')}>
+                    {HOW_ROWS.map(({ mark, title, desc }, i) => pointRow({
+                        mark,
+                        title: t(title),
+                        desc: t(desc),
+                        state: stateOf(i),
+                        duration: BEATS[i],
+                        playKey,
+                        onClick: () => play(i as Beat),
+                    }))}
+                </ListGroup>
             </Body>
         </>
     );
@@ -338,9 +336,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
                 explaining what is being chosen. */}
             <div className="shrink-0">
                 <div className="flex justify-center">
-                    <PixelCat pose="donut" size={176} />
+                    <PixelCat pose="donut" size={182} />
                 </div>
-                <h1 className="mt-6 text-2xl font-semibold text-body">{t('onboarding.welcome_title')}</h1>
+                <h1 className="m-0 mt-6 text-3xl font-bold text-[var(--c-ink)]">{t('onboarding.welcome_title')}</h1>
                 {/* Every translation of the sentence stacked into one grid cell,
                     the inactive ones hidden but still taking up their space, so
                     the box is as tall as the longest one at whatever width this
@@ -359,7 +357,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
                         return (
                             <p
                                 key={value}
-                                className={`col-start-1 row-start-1 text-sm leading-relaxed text-muted ${current ? '' : 'invisible'}`}
+                                className={`col-start-1 row-start-1 m-0 text-base text-[var(--c-muted)] ${current ? '' : 'invisible'}`}
                             >
                                 {text}
                             </p>
@@ -378,59 +376,51 @@ const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
             <div
                 ref={langListRef}
                 onScroll={syncLangsBelow}
-                style={langsBelow ? { maskImage: FADE_OUT, WebkitMaskImage: FADE_OUT } : undefined}
-                className="mx-auto mt-7 min-h-[7.5rem] w-full max-w-xs flex-1 overflow-y-auto scrollbar-hide text-start lg:flex-none"
+                className={`mx-auto mt-7 min-h-[7.5rem] w-full max-w-sm flex-1 overflow-y-auto scrollbar-hide text-start lg:flex-none ${langsBelow ? scrollEdge : ''}`}
             >
-                {languageOptions.map(({ value, label }) => (
-                    <button
-                        key={value}
-                        onClick={() => setLang(value as Lang)}
-                        aria-pressed={lang === value}
-                        className={`flex w-full items-center justify-between gap-4 py-3.5 text-start ${divider} last:border-b-0`}
-                    >
-                        <span className={`text-[0.9375rem] text-body ${lang === value ? 'font-semibold' : ''}`}>
-                            {label}
-                        </span>
-                        {lang === value && <Tick />}
-                    </button>
-                ))}
+                <ListGroup selection="single" checkIcon={LIST_CHECK} aria-label={t('onboarding.welcome_title')}>
+                    {languageOptions.map(({ value, label }) => (
+                        <ListRow
+                            key={value}
+                            title={label}
+                            selected={lang === value}
+                            onClick={() => setLang(value as Lang)}
+                        />
+                    ))}
+                </ListGroup>
             </div>
         </div>,
 
         <div key="mode" className="pt-8">
-            <h1 className="text-2xl font-semibold text-body">{t('onboarding.mode_title')}</h1>
-            <p className="mt-3 text-sm leading-relaxed text-muted">{t('onboarding.mode_subtitle')}</p>
-            <div className="mt-6">
+            <StepTitle title={t('onboarding.mode_title')} subtitle={t('account.onboarding.mode_sub')} />
+            <ListGroup
+                selection="single"
+                checkIcon={LIST_CHECK}
+                aria-label={t('onboarding.mode_title')}
+                footer={t('account.onboarding.mode_footer')}
+                className="mt-6"
+            >
                 {modeOptions.map(({ value, labelKey, descKey }) => (
-                    <button
+                    <ListRow
                         key={value}
+                        title={t(labelKey)}
+                        sub={t(descKey)}
+                        selected={mode === value}
                         onClick={() => setMode(value)}
-                        className={`flex w-full items-center justify-between gap-4 py-4 text-start ${divider} last:border-b-0`}
-                    >
-                        <span>
-                            <span className={`block text-[0.9375rem] text-body ${mode === value ? 'font-semibold' : ''}`}>
-                                {t(labelKey)}
-                            </span>
-                            <span className="mt-0.5 block text-[0.8125rem] leading-relaxed text-muted">
-                                {t(descKey)}
-                            </span>
-                        </span>
-                        {mode === value && <Tick />}
-                    </button>
+                    />
                 ))}
-            </div>
+            </ListGroup>
         </div>,
 
         <HowStep key="how" curve={curve} />,
 
         <div key="privacy" className="pt-8">
-            <h1 className="text-2xl font-semibold text-body">{t('onboarding.privacy_title')}</h1>
-            <p className="mt-3 text-sm leading-relaxed text-muted">{t('onboarding.privacy_subtitle')}</p>
-            <div className="mt-4">
-                <Point mark="lock" title={t('onboarding.privacy_local')} desc={t('onboarding.privacy_local_desc')} />
-                <Point mark="cloud" title={t('onboarding.privacy_cloud')} desc={t('onboarding.privacy_cloud_desc')} />
-                <Point mark="caution" title={t('onboarding.privacy_medical')} desc={t('onboarding.privacy_medical_desc')} />
-            </div>
+            <StepTitle title={t('onboarding.privacy_title')} subtitle={t('onboarding.privacy_subtitle')} />
+            <ListGroup className="mt-6">
+                {pointRow({ mark: 'lock', title: t('onboarding.privacy_local'), desc: t('account.onboarding.local_desc') })}
+                {pointRow({ mark: 'cloud', title: t('onboarding.privacy_cloud'), desc: t('account.onboarding.cloud_desc') })}
+                {pointRow({ mark: 'caution', title: t('onboarding.privacy_medical'), desc: t('account.onboarding.medical_desc') })}
+            </ListGroup>
         </div>,
     ];
 
@@ -442,15 +432,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
     };
 
     return (
-        <div className="flex h-[100dvh] w-full select-none flex-col bg-[var(--color-m3-surface-dim)] font-sans text-[var(--color-m3-on-surface)] dark:bg-[var(--color-m3-dark-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-            <div className="flex shrink-0 justify-end px-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))]">
-                <button
+        <div className="flex h-[100dvh] w-full select-none flex-col bg-[var(--c-paper)] font-sans text-[var(--c-ink)]">
+            <div className="flex shrink-0 justify-end px-4 pt-[calc(0.25rem+env(safe-area-inset-top,0px))]">
+                <Button
+                    variant="plain"
                     onClick={onDone}
-                    className={`rounded-lg px-2 py-1.5 text-[0.8125rem] text-muted hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] ${isLast ? 'invisible' : ''}`}
+                    className={isLast ? 'invisible' : ''}
                     tabIndex={isLast ? -1 : 0}
+                    aria-hidden={isLast || undefined}
                 >
                     {t('onboarding.skip')}
-                </button>
+                </Button>
             </div>
 
             {/* `safe center`, not `start`: on a phone the step is usually taller
@@ -461,7 +453,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
                 without touching step 0, whose `h-full` already exactly fills
                 the cross axis; `safe` is what keeps a step that overflows a
                 short window scrolling from the top instead of clipping. */}
-            <div className="onboarding-steps flex flex-1 overflow-y-auto scrollbar-hide px-6">
+            <div className="onboarding-steps flex flex-1 overflow-y-auto scrollbar-hide px-4 md:px-6">
                 {/* The welcome step pins its greeting and scrolls its own list,
                     so it needs the scroller's height to divide up; the rest are
                     read top to bottom and just grow.
@@ -482,22 +474,25 @@ const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
                 </div>
             </div>
 
-            <div className={`shrink-0 px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]`}>
+            <div className="shrink-0 border-t border-[var(--c-hairline)] bg-[var(--c-paper)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:px-6">
                 <div className="mx-auto grid w-full max-w-md grid-cols-[1fr_auto_1fr] items-center gap-4">
                     <div className="justify-self-start">
                         {step > 0 && (
-                            <button onClick={() => go(step - 1)} className="btn-secondary">
+                            <Button variant="secondary" compact onClick={() => go(step - 1)}>
                                 {t('onboarding.back')}
-                            </button>
+                            </Button>
                         )}
                     </div>
 
-                    <DoseRings count={steps.length} at={step} />
+                    {/* A standalone progress mark, named for screen readers. */}
+                    <span role="img" aria-label={t('account.step_of').replace('{n}', String(step + 1)).replace('{total}', String(steps.length))}>
+                        <DoseRings count={steps.length} at={step} />
+                    </span>
 
                     <div className="justify-self-end">
-                        <button onClick={() => (isLast ? onDone() : go(step + 1))} className="btn-primary">
+                        <Button variant="primary" compact onClick={() => (isLast ? onDone() : go(step + 1))}>
                             {t(isLast ? 'onboarding.start' : 'onboarding.next')}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

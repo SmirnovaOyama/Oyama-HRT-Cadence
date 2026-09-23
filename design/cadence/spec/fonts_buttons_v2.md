@@ -54,3 +54,12 @@ Rules:
   (44), "Add a blood test" secondary compact (44), both full rail width.
 - On a tinted surface (plate #F3EEE6, the desktop rail) the secondary fill is #FFFFFF instead of #EFE8DD, so it still reads as a button.
 - Hit targets stay >= 44px. Contrast: white on #A34A28 is 5.9:1, white on #B5532F 4.95:1, ink on #EFE8DD 14:1.
+
+## Revision 5: capsule buttons (owner's choice, option B)
+
+The owner said the rounded-rectangle buttons were not good looking and picked option B from four
+side-by-side styles: **every button is a capsule** (border-radius: 9999px), with the same colours as before
+(primary #A34A28 / dark #B5532F with white text, tinted secondary #EFE8DD / dark #332C24 with ink text, plain
+and destructive text buttons unchanged). Heights stay 50 (primary) and 44 (compact); small header buttons are
+36px capsules. Cards around buttons use radius 20. Segmented controls, inputs and list groups keep their
+rectangles (they are fields and containers, not buttons). This overrides the radius column in the table above.

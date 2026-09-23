@@ -64,3 +64,18 @@ Every icon was checked against lucide, the app's current set. Where a concept is
 
 ## How to extend the set
 Draw the object in outline at 1.75 on the 0.5 grid inside 3 to 21. Ask which part of it is "done" or "inside", and tone only that part, stopping at a real stroke. If nothing in the icon is done or inside (arrows, close, chevrons), leave it untoned. Check it at 16px in dark mode before you ship it.
+
+## Additions (second round: the app-wide set)
+These 42 icons replace every remaining lucide import. They follow the rules above, plus these shared parts:
+- **Off form** (cloud-off, shield-off, image-off, off): a 45-degree slash from top left to bottom right (3.5 to 20.5, or 4 to 20 on the shorter cloud). The outline is cut back about 2.3 units on each side of the slash, measured at right angles to it. Each cut end is a point on the rim or on the 0.5 grid. The off form has no tone, because nothing is on or inside. `off` is the in-target ring cut this way; it is not a ring with a bar across it.
+- **Hidden** (eye-off) is a shut eye, not a slashed one: the lower lid of `eye` with three lashes. `eye` and `eye-off` toggle as a pair.
+- **Spinner** is an open three-quarter arc on r 8.5 with no tone. Rotate the whole icon to animate it (the React component accepts `className="animate-spin"`). Loading is a passing state, so it carries no tone.
+- **Chevrons** (up, down, left, right) are the same 11 by 4.5 open corner turned four ways.
+- **Calibration methods** form a family: off, gauge (MIPD: the dial swept up to the needle), radar (EKF: the wedge just swept, up to the sweep line) and wind (OU-Kalman: a windsock, with the first band toned up to a band stroke). Forward and rewind put a Now rule on one side with two open chevrons running away from it.
+- **Ester decorations** (helpers.tsx) form a small science family, all toned on their core part: molecule (E2), shield (CPA, the shield split down the middle with the left half toned), shell (EV), ring (EB, a benzene hexagon), orbit (EC), helix (EN) and flask (EU and the default case).
+- **Gel.** Route.gel uses the existing `gel` pump bottle, to match the other route icons. `gel-drop` (a dollop on the skin line) is kept for inline places where the bottle is too busy.
+- **Hard drive** is a desk drive seen from the front: a housing on a base slab with a short slot stroke. The slab is toned up to the housing line. It has no platter, because a platter and arm read as a "Q" at 14px.
+- Free cubics are also allowed for the helix strands and the gel dollop. They are organic shapes, and they have vertical tangents at the helix extremes and a horizontal tangent at the dollop crest.
+
+## React
+`bun run icons` reads this file's `icons.json` and writes `src/components/icons/generated.tsx`. `src/components/icons/index.ts` exports each icon in PascalCase (`InTarget`, `ChevronRight`), plus lucide-named aliases (`Home`, `Loader2`) during the migration. Optical stroke sizing follows the table above. `sheet.png` next to this file shows every icon at 48, 20 and 16px in both themes.

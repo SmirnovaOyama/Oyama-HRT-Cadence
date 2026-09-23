@@ -8,14 +8,17 @@ import { APP_VERSION, AppTheme } from './constants';
 import { DoseEvent, decompressData, encryptData, decryptData } from '../logic';
 import { parseCloudBackup } from './utils/cloudBackup';
 import { useAppData } from './hooks/useAppData';
+import { useProjection } from './hooks/useProjection';
 import { useAppNavigation, ViewKey } from './hooks/useAppNavigation';
 import { useLiveShareSync } from './hooks/useLiveShareSync';
 import { describeSyncError, useCloudSync } from './hooks/useCloudSync';
 
 import WeightEditorModal from './components/WeightEditorModal';
 import DoseFormModal from './components/DoseFormModal';
+import type { DoseFormPrefill } from './components/DoseForm';
 import ImportModal from './components/ImportModal';
 import Sidebar from './components/Sidebar';
+import TabBar from './components/TabBar';
 import PasswordInputModal from './components/PasswordInputModal';
 import DisclaimerModal from './components/DisclaimerModal';
 import AuthModal from './components/AuthModal';
@@ -23,7 +26,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { cloudService } from './services/cloud';
 
 // Pages
-import Home from './pages/Home';
+import Home, { type LogDosePrefill } from './pages/Home';
 import History from './pages/History';
 import Lab from './pages/Lab';
 import CalibrationSettings from './pages/CalibrationSettings';
@@ -101,14 +104,27 @@ const AppContent = () => {
         transitionDirection,
         handleViewChange,
         mainScrollRef,
-        navItems,
-    } = useAppNavigation(user);
+    } = useAppNavigation();
+
+    // "If you keep your schedule": the logged doses plus the ones each regular
+    // routine still brings. Only the pages that draw the estimate need it.
+    const projection = useProjection({
+        events,
+        weight,
+        enabled: currentView === 'home' || currentView === 'history',
+    });
 
 
     // --- Local UI State (Modals & Forms) ---
     const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<DoseEvent | null>(null);
+    const [doseFormPrefill, setDoseFormPrefill] = useState<DoseFormPrefill | null>(null);
+    // Where Share and the model settings go back to: both open from more than
+    // one tab (Share from Today, Timeline and You; the model settings from
+    // Blood tests and You).
+    const [shareReturn, setShareReturn] = useState<ViewKey>('home');
+    const [pkReturn, setPkReturn] = useState<ViewKey>('lab');
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isPasswordInputOpen, setIsPasswordInputOpen] = useState(false);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -263,7 +279,37 @@ const AppContent = () => {
         }
     };
 
-    const handleEditEvent = (e: DoseEvent) => { setEditingEvent(e); setIsFormOpen(true); };
+    const handleEditEvent = (e: DoseEvent) => { setDoseFormPrefill(null); setEditingEvent(e); setIsFormOpen(true); };
+
+    // The tab bar's Log button and the rail's "Log a dose": a new dose, never
+    // the one last opened for editing. A "Coming up" row on Today passes the
+    // routine it belongs to, so the sheet opens on that medicine and amount.
+    const handleLogNewDose = (prefill?: LogDosePrefill) => {
+        setEditingEvent(null);
+        setDoseFormPrefill(prefill
+            ? { route: prefill.route, ester: prefill.ester, doseMG: prefill.doseMG, extras: { ...prefill.extras } }
+            : null);
+        setIsFormOpen(true);
+    };
+
+    // Share and the model settings keep the tab they were opened from lit.
+    const navView: ViewKey = currentView === 'share' ? shareReturn
+        : currentView === 'pk-params' ? pkReturn
+            : currentView;
+
+    const openShare = (from: ViewKey) => { setShareReturn(from); handleViewChange('share'); };
+    const openPKParams = (from: ViewKey) => { setPkReturn(from); handleViewChange('pk-params'); };
+    const tabLabel = (view: ViewKey) => t(
+        view === 'home' ? 'shell.tab.today'
+            : view === 'history' ? 'shell.tab.timeline'
+                : view === 'lab' ? 'tests.page_title'
+                    : 'you.title');
+
+    // The rail's "Add a blood test": Blood tests, with its add form open.
+    const handleAddLabResult = () => { handleViewChange('lab'); setIsQuickAddLabOpen(true); };
+
+    // While a forced 2FA setup is pending, the nav stays locked on that page.
+    const handleNavChange = (view: ViewKey) => { if (!needsSetup2FA) handleViewChange(view); };
 
     const handleQuickExport = () => {
         if (events.length === 0 && labResults.length === 0) {
@@ -377,13 +423,6 @@ const AppContent = () => {
         }
     };
 
-    // Construct Nav Items again just for Sidebar prop, or reuse from hook if we exported it
-    // Actually we exported navItems from useAppNavigation
-    // But we need to pass them to sidebar.
-    // And also reconstruct the bottom nav bar manually because it was inline in the original App.tsx
-    // Let's grab navItems logic from hook or just reconstruct here?
-    // The hook provides navItems.
-
     // Takes over the whole screen rather than sitting in the view stack: the
     // intro is where language and HRT mode get chosen, and leaving the nav up
     // would let someone tab away with both still on their defaults. Yields to a
@@ -398,18 +437,19 @@ const AppContent = () => {
     }
 
     return (
-        <div className="h-[100dvh] w-full bg-[var(--color-m3-surface)] dark:bg-[var(--color-m3-dark-surface)] flex flex-col md:flex-row font-sans text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] select-none overflow-hidden">
+        <div className="h-[100dvh] w-full flex flex-col md:flex-row font-sans bg-[var(--c-paper)] text-[var(--c-ink)] select-none overflow-hidden">
             <Sidebar
-                navItems={navItems}
-                currentView={currentView}
-                onViewChange={(v) => !needsSetup2FA && handleViewChange(v)}
+                currentView={navView}
+                onViewChange={handleNavChange}
+                onLogDose={() => handleLogNewDose()}
+                onAddTest={handleAddLabResult}
+                isAdmin={!!user?.isAdmin}
+                locked={needsSetup2FA}
+                isSignedIn={!!token}
+                syncStatus={syncState.status}
+                lastSyncedAt={syncState.lastSyncedAt}
             />
-            <div className="flex-1 flex flex-col overflow-hidden w-full bg-[var(--color-m3-surface-dim)] dark:bg-[var(--color-m3-dark-surface)] relative">
-
-                {/* Mobile site label — reflects the current deployment host */}
-                <div className="md:hidden shrink-0 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] pb-1 text-center text-[0.6875rem] font-medium tracking-wide text-muted select-none">
-                    {window.location.hostname}
-                </div>
+            <div className="flex-1 min-w-0 flex flex-col overflow-hidden w-full bg-[var(--c-paper)] relative pt-[env(safe-area-inset-top,0px)] md:pt-0">
 
                 {/* Operator banner. Outside the scroller and keyed off nothing in
                     this component, so it stays put across view changes. */}
@@ -429,21 +469,27 @@ const AppContent = () => {
                             currentStatus={currentStatus}
                             events={events}
                             simulation={simulation}
+                            projection={projection}
                             labResults={labResults}
                             onEditEvent={handleEditEvent}
                             calibrationFn={calibrationFn}
                             theme={theme}
                             onNavigateToHistory={() => handleViewChange('history')}
                             onNavigateToLab={() => handleViewChange('lab')}
-                            onNavigateToShare={() => handleViewChange('share')}
+                            onNavigateToShare={() => openShare('home')}
                             authToken={token}
                             onAuthRequired={() => setIsAuthModalOpen(true)}
+                            onLogDose={handleLogNewDose}
+                            syncStatus={token ? syncState.status : undefined}
+                            lastSyncedAt={syncState.lastSyncedAt}
+                            onOpenBackup={() => handleViewChange('account')}
                         />
                     )}
 
                     {currentView === 'share' && token && (
                         <ShareSettings
-                            onBack={() => handleViewChange('home')}
+                            onBack={() => handleViewChange(shareReturn)}
+                            parentLabel={tabLabel(shareReturn)}
                             authToken={token}
                             mode={mode}
                             events={events}
@@ -468,6 +514,15 @@ const AppContent = () => {
                             onSaveTemplate={addTemplate}
                             onDeleteTemplate={deleteTemplate}
                             groupedEvents={groupedEvents}
+                            events={events}
+                            simulation={simulation}
+                            projection={projection}
+                            labResults={labResults}
+                            calibrationFn={calibrationFn}
+                            calibration={calibration}
+                            theme={theme}
+                            onNavigateToLab={() => handleViewChange('lab')}
+                            onNavigateToShare={token ? () => openShare('history') : undefined}
                         />
                     )}
 
@@ -487,6 +542,12 @@ const AppContent = () => {
                             calibration={calibration}
                             onOpenCalibrationSettings={() => handleViewChange('lab-calibration')}
                             lang={lang}
+                            events={events}
+                            calibrationHistoryMode={calibrationHistoryMode}
+                            onSetCalibrationMethod={setCalibrationMethod}
+                            onSetCalibrationHistoryMode={setCalibrationHistoryMode}
+                            onOpenPKParams={() => openPKParams('lab')}
+                            pkCustomized={!!pkParams}
                         />
                     )}
 
@@ -523,7 +584,7 @@ const AppContent = () => {
                             weight={weight}
                             setIsWeightModalOpen={setIsWeightModalOpen}
                             pkParams={pkParams}
-                            onNavigateToPKParams={() => handleViewChange('pk-params')}
+                            onNavigateToPKParams={() => openPKParams('settings')}
                             onNavigateToHRTMode={() => handleViewChange('settings-hrt-mode')}
                             onNavigateToLanguage={() => handleViewChange('settings-language')}
                             onNavigateToAppearance={() => handleViewChange('settings-appearance')}
@@ -539,6 +600,14 @@ const AppContent = () => {
                             onNavigateToCatStates={() => handleViewChange('settings-cat-states')}
                             isAdmin={!!user?.isAdmin}
                             onNavigateToAdmin={() => handleViewChange('admin')}
+                            onNavigate={(v) => {
+                                if (v === 'share') openShare('settings');
+                                else handleViewChange(v as ViewKey);
+                            }}
+                            onSignIn={() => setIsAuthModalOpen(true)}
+                            syncStatus={syncState.status}
+                            syncErrorCode={syncState.errorCode}
+                            lastSyncedAt={syncState.lastSyncedAt}
                         />
                     )}
 
@@ -674,66 +743,24 @@ const AppContent = () => {
                             pkParams={pkParams}
                             onSave={setPkParams}
                             onReset={clearPkParams}
-                            onBack={() => handleViewChange('settings')}
+                            onBack={() => handleViewChange(pkReturn)}
+                            parentLabel={tabLabel(pkReturn)}
                         />
                     )}
 
                     {currentView === 'admin' && user?.isAdmin && (
-                        <Admin />
+                        <Admin onBack={() => handleViewChange('settings')} />
                     )}
                 </div>
 
-                {/* Bottom Navigation — floating island */}
-                <nav className="fixed left-4 right-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] z-40 md:hidden rounded-2xl bg-[var(--color-m3-surface-bright)] dark:bg-[var(--color-m3-dark-surface-container)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] shadow-[var(--shadow-m3-3)]">
-                    <div className="flex items-stretch p-1.5 gap-1">
-                        {navItems.filter(item => item.id !== 'admin').map(({ id, icon: Icon, label }) => {
-                            const activeTab = ({
-                                'home': 'home',
-                                'history': 'history',
-                                'lab': 'lab',
-                                'lab-calibration': 'lab',
-                                'settings': 'settings',
-                                'settings-hrt-mode': 'settings',
-                                'settings-language': 'settings',
-                                'settings-appearance': 'settings',
-                                'settings-weight': 'settings',
-                                'settings-export': 'settings',
-                                'settings-import': 'settings',
-                                'settings-transparency': 'settings',
-                                'settings-milk-tea': 'settings',
-                                'settings-cat-states': 'settings',
-                                'pk-params': 'settings',
-                                'account': 'account',
-                                'sessions': 'account',
-                                'two-factor': 'account',
-                                // Mobile reaches admin from Settings → General, so the
-                                // settings tab is the one that should read as active.
-                                'admin': 'settings',
-                            } as Record<string, string>)[currentView] ?? currentView;
-                            const isActive = activeTab === id;
-                            const isDisabled = needsSetup2FA && id !== 'two-factor';
-                            return (
-                                <button
-                                    key={id}
-                                    onClick={() => !isDisabled && handleViewChange(id as ViewKey)}
-                                    disabled={isDisabled}
-                                    className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 transition-colors duration-150 motion-reduce:transition-none
-                                        ${isDisabled
-                                            ? 'text-[var(--color-m3-outline)] dark:text-[var(--color-m3-dark-outline)] cursor-not-allowed'
-                                            : isActive
-                                            ? 'text-body'
-                                            : 'text-muted'
-                                        }`}
-                                >
-                                    <Icon size={20} strokeWidth={isActive ? 2 : 1.75} />
-                                    <span className="text-[0.625rem] font-medium">
-                                        {label}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </nav>
+                {/* Docked tab bar (mobile only). Part of the column, not fixed over
+                    it, so the scroller above always ends at its top edge. */}
+                <TabBar
+                    currentView={navView}
+                    onViewChange={handleNavChange}
+                    onLogDose={() => handleLogNewDose()}
+                    locked={needsSetup2FA}
+                />
             </div>
 
             <PasswordInputModal
@@ -753,6 +780,7 @@ const AppContent = () => {
                 isOpen={isFormOpen}
                 onClose={() => setIsFormOpen(false)}
                 eventToEdit={editingEvent}
+                prefill={doseFormPrefill}
                 onSave={(e: DoseEvent) => {
                     if (events.find(p => p.id === e.id)) updateEvent(e);
                     else addEvent(e);
@@ -783,7 +811,7 @@ const AppContent = () => {
                 onClose={() => setIsAuthModalOpen(false)}
             />
 
-        </div >
+        </div>
     );
 };
 

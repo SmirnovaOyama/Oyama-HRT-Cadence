@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
+import { useDialog } from '../contexts/DialogContext';
 import { LabResult, isT_LabUnit } from '../../logic';
-import { Check, Trash2, X, ChevronDown } from 'lucide-react';
+import { ChevronRight } from './icons';
 import { v4 as uuidv4 } from 'uuid';
 import DateTimePicker from './DateTimePicker';
-import { LOCALE_MAP } from '../utils/helpers';
+import { formatTime } from '../utils/helpers';
+import { makeDayFormatter } from './DoseHeatmap';
+import { Button, ListGroup, ListRow, SegmentedControl } from './ui';
 
 interface LabResultFormProps {
     resultToEdit?: LabResult | null;
@@ -15,8 +18,6 @@ interface LabResultFormProps {
 
 type LabUnit = 'pg/ml' | 'pmol/l' | 'ng/dl' | 'nmol/l';
 
-const divider = "border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]";
-
 const E2_UNITS: LabUnit[] = ['pmol/l', 'pg/ml'];
 const T_UNITS: LabUnit[] = ['ng/dl', 'nmol/l'];
 const UNIT_LABELS: Record<LabUnit, string> = {
@@ -26,53 +27,50 @@ const UNIT_LABELS: Record<LabUnit, string> = {
     'nmol/l': 'nmol/L',
 };
 
-// One hormone's value + unit toggle. Reused for the estradiol row, the
-// testosterone row, and (in edit mode) the single row matching whichever
-// hormone the record being edited already belongs to.
-const HormoneValueField: React.FC<{
+/** Local "YYYY-MM-DDTHH:mm" for a moment, the shape the date row keeps. */
+const toLocalIso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+// One hormone's value and unit, as a grouped list: the number field on the
+// left, the unit as a short segmented control on the right. Reused for the
+// estradiol group, the testosterone group, and (when editing) the one group
+// matching the hormone of the record being edited.
+const HormoneValueGroup: React.FC<{
+    id: string;
     label: string;
     units: LabUnit[];
     unit: LabUnit;
     onUnitChange: (u: LabUnit) => void;
     value: string;
     onValueChange: (v: string) => void;
-}> = ({ label, units, unit, onUnitChange, value, onValueChange }) => (
-    <div>
-        <div className="flex items-center justify-between mb-3">
-            <span className="text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                {label}
-            </span>
-            <div className="flex gap-4">
-                {units.map(u => (
-                    <button
-                        key={u}
-                        onClick={() => onUnitChange(u)}
-                        className={`text-sm pb-0.5 border-b-2 ${unit === u
-                            ? 'font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] border-[var(--color-m3-primary)]'
-                            : 'text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] border-transparent'
-                        }`}
-                    >
-                        {UNIT_LABELS[u]}
-                    </button>
-                ))}
-            </div>
+}> = ({ id, label, units, unit, onUnitChange, value, onValueChange }) => (
+    <ListGroup header={<label htmlFor={id}>{label}</label>}>
+        <div className="list-row gap-3">
+            <input
+                id={id}
+                type="number"
+                inputMode="decimal"
+                placeholder="0.0"
+                value={value}
+                onChange={e => onValueChange(e.target.value)}
+                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-xl font-semibold tabular-nums text-[var(--c-ink)] outline-none placeholder:font-normal placeholder:text-[var(--c-muted)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <SegmentedControl
+                aria-label={label}
+                className="w-44 shrink-0"
+                options={units.map(u => ({ value: u, label: UNIT_LABELS[u] }))}
+                value={unit}
+                onChange={onUnitChange}
+            />
         </div>
-        <input
-            type="number"
-            inputMode="decimal"
-            placeholder="0.0"
-            value={value}
-            onChange={e => onValueChange(e.target.value)}
-            className="w-full bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container-low)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-md px-3 py-2 outline-none focus:border-[var(--color-m3-primary)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] placeholder:text-[var(--color-m3-on-surface-variant)] tabular-nums"
-            style={{ fontSize: '16px' }}
-        />
-    </div>
+    </ListGroup>
 );
 
+/** Add or edit a blood test, laid out for a sheet: grouped rows, then the
+ *  one primary action and a plain destructive delete. */
 const LabResultForm: React.FC<LabResultFormProps> = ({ resultToEdit, onSave, onCancel, onDelete }) => {
     const { t, lang } = useTranslation();
+    const { showDialog } = useDialog();
     const [dateStr, setDateStr] = useState("");
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
     // Editing an existing record: single value tied to that record's hormone.
@@ -89,15 +87,11 @@ const LabResultForm: React.FC<LabResultFormProps> = ({ resultToEdit, onSave, onC
 
     useEffect(() => {
         if (resultToEdit) {
-            const d = new Date(resultToEdit.timeH * 3600000);
-            const iso = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            setDateStr(iso);
+            setDateStr(toLocalIso(new Date(resultToEdit.timeH * 3600000)));
             setEditValue(resultToEdit.concValue.toString());
             setEditUnit(resultToEdit.unit);
         } else {
-            const now = new Date();
-            const iso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            setDateStr(iso);
+            setDateStr(toLocalIso(new Date()));
             setE2Value("");
             setTValue("");
             setE2Unit('pmol/l');
@@ -126,129 +120,90 @@ const LabResultForm: React.FC<LabResultFormProps> = ({ resultToEdit, onSave, onC
         if (hasT) onSave({ id: uuidv4(), timeH, concValue: tNum, unit: tUnit });
     };
 
+    const handleDelete = () => {
+        if (!resultToEdit || !onDelete) return;
+        showDialog('confirm', t('lab.delete_confirm'), () => {
+            onDelete(resultToEdit.id);
+            onCancel();
+        });
+    };
+
     const canSave = resultToEdit ? !!editValue : (!!e2Value || !!tValue);
     const editIsT = isT_LabUnit(editUnit);
 
+    const dayText = useMemo(() => makeDayFormatter(lang), [lang]);
+    const dateLabel = dateStr && !Number.isNaN(new Date(dateStr).getTime())
+        ? `${dayText(new Date(dateStr))}, ${formatTime(new Date(dateStr))}`
+        : '';
+
     return (
-        <div className="flex flex-col h-full">
-            <div className="overflow-y-auto flex-1">
-                {/* Date row */}
-                <button
-                    type="button"
-                    onClick={() => setIsDatePickerOpen(v => !v)}
-                    className={`w-full flex items-center justify-between py-[18px] ${divider} text-start`}
-                >
-                    <span className="text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                        {t('lab.date')}
-                    </span>
-                    <div className="flex items-center gap-1.5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                        <span className="text-sm tabular-nums">
-                            {dateStr ? new Date(dateStr).toLocaleString(LOCALE_MAP[lang] || 'en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                        </span>
-                        <ChevronDown size={14} className={`chev ${isDatePickerOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                </button>
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+                <ListGroup chevronIcon={<ChevronRight size={16} />}>
+                    <ListRow
+                        title={t('tests.date')}
+                        value={<span className="tabular-nums">{dateLabel}</span>}
+                        drillIn
+                        aria-expanded={isDatePickerOpen}
+                        onClick={() => setIsDatePickerOpen(v => !v)}
+                    />
+                </ListGroup>
                 <DateTimePicker
                     isOpen={isDatePickerOpen}
                     inline
                     onClose={() => setIsDatePickerOpen(false)}
-                    onConfirm={(date) => {
-                        const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                        setDateStr(iso);
-                    }}
+                    onConfirm={(date) => setDateStr(toLocalIso(date))}
                     initialDate={dateStr ? new Date(dateStr) : new Date()}
                     mode="datetime"
-                    title={t('lab.date')}
+                    title={t('tests.date')}
                 />
-
-                {resultToEdit ? (
-                    <div className={`py-[18px] ${divider}`}>
-                        <HormoneValueField
-                            label={editIsT ? t('lab.value_t') : t('lab.value')}
-                            units={editIsT ? T_UNITS : E2_UNITS}
-                            unit={editUnit}
-                            onUnitChange={setEditUnit}
-                            value={editValue}
-                            onValueChange={setEditValue}
-                        />
-                    </div>
-                ) : (
-                    <>
-                        <div className={`py-[18px] ${divider}`}>
-                            <HormoneValueField
-                                label={t('lab.value')}
-                                units={E2_UNITS}
-                                unit={e2Unit}
-                                onUnitChange={setE2Unit}
-                                value={e2Value}
-                                onValueChange={setE2Value}
-                            />
-                        </div>
-                        <div className={`py-[18px] ${divider}`}>
-                            <HormoneValueField
-                                label={t('lab.value_t')}
-                                units={T_UNITS}
-                                unit={tUnit}
-                                onUnitChange={setTUnit}
-                                value={tValue}
-                                onValueChange={setTValue}
-                            />
-                        </div>
-                        <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] pt-2">
-                            {t('lab.dual_hint')}
-                        </p>
-                    </>
-                )}
             </div>
 
-            {/* Footer */}
-            <div className="pt-4 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2">
-                    {resultToEdit && onDelete && (
-                        <>
-                            {showDeleteConfirm ? (
-                                <div className="flex items-center gap-1 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded px-2 py-1">
-                                    <span className="text-xs text-red-600 dark:text-red-400 font-medium whitespace-nowrap">{t('dialog.confirm_title')}?</span>
-                                    <button
-                                        onClick={() => { onDelete(resultToEdit.id); onCancel(); }}
-                                        className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded"
-                                    >
-                                        <Check size={14} />
-                                    </button>
-                                    <button
-                                        onClick={() => setShowDeleteConfirm(false)}
-                                        className="p-1 text-[var(--color-m3-on-surface-variant)] hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => setShowDeleteConfirm(true)}
-                                    className="p-2 text-[var(--color-m3-on-surface-variant)] hover:text-red-500 rounded"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            )}
-                        </>
-                    )}
-                </div>
+            {resultToEdit ? (
+                <HormoneValueGroup
+                    id="lab-edit-value"
+                    label={editIsT ? t('tests.t') : t('tests.e2')}
+                    units={editIsT ? T_UNITS : E2_UNITS}
+                    unit={editUnit}
+                    onUnitChange={setEditUnit}
+                    value={editValue}
+                    onValueChange={setEditValue}
+                />
+            ) : (
+                <>
+                    <HormoneValueGroup
+                        id="lab-e2-value"
+                        label={t('tests.e2')}
+                        units={E2_UNITS}
+                        unit={e2Unit}
+                        onUnitChange={setE2Unit}
+                        value={e2Value}
+                        onValueChange={setE2Value}
+                    />
+                    <div className="flex flex-col">
+                        <HormoneValueGroup
+                            id="lab-t-value"
+                            label={t('tests.t')}
+                            units={T_UNITS}
+                            unit={tUnit}
+                            onUnitChange={setTUnit}
+                            value={tValue}
+                            onValueChange={setTValue}
+                        />
+                        <p className="list-group-footer">{t('lab.dual_hint')}</p>
+                    </div>
+                </>
+            )}
 
-                <div className="flex gap-2 ml-auto">
-                    <button
-                        onClick={onCancel}
-                        className="min-w-[88px] px-4 py-2 text-sm text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] rounded-md flex items-center justify-center"
-                    >
-                        {t('btn.cancel')}
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={!canSave || !dateStr}
-                        className="min-w-[88px] px-4 py-2 text-sm font-medium bg-[var(--color-m3-primary)] text-white rounded-md disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                    >
-                        <Check size={14} />
-                        {t('btn.save')}
-                    </button>
+            <div className="flex flex-col gap-2">
+                <Button block onClick={handleSave} disabled={!canSave || !dateStr}>
+                    {t('tests.save')}
+                </Button>
+                <div className="flex items-center justify-between gap-3">
+                    {resultToEdit && onDelete ? (
+                        <Button variant="destructive" onClick={handleDelete}>{t('tests.delete')}</Button>
+                    ) : <span />}
+                    <Button variant="plain" onClick={onCancel}>{t('btn.cancel')}</Button>
                 </div>
             </div>
         </div>

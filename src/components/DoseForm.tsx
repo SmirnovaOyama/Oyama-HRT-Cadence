@@ -5,15 +5,32 @@ import { useDialog } from '../contexts/DialogContext';
 import CustomSelect from './CustomSelect';
 import DateTimePicker from './DateTimePicker';
 import { Route, Ester, ExtraKey, DoseEvent, SL_TIER_ORDER, SublingualTierParams, getBioavailabilityMultiplier, getToE2Factor, getDoseAdvisory } from '../../logic';
-import { Save, Trash2, Info, Bookmark, BookmarkPlus, X, ChevronDown, Check, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Check, ChevronRight, ChevronDown, Close, Plus, Delete, External } from './icons';
+import { Button, ListGroup, ListRow } from './ui';
 import { DoseAdvisoryLine } from './DoseAdvisory';
-import { LOCALE_MAP } from '../utils/helpers';
+import { joinList } from '../i18n/listSeparator';
 import InjectionFields from './dose_form/InjectionFields';
 import OralFields from './dose_form/OralFields';
 import SublingualFields from './dose_form/SublingualFields';
 import GelFields from './dose_form/GelFields';
 import PatchFields from './dose_form/PatchFields';
-import QuickDoseButtons, { QuickDose } from './dose_form/QuickDoseButtons';
+import type { QuickDose } from './dose_form/QuickDoseButtons';
+import type { AmountBasis } from './dose_form/AmountSection';
+import {
+    GroupHeader,
+    ListSep,
+    RouteTile,
+    describeAmount,
+    describeDose,
+    describeWhen,
+    esterName,
+    formatAmount,
+    formatRelative,
+    formatTime,
+    routeName,
+} from './dose_form/shared';
+import { isDue, regimenSub, sameDose } from './dose_form/regimens';
+import { Regimen, inferRegimens, sameLocalDay, usableRegimens } from '../utils/schedule';
 import { useHRTMode } from '../contexts/HRTModeContext';
 
 export interface DoseTemplate {
@@ -41,12 +58,13 @@ const DOSE_GUIDE_CONFIG: Partial<Record<Route, DoseGuideConfig>> = {
     [Route.gel]: { unitKey: 'mg_day', thresholds: [1.5, 3, 6, 9] },
 };
 
-const LEVEL_BADGE_STYLES: Record<DoseLevelKey, string> = {
-    low: 'text-emerald-700 dark:text-emerald-300',
-    medium: 'text-sky-700 dark:text-sky-300',
-    high: 'text-amber-700 dark:text-amber-300',
-    very_high: 'text-rose-700 dark:text-rose-300',
-    above: 'text-red-700 dark:text-red-300'
+// The level is words in a colour, never a dot or a badge.
+const LEVEL_TEXT: Record<DoseLevelKey, string> = {
+    low: 'text-[var(--c-target)]',
+    medium: 'text-[var(--c-target)]',
+    high: 'text-[var(--c-attention)]',
+    very_high: 'text-[var(--c-danger)]',
+    above: 'text-[var(--c-danger)]',
 };
 
 const formatGuideNumber = (val: number) => {
@@ -111,6 +129,15 @@ const holdFromTheta = (thetaVal: number): number => {
     return Math.max(1, pLast.hold + (th - pLast.theta) * slope);
 };
 
+// Display order of the route list (the enum's own order is not meaningful).
+const ROUTE_ORDER: Route[] = [Route.injection, Route.oral, Route.sublingual, Route.gel, Route.patchApply, Route.patchRemove];
+
+const toLocalInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+/** "custom" (the full route and medicine fields), one of the person's
+ *  routines (inferred from the log), or a saved row. */
+type WhatChoice = 'custom' | `reg:${string}` | `tpl:${string}` | `qd:${string}`;
+
 interface DoseFormProps {
     eventToEdit: DoseEvent | null;
     onSave: (event: DoseEvent) => void;
@@ -126,18 +153,43 @@ interface DoseFormProps {
     onDeleteQuickDose?: (id: string) => void;
     /** Existing doses, used only to show whether recent use is already running high. */
     events?: DoseEvent[];
+    /** id for the sheet title, so a dialog around the form can point at it. */
+    titleId?: string;
+    /** A new dose that should open on this medicine, route and amount (a
+     *  "Coming up" row on Today). Ignored when editing. */
+    prefill?: DoseFormPrefill | null;
 }
 
-const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDelete, templates = [], onSaveTemplate, onDeleteTemplate, isInline = false, hideHeader = false, quickDoses, onAddQuickDose, onDeleteQuickDose, events = [] }) => {
+/** What a "Coming up" row hands the sheet. Time stays "Now". */
+export interface DoseFormPrefill {
+    route: Route;
+    ester: Ester;
+    doseMG: number;
+    extras: Partial<Record<ExtraKey, number>>;
+}
+
+/**
+ * The Log a dose sheet (design/cadence/boards/LogDose.dc.html). Every choice
+ * is a list view: What (the person's routines, then saved templates and quick
+ * doses that are not the same dose, or "Something else" with route and
+ * medicine pickers), When (Now, or Earlier with the date and
+ * time picker), then How much with a stepper and the route's own fields. A
+ * footer sentence says exactly what will be saved.
+ */
+const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDelete, templates = [], onSaveTemplate, onDeleteTemplate, isInline = false, hideHeader = false, quickDoses, onAddQuickDose, onDeleteQuickDose, events = [], titleId, prefill = null }) => {
     const { t, lang } = useTranslation();
     const { showDialog } = useDialog();
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const isInitializingRef = useRef(false);
-    const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [showSaveTemplateInput, setShowSaveTemplateInput] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
     const [templateName, setTemplateName] = useState('');
+    const [whatChoice, setWhatChoice] = useState<WhatChoice>('custom');
+    const [isEditingList, setIsEditingList] = useState(false);
+    const [whenMode, setWhenMode] = useState<'now' | 'earlier'>(eventToEdit ? 'earlier' : 'now');
+    const [now, setNow] = useState(() => new Date());
+    const [amountBasis, setAmountBasis] = useState<AmountBasis>('raw');
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
+    const [isDoseGuideOpen, setIsDoseGuideOpen] = useState(false);
 
     // Form State
     const [dateStr, setDateStr] = useState("");
@@ -160,6 +212,61 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     const [customHoldValue, setCustomHoldValue] = useState<number>(10);
     const [lastEditedField, setLastEditedField] = useState<'raw' | 'bio'>('bio');
 
+    const availableRoutes = useMemo(() => {
+        if (isTransmasc) {
+            // Transmasc: no oral/sublingual; no patches (T patches are uncommon and
+            // not realistically modeled with the current µg/day scheme).
+            return Object.values(Route).filter(r =>
+                r !== Route.oral && r !== Route.sublingual &&
+                r !== Route.patchApply && r !== Route.patchRemove
+            );
+        }
+        return Object.values(Route);
+    }, [isTransmasc]);
+
+    // Saved rows offered in "What". Rows for a route this mode can't log are left out.
+    const savedTemplates = useMemo(
+        () => templates.filter(tpl => availableRoutes.includes(tpl.route)),
+        [templates, availableRoutes],
+    );
+    const savedQuickDoses = useMemo(
+        () => (quickDoses ?? [])
+            .filter(q => availableRoutes.includes(q.route))
+            .slice()
+            .sort((a, b) => a.route === b.route && a.ester === b.ester ? a.value - b.value : 0),
+        [quickDoses, availableRoutes],
+    );
+
+    // The person's routines, soonest due first, as the top rows of "What".
+    // Each one logs the same medicine, route and amount as its latest dose.
+    const nowMs = now.getTime();
+    const regimens = useMemo<Regimen[]>(
+        () => eventToEdit
+            ? []
+            : usableRegimens(inferRegimens(events, nowMs))
+                .filter(r => availableRoutes.includes(r.last.route))
+                .sort((a, b) => a.nextDueMs - b.nextDueMs),
+        [eventToEdit, events, nowMs, availableRoutes],
+    );
+    // Saved rows that repeat a routine are left out of the list (still shown
+    // while editing the list, so they can be deleted).
+    const isRoutineDose = (dose: { route: Route; ester: Ester; doseMG: number; extras?: Partial<Record<ExtraKey, number>> }) =>
+        regimens.some(r => sameDose(r.last, dose));
+    const listedTemplates = isEditingList ? savedTemplates : savedTemplates.filter(tpl => !isRoutineDose(tpl));
+    const listedQuickDoses = isEditingList
+        ? savedQuickDoses
+        : savedQuickDoses.filter(q => !isRoutineDose({ route: q.route, ester: q.ester, doseMG: q.value }));
+    /** When a quick dose's amount was last logged, for its sub-line. */
+    const lastLoggedMs = (q: QuickDose): number | null => {
+        let best: number | null = null;
+        for (const e of events) {
+            if (!sameDose(e, { route: q.route, ester: q.ester, doseMG: q.value })) continue;
+            const ms = e.timeH * 3_600_000;
+            if (ms <= nowMs && (best === null || ms > best)) best = ms;
+        }
+        return best;
+    };
+
     const slExtras = useMemo(() => {
         if (route !== Route.sublingual) return null;
         if (useCustomTheta) {
@@ -177,12 +284,74 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         return getBioavailabilityMultiplier(route, ester, extrasForCalc);
     }, [route, ester, slExtras, gelSite]);
 
+    /** Fill the form from a saved template. Templates store the raw-ester
+     *  dose, so the raw field is the source of truth; otherwise handleSave
+     *  would re-derive the dose from the rounded E2-equivalent string and
+     *  drift it (12.5 → 12.499934). */
+    const applyTemplate = (template: DoseTemplate) => {
+        setRoute(template.route);
+        setEster(template.ester);
+        setRawDose(formatAmount(template.doseMG));
+        setLastEditedField(template.ester === Ester.E2 ? 'bio' : 'raw');
+        setAmountBasis(template.ester === Ester.E2 ? 'bio' : 'raw');
+
+        const factor = getToE2Factor(template.ester) || 1;
+        setE2Dose(formatAmount(template.doseMG * factor));
+
+        if (template.route === Route.patchApply) {
+            const rate = template.extras[ExtraKey.releaseRateUGPerDay];
+            if (rate) {
+                setPatchMode('rate');
+                setPatchRate(rate.toString());
+            } else {
+                setPatchMode('dose');
+            }
+            const wearH = template.extras[ExtraKey.patchWearH];
+            setPatchWearDays(typeof wearH === 'number' && Number.isFinite(wearH) && wearH > 0 ? (wearH / 24).toString() : "");
+        }
+
+        if (template.route === Route.sublingual) {
+            if (template.extras[ExtraKey.sublingualTier] !== undefined) {
+                setSlTier(template.extras[ExtraKey.sublingualTier]);
+                setUseCustomTheta(false);
+            } else if (template.extras[ExtraKey.sublingualTheta] !== undefined) {
+                const theta = template.extras[ExtraKey.sublingualTheta];
+                const hold = Math.max(1, Math.min(60, holdFromTheta(typeof theta === 'number' ? theta : 0.11)));
+                setCustomHoldValue(hold);
+                setCustomHoldInput(formatAmount(hold));
+                setUseCustomTheta(true);
+            }
+        }
+
+        if (template.route === Route.gel && template.extras[ExtraKey.gelSite] !== undefined) {
+            setGelSite(template.extras[ExtraKey.gelSite]);
+        }
+    };
+
+    /** Fill everything from a routine's latest dose. */
+    const applyRegimen = (regimen: Regimen) => {
+        const last = regimen.last;
+        applyTemplate({ id: '', name: '', createdAt: 0, route: last.route, ester: last.ester, doseMG: last.doseMG, extras: { ...last.extras } });
+    };
+
+    /** Fill route, medicine and amount from a quick dose (a raw-ester value). */
+    const applyQuickDose = (dose: QuickDose) => {
+        setRoute(dose.route);
+        setEster(dose.ester);
+        setRawDose(formatAmount(dose.value));
+        const factor = getToE2Factor(dose.ester) || 1;
+        setE2Dose(formatAmount(dose.value * factor));
+        setLastEditedField(dose.ester === Ester.E2 ? 'bio' : 'raw');
+        setAmountBasis(dose.ester === Ester.E2 ? 'bio' : 'raw');
+        if (dose.route === Route.patchApply) setPatchMode('dose');
+    };
+
     useEffect(() => {
         isInitializingRef.current = true;
         if (eventToEdit) {
-            const d = new Date(eventToEdit.timeH * 3600000);
-            const iso = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            setDateStr(iso);
+            setDateStr(toLocalInput(new Date(eventToEdit.timeH * 3600000)));
+            setWhenMode('earlier');
+            setWhatChoice('custom');
             setRoute(eventToEdit.route);
             setEster(eventToEdit.ester);
 
@@ -195,14 +364,15 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 setPatchMode("dose");
                 const factor = getToE2Factor(eventToEdit.ester);
                 const e2Val = eventToEdit.doseMG * factor;
-                setE2Dose(e2Val.toFixed(3));
+                setE2Dose(formatAmount(e2Val));
+                setRawDose(formatAmount(eventToEdit.doseMG));
 
                 if (eventToEdit.ester !== Ester.E2) {
-                    setRawDose(eventToEdit.doseMG.toFixed(3));
                     setLastEditedField('raw');
+                    setAmountBasis('raw');
                 } else {
-                    setRawDose(eventToEdit.doseMG.toFixed(3));
                     setLastEditedField('bio');
+                    setAmountBasis('bio');
                 }
             }
 
@@ -220,7 +390,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                     const safeTheta = (typeof thetaVal === 'number' && Number.isFinite(thetaVal)) ? thetaVal : 0.11;
                     const hold = Math.max(1, Math.min(60, holdFromTheta(safeTheta)));
                     setCustomHoldValue(hold);
-                    setCustomHoldInput(hold.toString());
+                    setCustomHoldInput(formatAmount(hold));
                 } else {
                     setUseCustomTheta(false);
                     setCustomHoldValue(10);
@@ -246,9 +416,8 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             }
 
         } else {
-            const now = new Date();
-            const iso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            setDateStr(iso);
+            setDateStr(toLocalInput(new Date()));
+            setWhenMode('now');
             setRoute(isTransmasc ? Route.injection : Route.sublingual);
             setEster(isTransmasc ? Ester.TC : Ester.EV);
             setRawDose("");
@@ -262,6 +431,51 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             setCustomHoldValue(10);
             setCustomHoldInput("10");
             setLastEditedField('bio');
+            setAmountBasis('raw');
+
+            // Start on the routine that is due (or the one a "Coming up" row
+            // passed in), else the first row of the list. Later calls win over
+            // the defaults above.
+            const initNow = Date.now();
+            const dueRegimen = regimens.find(r => isDue(r, initNow));
+            const firstRegimen = dueRegimen ?? regimens[0];
+            const firstTemplate = listedTemplates[0];
+            const firstQuick = listedQuickDoses[0];
+            const sameAmount = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+            const prefillRegimen = prefill && availableRoutes.includes(prefill.route)
+                ? regimens.find(r => sameDose(r.last, prefill))
+                : undefined;
+            const prefillTemplate = prefill && !prefillRegimen && availableRoutes.includes(prefill.route)
+                ? savedTemplates.find(tpl => tpl.route === prefill.route && tpl.ester === prefill.ester && sameAmount(tpl.doseMG, prefill.doseMG))
+                : undefined;
+            const prefillQuick = prefill && !prefillRegimen && !prefillTemplate && availableRoutes.includes(prefill.route)
+                ? savedQuickDoses.find(q => q.route === prefill.route && q.ester === prefill.ester && sameAmount(q.value, prefill.doseMG))
+                : undefined;
+            if (prefillRegimen) {
+                applyRegimen(prefillRegimen);
+                setWhatChoice(`reg:${prefillRegimen.key}`);
+            } else if (prefillTemplate) {
+                applyTemplate(prefillTemplate);
+                setWhatChoice(`tpl:${prefillTemplate.id}`);
+            } else if (prefillQuick) {
+                applyQuickDose(prefillQuick);
+                setWhatChoice(`qd:${prefillQuick.id}`);
+            } else if (prefill && availableRoutes.includes(prefill.route)) {
+                // Not saved as a row: open "Something else" filled in.
+                applyTemplate({ id: '', name: '', createdAt: 0, ...prefill });
+                setWhatChoice('custom');
+            } else if (firstRegimen) {
+                applyRegimen(firstRegimen);
+                setWhatChoice(`reg:${firstRegimen.key}`);
+            } else if (firstTemplate) {
+                applyTemplate(firstTemplate);
+                setWhatChoice(`tpl:${firstTemplate.id}`);
+            } else if (firstQuick) {
+                applyQuickDose(firstQuick);
+                setWhatChoice(`qd:${firstQuick.id}`);
+            } else {
+                setWhatChoice('custom');
+            }
         }
 
         // Use timeout to allow state to settle
@@ -269,7 +483,19 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             isInitializingRef.current = false;
         }, 0);
         return () => clearTimeout(timer);
-    }, [eventToEdit]); // Removed isOpen dependency as component mounts only when needed
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [eventToEdit, prefill]); // Removed isOpen dependency as component mounts only when needed
+
+    // Nothing left to edit: leave edit mode.
+    useEffect(() => {
+        if (isEditingList && savedTemplates.length === 0 && savedQuickDoses.length === 0) setIsEditingList(false);
+    }, [isEditingList, savedTemplates.length, savedQuickDoses.length]);
+
+    // Keep the "Now" row's time (and the planned-or-past check) current.
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(new Date()), 15_000);
+        return () => window.clearInterval(timer);
+    }, []);
 
     const handleRawChange = (val: string) => {
         setRawDose(val);
@@ -278,7 +504,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         if (!isNaN(v)) {
             const factor = getToE2Factor(ester) || 1;
             const e2Equivalent = v * factor;
-            setE2Dose(e2Equivalent.toFixed(3));
+            setE2Dose(formatAmount(e2Equivalent));
         } else {
             setE2Dose("");
         }
@@ -291,9 +517,9 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         if (!isNaN(v)) {
             const factor = getToE2Factor(ester) || 1;
             if (ester === Ester.E2) {
-                setRawDose(v.toFixed(3));
+                setRawDose(formatAmount(v));
             } else {
-                setRawDose((v / factor).toFixed(3));
+                setRawDose(formatAmount(v / factor));
             }
         } else {
             setRawDose("");
@@ -303,11 +529,13 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     useEffect(() => {
         if (isInitializingRef.current || lastEditedField !== 'raw' || !rawDose) return;
         handleRawChange(rawDose);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bioMultiplier, ester, route]);
 
     useEffect(() => {
         if (isInitializingRef.current || lastEditedField !== 'bio' || !e2Dose) return;
         handleE2Change(e2Dose);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bioMultiplier, ester, route]);
 
     const [isSaving, setIsSaving] = useState(false);
@@ -351,48 +579,57 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         showDialog('alert', t('template.saved'));
     };
 
-    const handleLoadTemplate = (template: DoseTemplate) => {
-        setRoute(template.route);
-        setEster(template.ester);
-        setRawDose(template.doseMG.toFixed(3));
-        // Templates store the raw-ester dose, so mark the raw field as the
-        // source of truth — otherwise handleSave would re-derive the dose from
-        // the rounded E2-equivalent string and drift it (12.5 → 12.499934).
-        setLastEditedField(template.ester === Ester.E2 ? 'bio' : 'raw');
+    // Quick doses: the raw amount for the current route and medicine.
+    const currentQuickValue = parseFloat(rawDose);
+    const quickExists = savedQuickDoses.some(d =>
+        d.route === route && d.ester === ester && Number.isFinite(currentQuickValue) && Math.abs(d.value - currentQuickValue) < 0.0001);
 
-        const factor = getToE2Factor(template.ester) || 1;
-        const e2Val = template.doseMG * factor;
-        setE2Dose(e2Val.toFixed(3));
-
-        if (template.route === Route.patchApply && template.extras[ExtraKey.releaseRateUGPerDay]) {
-            setPatchMode('rate');
-            setPatchRate(template.extras[ExtraKey.releaseRateUGPerDay].toString());
+    const handleAddQuickDose = () => {
+        if (!onAddQuickDose) return;
+        if (!Number.isFinite(currentQuickValue) || currentQuickValue <= 0) {
+            showDialog('alert', t('quickdose.empty_input'));
+            return;
         }
-        if (template.route === Route.patchApply) {
-            const wearH = template.extras[ExtraKey.patchWearH];
-            setPatchWearDays(typeof wearH === 'number' && Number.isFinite(wearH) && wearH > 0 ? (wearH / 24).toString() : "");
-        }
-
-        if (template.route === Route.sublingual) {
-            if (template.extras[ExtraKey.sublingualTier] !== undefined) {
-                setSlTier(template.extras[ExtraKey.sublingualTier]);
-                setUseCustomTheta(false);
-            } else if (template.extras[ExtraKey.sublingualTheta] !== undefined) {
-                const theta = template.extras[ExtraKey.sublingualTheta];
-                const hold = Math.max(1, Math.min(60, holdFromTheta(typeof theta === 'number' ? theta : 0.11)));
-                setCustomHoldValue(hold);
-                setCustomHoldInput(hold.toString());
-                setUseCustomTheta(true);
-            }
-        }
-
-        if (template.route === Route.gel && template.extras[ExtraKey.gelSite] !== undefined) {
-            setGelSite(template.extras[ExtraKey.gelSite]);
-        }
-
-        setShowTemplateMenu(false);
-        showDialog('alert', t('template.loaded'));
+        if (quickExists) return;
+        onAddQuickDose({
+            id: uuidv4(),
+            route,
+            ester,
+            value: currentQuickValue,
+            createdAt: Date.now()
+        });
     };
+
+    const handleDeleteTemplate = (template: DoseTemplate) => {
+        showDialog('confirm', t('template.delete_confirm'), () => {
+            onDeleteTemplate(template.id);
+            if (whatChoice === `tpl:${template.id}`) setWhatChoice('custom');
+        });
+    };
+
+    const handleDeleteQuickDose = (dose: QuickDose) => {
+        if (!onDeleteQuickDose) return;
+        showDialog('confirm', t('quickdose.delete_confirm'), () => {
+            onDeleteQuickDose(dose.id);
+            if (whatChoice === `qd:${dose.id}`) setWhatChoice('custom');
+        });
+    };
+
+    const handleDeleteEvent = () => {
+        if (!eventToEdit) return;
+        showDialog('confirm', t('modal.dose.delete_confirm'), () => {
+            onDelete(eventToEdit.id);
+            onCancel();
+        });
+    };
+
+    const chosenDate = useMemo(() => {
+        if (whenMode === 'now') return now;
+        const d = new Date(dateStr);
+        return Number.isNaN(d.getTime()) ? now : d;
+    }, [whenMode, dateStr, now]);
+
+    const isPlanned = !eventToEdit && whenMode === 'earlier' && chosenDate.getTime() > now.getTime() + 60_000;
 
     const handleSave = () => {
         // Ref latch, not state: setIsSaving(true/false) within one synchronous
@@ -407,7 +644,10 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             isSavingRef.current = false;
             setIsSaving(false);
         };
-        let timeH = new Date(dateStr).getTime() / 3600000;
+        // "Now" is the moment of saving, to the minute, like the old default.
+        let timeH = whenMode === 'now'
+            ? Math.floor(Date.now() / 60000) * 60000 / 3600000
+            : new Date(dateStr).getTime() / 3600000;
         if (isNaN(timeH)) {
             timeH = new Date().getTime() / 3600000;
         }
@@ -447,7 +687,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 // doseMG is stored in raw-ester mg, and the raw field is what the
                 // user typed (or a template/quick-dose filled). Use it directly:
                 // round-tripping through the E2-equivalent string loses precision
-                // to its toFixed(3) — e.g. 12.5 mg CPA saved as 12.499934.
+                // to its rounding, e.g. 12.5 mg CPA saved as 12.499934.
                 if (!rawDose || rawDose.trim() === '' || !Number.isFinite(rawVal) || rawVal <= 0) {
                     failSave(nonPositiveMsg);
                     return;
@@ -481,9 +721,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         const newEvent: DoseEvent = {
             id: eventToEdit?.id || uuidv4(),
             route,
-            ester: (route === Route.patchRemove || route === Route.patchApply || route === Route.gel)
-                ? (isTransmasc ? Ester.T : Ester.E2)
-                : ester,
+            ester: savedEster,
             timeH,
             doseMG: finalDose,
             extras
@@ -522,18 +760,6 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         }
     }, [route, isTransmasc]);
 
-    const availableRoutes = useMemo(() => {
-        if (isTransmasc) {
-            // Transmasc: no oral/sublingual; no patches (T patches are uncommon and
-            // not realistically modeled with the current µg/day scheme).
-            return Object.values(Route).filter(r =>
-                r !== Route.oral && r !== Route.sublingual &&
-                r !== Route.patchApply && r !== Route.patchRemove
-            );
-        }
-        return Object.values(Route);
-    }, [isTransmasc]);
-
     useEffect(() => {
         if (!availableRoutes.includes(route)) {
             setRoute(availableRoutes[0]);
@@ -545,6 +771,11 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             setEster(availableEsters[0]);
         }
     }, [availableEsters, ester]);
+
+    // The ester actually stored: patches and gels always save the plain hormone.
+    const savedEster = (route === Route.patchRemove || route === Route.patchApply || route === Route.gel)
+        ? (isTransmasc ? Ester.T : Ester.E2)
+        : ester;
 
     const doseGuide = useMemo(() => {
         if (ester === Ester.CPA) return null;
@@ -578,9 +809,8 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
 
     const guideUnitLabel = doseGuide?.config ? t(`dose.guide.unit.${doseGuide.config.unitKey}`) : "";
     const guideRangeText = doseGuide?.config
-        ? `${doseGuide.config.thresholds.map((threshold) => `≤ ${formatGuideNumber(threshold)}`).join(' · ')} ${guideUnitLabel}`
+        ? `${doseGuide.config.thresholds.map((threshold) => `≤ ${formatGuideNumber(threshold)}`).join(', ')} ${guideUnitLabel}`
         : "";
-    const guideBadgeClass = doseGuide?.level ? LEVEL_BADGE_STYLES[doseGuide.level] : "";
     const confirmAndOpenExternal = (url: string) => {
         const host = (() => {
             try {
@@ -594,492 +824,569 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             window.open(url, '_blank', 'noopener,noreferrer');
         });
     };
-    const renderLoadTemplateControl = () => {
-        if (eventToEdit) return null;
 
-        return (
-            <div className="relative">
-                <button
-                    onClick={() => {
-                        if (templates.length === 0) return;
-                        setShowTemplateMenu(!showTemplateMenu);
-                    }}
-                    disabled={templates.length === 0}
-                    className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 ${
-                        templates.length === 0
-                            ? 'text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] opacity-40 cursor-not-allowed'
-                            : 'text-[var(--color-m3-primary)] hover:bg-[var(--color-m3-primary-container)] dark:hover:bg-[var(--color-m3-primary-container)]/20'
-                    }`}
-                    title={t('template.load_title')}
-                >
-                    <Bookmark size={14} />
-                    <span>{t('template.load_title')}</span>
-                </button>
-                {showTemplateMenu && templates.length > 0 && (
-                    <div className="absolute right-0 top-full mt-1 bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container)] rounded-xl border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] w-64 max-h-64 overflow-y-auto z-50">
-                        <div className="py-1">
-                            {templates.map((template: DoseTemplate) => (
-                                <div key={template.id} className="group flex items-center justify-between px-3 py-2.5 hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container-high)] border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] last:border-b-0">
-                                    <button
-                                        onClick={() => { handleLoadTemplate(template); setShowTemplateMenu(false); }}
-                                        className="flex-1 text-left"
-                                    >
-                                        <div className="text-sm font-medium text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{template.name}</div>
-                                        <div className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mt-0.5">
-                                            {t(`route.${template.route}`)} · {template.doseMG.toFixed(2)} mg
-                                        </div>
-                                    </button>
-                                    {templateToDelete === template.id ? (
-                                        <div className="flex items-center gap-0.5 pl-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={() => { setTemplateToDelete(null); setShowTemplateMenu(false); onDeleteTemplate(template.id); }} className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title={t('btn.confirm')}>
-                                                <Check size={13} />
-                                            </button>
-                                            <button onClick={() => setTemplateToDelete(null)} className="p-1 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container-high)] rounded" title={t('btn.cancel')}>
-                                                <X size={13} />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setTemplateToDelete(template.id);
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:text-red-500 rounded shrink-0"
-                                            title={t('btn.delete')}
-                                        >
-                                            <Trash2 size={13} />
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
+    // ── The sentence in the footer ────────────────────────────────────
+    const sentenceDose = (() => {
+        const rate = parseFloat(patchRate);
+        if (route === Route.patchApply && patchMode === 'rate') {
+            return describeDose(t, lang, {
+                route, ester: savedEster, doseMG: 0,
+                extras: Number.isFinite(rate) && rate > 0 ? { [ExtraKey.releaseRateUGPerDay]: rate } : {},
+            }, { lower: true, unitRate: t('dose.guide.unit.ug_day') });
+        }
+        const amount = route === Route.gel ? parseFloat(e2Dose) : parseFloat(rawDose);
+        return describeDose(t, lang, {
+            route, ester: savedEster, doseMG: Number.isFinite(amount) && amount > 0 ? amount : 0,
+        }, { lower: true });
+    })();
+    const missingAmount = (() => {
+        if (route === Route.patchRemove) return false;
+        const v = route === Route.patchApply && patchMode === 'rate'
+            ? parseFloat(patchRate)
+            : route === Route.gel ? parseFloat(e2Dose) : parseFloat(rawDose);
+        return !(Number.isFinite(v) && v > 0);
+    })();
+    const sentence = t(eventToEdit ? 'log.will_save' : isPlanned ? 'log.will_plan' : 'log.will_log').replace(
+        '{what}',
+        joinList(lang, [sentenceDose, ...(missingAmount ? [t('log.no_amount')] : []), describeWhen(t, lang, chosenDate)]),
+    );
+
+    const title = eventToEdit ? t('log.edit_title') : isPlanned ? t('log.plan_title') : t('log.title');
+    const saveLabel = eventToEdit ? t('log.save_changes') : isPlanned ? t('log.add_to_plan') : t('log.log_it');
+
+    const checkIcon = <Check size={22} />;
+    const chevronIcon = <ChevronRight size={16} />;
+    const hasSavedRows = savedTemplates.length > 0 || savedQuickDoses.length > 0;
+    const showWhatList = !eventToEdit && (regimens.length > 0 || hasSavedRows);
+    const showChoosers = !showWhatList || whatChoice === 'custom';
+    const unitRate = t('dose.guide.unit.ug_day');
+    /** One line, never wrapping next to the check: long text ends in an ellipsis. */
+    const oneLine = (text: React.ReactNode) => <span className="block truncate">{text}</span>;
+
+    // ── Sections ──────────────────────────────────────────────────────
+    // Route and medicine, with no tiles: the rows of this group are plain.
+    const choosers = (
+        <div className="list-group">
+            <CustomSelect
+                bare
+                label={t('log.route_label')}
+                value={route}
+                onChange={(val) => setRoute(val as Route)}
+                options={ROUTE_ORDER.filter(r => availableRoutes.includes(r)).map(r => ({
+                    value: r,
+                    label: routeName(t, r),
+                }))}
+            />
+            {route !== Route.patchRemove && availableEsters.length > 1 && (
+                <>
+                    <ListSep />
+                    <CustomSelect
+                        bare
+                        label={t('log.ester_label')}
+                        value={ester}
+                        onChange={(val) => setEster(val as Ester)}
+                        options={availableEsters.map(e => ({
+                            value: e,
+                            label: esterName(t, e),
+                        }))}
+                    />
+                </>
+            )}
+        </div>
+    );
+
+    /** A template's sub-line: the full dose when it fits one line, else
+     *  the medicine and amount (the tile shows the route). */
+    const templateSub = (tpl: DoseTemplate): string => {
+        const full = describeDose(t, lang, tpl, { unitRate });
+        return full.length <= 40 ? full : describeAmount(t, tpl, { unitRate });
     };
 
-    return (
-        <div className="flex flex-col h-full">
+    const deleteButton = (label: string, onClick: () => void) => (
+        <Button
+            variant="icon"
+            className="-my-2 -mr-2 text-[var(--c-danger)]"
+            aria-label={t('log.delete_named').replace('{name}', label)}
+            onClick={onClick}
+        >
+            <Delete size={22} />
+        </Button>
+    );
 
-            {/* Save Template Dialog Overlay */}
-            {/* Save Template Dialog Overlay (Removed) */}
+    /** A routine's title: medicine and amount ("Estradiol valerate 4 mg"),
+     *  which fits one line. The route is in the tile; it joins the title only
+     *  when two routines would otherwise read the same. */
+    const regimenTitle = (regimen: Regimen): string => {
+        const short = describeAmount(t, regimen.last, { unitRate });
+        const clash = regimens.some(r => r !== regimen && describeAmount(t, r.last, { unitRate }) === short);
+        return clash ? describeDose(t, lang, regimen.last, { unitRate }) : short;
+    };
 
-            {/* Header */}
-            {!isInline && !hideHeader && (
-                <div className="px-6 py-4 border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] flex justify-between items-center shrink-0">
-                    <h3 className="text-base font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                        {eventToEdit ? t('modal.dose.edit_title') : t('modal.dose.add_title')}
-                    </h3>
-                    <div className="flex gap-2 items-center">
-                        {renderLoadTemplateControl()}
-                        <button onClick={onCancel} className="p-1.5 hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container-high)] rounded-lg">
-                            <X size={18} className="text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]" />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Inline Header (Simpler) */}
-            {isInline && !hideHeader && (
-                <div className="pb-4 border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] flex justify-between items-center">
-          <span className="text-[0.8125rem] font-semibold text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                        {t('timeline.add_title')}
-                    </span>
-                    {renderLoadTemplateControl()}
-                </div>
-            )}
-
-            <div className={`space-y-4 flex-1 overflow-y-auto ${!isInline ? 'px-6 pb-4' : hideHeader ? 'pb-2' : 'pb-4'}`}>
-                {/* Time */}
-                <div>
-                    <button
-                        type="button"
-                        onClick={() => setIsDatePickerOpen(v => !v)}
-                        className="w-full flex items-center justify-between py-[18px] border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] text-start"
-                    >
-                        <span className="text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{t('field.time')}</span>
-                        <div className="flex items-center gap-1.5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                            <span className="text-sm tabular-nums">
-                                {dateStr ? new Date(dateStr).toLocaleString(LOCALE_MAP[lang] || 'en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                            </span>
-                            <ChevronDown size={14} className={`chev ${isDatePickerOpen ? 'rotate-180' : ''}`} />
-                        </div>
-                    </button>
-                    <DateTimePicker
-                        isOpen={isDatePickerOpen}
-                        inline
-                        onClose={() => setIsDatePickerOpen(false)}
-                        onConfirm={(date) => {
-                            const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                            setDateStr(iso);
-                        }}
-                        initialDate={dateStr ? new Date(dateStr) : new Date()}
-                        mode="datetime"
-                        title={t('field.time')}
-                    />
-                </div>
-
-                {/* Route */}
-                <CustomSelect
-                    label={t('field.route')}
-                    value={route}
-                    onChange={(val) => setRoute(val as Route)}
-                    options={availableRoutes.map(r => ({
-                        value: r,
-                        label: t(`route.${r}`)
-                    }))}
-                />
-
-                {route === Route.patchRemove && (
-                    <div className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)] p-3 rounded-[var(--radius-md)]">
-                        {t('patch.remove_hint')}
-                    </div>
-                )}
-
-                {route !== Route.patchRemove && (
-                    <>
-                        {/* Ester Selection */}
-                        {availableEsters.length > 1 && (
-                            <CustomSelect
-                                label={t('field.ester')}
-                                value={ester}
-                                onChange={(val) => setEster(val as Ester)}
-                                options={availableEsters.map(e => ({
-                                    value: e,
-                                    label: t(`ester.${e}`)
-                                }))}
+    const whatSection = showWhatList ? (
+        <section className="flex flex-col gap-3">
+            <div>
+                <GroupHeader
+                    trailing={hasSavedRows || isEditingList ? (
+                        <Button variant="plain" onClick={() => setIsEditingList(v => !v)}>
+                            {isEditingList ? t('log.done') : t('log.edit_list')}
+                        </Button>
+                    ) : undefined}
+                >
+                    {t('log.what')}
+                </GroupHeader>
+                <ListGroup
+                    selection={isEditingList ? undefined : 'single'}
+                    aria-label={t('log.what')}
+                    checkIcon={checkIcon}
+                    chevronIcon={chevronIcon}
+                >
+                    {/* The person's routines first: medicine and amount, then
+                        one line of state (how often, when the next one is due). */}
+                    {!isEditingList && regimens.map(regimen => {
+                        const key = `reg:${regimen.key}` as const;
+                        const due = isDue(regimen, nowMs);
+                        const sub = regimenSub(t, lang, regimen, nowMs);
+                        return (
+                            <ListRow
+                                key={key}
+                                aria-label={joinList(lang, [describeDose(t, lang, regimen.last, { unitRate }), sub])}
+                                title={oneLine(regimenTitle(regimen))}
+                                sub={oneLine(
+                                    <span className={due ? 'text-[var(--c-attention)]' : undefined}>{sub}</span>,
+                                )}
+                                leading={<RouteTile route={regimen.last.route} ester={regimen.last.ester} />}
+                                selected={whatChoice === key}
+                                onClick={() => {
+                                    applyRegimen(regimen);
+                                    setWhatChoice(key);
+                                }}
                             />
-                        )}
+                        );
+                    })}
+                    {listedTemplates.map(tpl => {
+                        const key = `tpl:${tpl.id}` as const;
+                        const common = {
+                            title: oneLine(tpl.name),
+                            sub: oneLine(templateSub(tpl)),
+                            leading: <RouteTile route={tpl.route} ester={tpl.ester} />,
+                        };
+                        return isEditingList ? (
+                            <ListRow
+                                key={key}
+                                {...common}
+                                trailing={deleteButton(tpl.name, () => handleDeleteTemplate(tpl))}
+                            />
+                        ) : (
+                            <ListRow
+                                key={key}
+                                {...common}
+                                selected={whatChoice === key}
+                                onClick={() => {
+                                    applyTemplate(tpl);
+                                    setWhatChoice(key);
+                                }}
+                            />
+                        );
+                    })}
+                    {listedQuickDoses.map(dose => {
+                        const key = `qd:${dose.id}` as const;
+                        const shape = { route: dose.route, ester: dose.ester, doseMG: dose.value };
+                        const label = describeDose(t, lang, shape);
+                        const lastMs = lastLoggedMs(dose);
+                        const common = {
+                            title: oneLine(describeAmount(t, shape)),
+                            sub: oneLine(joinList(lang, [
+                                routeName(t, dose.route),
+                                ...(lastMs !== null ? [t('log.last_logged').replace('{when}', formatRelative(lang, lastMs, nowMs))] : []),
+                            ])),
+                            leading: <RouteTile route={dose.route} ester={dose.ester} />,
+                        };
+                        return isEditingList ? (
+                            <ListRow
+                                key={key}
+                                {...common}
+                                trailing={onDeleteQuickDose ? deleteButton(label, () => handleDeleteQuickDose(dose)) : undefined}
+                            />
+                        ) : (
+                            <ListRow
+                                key={key}
+                                {...common}
+                                selected={whatChoice === key}
+                                onClick={() => {
+                                    applyQuickDose(dose);
+                                    setWhatChoice(key);
+                                }}
+                            />
+                        );
+                    })}
+                    {!isEditingList && (
+                        <ListRow
+                            title={t('log.something_else')}
+                            leading={<RouteTile route={route} neutral><Plus size={20} /></RouteTile>}
+                            drillIn
+                            chevron={whatChoice === 'custom' ? <ChevronDown size={16} /> : chevronIcon}
+                            aria-expanded={whatChoice === 'custom'}
+                            onClick={() => setWhatChoice('custom')}
+                        />
+                    )}
+                </ListGroup>
+            </div>
+            {showChoosers && choosers}
+        </section>
+    ) : (
+        <section>
+            <GroupHeader>{t('log.what')}</GroupHeader>
+            {choosers}
+        </section>
+    );
 
-                        {quickDoses && onAddQuickDose && onDeleteQuickDose && (
-                            <div className="mt-2">
-                                <QuickDoseButtons
-                                    route={route}
-                                    ester={ester}
-                                    quickDoses={quickDoses}
-                                    currentDose={rawDose}
-                                    onSelectDose={(val) => handleRawChange(val.toString())}
-                                    onAddQuickDose={onAddQuickDose}
-                                    onDeleteQuickDose={onDeleteQuickDose}
-                                />
-                            </div>
-                        )}
+    const whenSection = (
+        <section>
+            <ListGroup header={t('log.when')} selection="single" checkIcon={checkIcon} chevronIcon={chevronIcon}>
+                <ListRow
+                    title={t('log.now')}
+                    value={formatTime(lang, now)}
+                    selected={whenMode === 'now'}
+                    onClick={() => {
+                        setWhenMode('now');
+                        setIsDatePickerOpen(false);
+                    }}
+                />
+                <ListRow
+                    title={t('log.earlier')}
+                    value={whenMode === 'earlier'
+                        ? (sameLocalDay(chosenDate.getTime(), nowMs) ? formatTime(lang, chosenDate) : describeWhen(t, lang, chosenDate))
+                        : undefined}
+                    drillIn
+                    chevron={isDatePickerOpen ? <ChevronDown size={16} /> : chevronIcon}
+                    aria-haspopup="dialog"
+                    aria-expanded={isDatePickerOpen}
+                    onClick={() => {
+                        if (whenMode === 'now') setDateStr(toLocalInput(new Date()));
+                        setWhenMode('earlier');
+                        setIsDatePickerOpen(v => whenMode === 'now' ? true : !v);
+                    }}
+                />
+            </ListGroup>
+            <DateTimePicker
+                isOpen={isDatePickerOpen}
+                inline
+                onClose={() => setIsDatePickerOpen(false)}
+                onConfirm={(date) => setDateStr(toLocalInput(date))}
+                initialDate={dateStr ? new Date(dateStr) : new Date()}
+                mode="datetime"
+                title={t('log.when')}
+            />
+        </section>
+    );
 
-                        <div className="mt-2">
-                            {route === Route.injection && (
-                                <InjectionFields
-                                    ester={ester}
-                                    rawDose={rawDose}
-                                    e2Dose={e2Dose}
-                                    onRawChange={handleRawChange}
-                                    onE2Change={handleE2Change}
-                                    route={route}
-                                />
-                            )}
+    const amountFields = (() => {
+        const amountProps = {
+            ester,
+            rawDose,
+            e2Dose,
+            onRawChange: handleRawChange,
+            onE2Change: handleE2Change,
+            basis: amountBasis,
+            onBasisChange: setAmountBasis,
+        };
+        switch (route) {
+            case Route.injection:
+                return <InjectionFields {...amountProps} />;
+            case Route.oral:
+                return <OralFields {...amountProps} />;
+            case Route.sublingual:
+                return (
+                    <SublingualFields
+                        {...amountProps}
+                        slTier={slTier}
+                        setSlTier={setSlTier}
+                        useCustomTheta={useCustomTheta}
+                        setUseCustomTheta={setUseCustomTheta}
+                        customHoldInput={customHoldInput}
+                        setCustomHoldInput={setCustomHoldInput}
+                        customHoldValue={customHoldValue}
+                        setCustomHoldValue={setCustomHoldValue}
+                        thetaFromHold={thetaFromHold}
+                    />
+                );
+            case Route.gel:
+                return (
+                    <GelFields
+                        gelSite={gelSite}
+                        setGelSite={setGelSite}
+                        e2Dose={e2Dose}
+                        onE2Change={handleE2Change}
+                        bioMultiplier={bioMultiplier}
+                    />
+                );
+            case Route.patchApply:
+                return (
+                    <PatchFields
+                        patchMode={patchMode}
+                        setPatchMode={setPatchMode}
+                        patchRate={patchRate}
+                        setPatchRate={setPatchRate}
+                        rawDose={rawDose}
+                        onRawChange={handleRawChange}
+                        patchWearDays={patchWearDays}
+                        setPatchWearDays={setPatchWearDays}
+                    />
+                );
+            case Route.patchRemove:
+                return <p className="callout m-0">{t('log.patch_remove_note')}</p>;
+            default:
+                return null;
+        }
+    })();
 
-                            {route === Route.oral && (
-                                <OralFields
-                                    ester={ester}
-                                    rawDose={rawDose}
-                                    e2Dose={e2Dose}
-                                    onRawChange={handleRawChange}
-                                    onE2Change={handleE2Change}
-                                    route={route}
-                                />
-                            )}
-
-                            {route === Route.sublingual && (
-                                <SublingualFields
-                                    ester={ester}
-                                    rawDose={rawDose}
-                                    e2Dose={e2Dose}
-                                    onRawChange={handleRawChange}
-                                    onE2Change={handleE2Change}
-                                    slTier={slTier}
-                                    setSlTier={setSlTier}
-                                    useCustomTheta={useCustomTheta}
-                                    setUseCustomTheta={setUseCustomTheta}
-                                    customHoldInput={customHoldInput}
-                                    setCustomHoldInput={setCustomHoldInput}
-                                    customHoldValue={customHoldValue}
-                                    setCustomHoldValue={setCustomHoldValue}
-                                    thetaFromHold={thetaFromHold}
-                                    route={route}
-                                />
-                            )}
-
-                            {route === Route.gel && (
-                                <GelFields
-                                    gelSite={gelSite}
-                                    setGelSite={setGelSite}
-                                    e2Dose={e2Dose}
-                                    onE2Change={handleE2Change}
-                                    bioMultiplier={bioMultiplier}
-                                />
-                            )}
-
-                            {route === Route.patchApply && (
-                                <PatchFields
-                                    patchMode={patchMode}
-                                    setPatchMode={setPatchMode}
-                                    patchRate={patchRate}
-                                    setPatchRate={setPatchRate}
-                                    rawDose={rawDose}
-                                    onRawChange={handleRawChange}
-                                    patchWearDays={patchWearDays}
-                                    setPatchWearDays={setPatchWearDays}
-                                    route={route}
-                                />
-                            )}
-                        </div>
-
-                        {/* Injection-specific guide from mtf.wiki */}
-                        {route === Route.injection && !isTransmasc && (
-                            <div className="mt-3 border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] pt-3 space-y-3">
-                                {/* Safety Warning */}
-                                <div className="flex gap-2">
-                                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                                    <div>
-                                        <span className="text-sm font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{t('inj.guide.title')}</span>
-                                        <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">{t('inj.guide.safety')}</p>
-                                    </div>
-                                </div>
-
-                                {/* Usage & Dosage */}
-                                <div className="space-y-1.5 pl-6">
-                                    <p className="text-sm text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('inj.guide.route_methods')}</p>
-                                    <p className="text-xs font-medium text-red-600 dark:text-red-400">{t('inj.guide.route_warn')}</p>
-                                    <p className="text-sm font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] mt-1">{t('inj.guide.dosage_title')}</p>
-                                    <ul className="text-sm text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] space-y-0.5 list-disc list-inside">
-                                        <li>{t('inj.guide.dosage_ev')}</li>
-                                        <li>{t('inj.guide.dosage_ec')}</li>
-                                    </ul>
-                                    <a
-                                        href="https://transfemscience.org/misc/injectable-e2-simulator/"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            confirmAndOpenExternal('https://transfemscience.org/misc/injectable-e2-simulator/');
-                                        }}
-                                        className="inline-flex items-center gap-1 text-sm text-[var(--color-m3-primary)] hover:underline mt-0.5"
-                                    >
-                                        {t('inj.guide.sim_link')}
-                                        <ExternalLink size={13} />
-                                    </a>
-                                </div>
-
-                                {/* Precautions */}
-                                <div className="pl-6 space-y-1">
-                                    <p className="text-sm font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{t('inj.guide.notes_title')}</p>
-                                    <ul className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] space-y-1.5 list-disc list-inside leading-relaxed">
-                                        <li>{t('inj.guide.note_1')}</li>
-                                        <li>{t('inj.guide.note_2')}</li>
-                                        <li className="font-semibold text-red-600 dark:text-red-400">{t('inj.guide.note_3')}</li>
-                                        <li><span className="font-semibold text-amber-700 dark:text-amber-400">{t('inj.guide.note_4')}</span></li>
-                                        <li>{t('inj.guide.note_5')}</li>
-                                        <li>{t('inj.guide.note_6')}</li>
-                                        <li>{t('inj.guide.note_7')}</li>
-                                        <li>{t('inj.guide.note_8')}</li>
-                                        <li>{t('inj.guide.note_9')}</li>
-                                    </ul>
-                                </div>
-
-                                {/* Source */}
-                                <a
-                                    href="https://mtf.wiki/zh-cn/docs/medicine/estrogen/injection"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        confirmAndOpenExternal('https://mtf.wiki/zh-cn/docs/medicine/estrogen/injection');
-                                    }}
-                                    className="inline-flex items-center gap-1 text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:text-[var(--color-m3-primary)]"
-                                >
-                                    {t('inj.guide.source')}
-                                    <ExternalLink size={12} />
-                                </a>
-                            </div>
-                        )}
-
-                        {/* CPA dosage hint */}
-                        {ester === Ester.CPA && (
-                            <div className="mt-3 p-3 rounded-[var(--radius-lg)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] bg-[var(--color-m3-surface-container-low)] dark:bg-[var(--color-m3-dark-surface-container)] flex gap-3">
-                                <Info className="w-5 h-5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0 mt-0.5" />
-                                <div className="space-y-1.5">
-                                    <span className="text-sm font-bold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{t('dose.guide.title')}</span>
-                                    <ul className="space-y-1 mt-1">
-                                        {(['rec', 'combo', 'ultralow'] as const).map(key => (
-                                            <li key={key} className="flex items-start gap-1.5 text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] leading-relaxed">
-                                                <span className="mt-1.5 w-1 h-1 rounded-full bg-[var(--color-m3-on-surface-variant)] dark:bg-[var(--color-m3-dark-on-surface-variant)] shrink-0" />
-                                                {t(`dose.guide.cpa_hint.${key}`)}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Dose guide for non-injection routes */}
-                        {doseGuide && (
-                            <div className="mt-2 pt-2 border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] flex gap-2">
-                                <Info className="w-3.5 h-3.5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] shrink-0 mt-0.5" />
-                                <div className="space-y-0.5 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">{t('dose.guide.title')}</span>
-                                        {doseGuide.level && (
-                                            <span className={`text-xs font-medium ${guideBadgeClass}`}>
-                                                {t(`dose.guide.level.${doseGuide.level}`)}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
+    // Dose guidance, folded into a one-row disclosure: the level stays
+    // visible as the row's value, the details open underneath.
+    const hasDoseGuide = route !== Route.patchRemove && Boolean(doseGuide || ester === Ester.CPA);
+    const doseGuideRows = hasDoseGuide ? (
+        <>
+            <button
+                type="button"
+                className={`list-row ${doseGuide?.level ? 'list-row-has-value' : ''}`}
+                aria-expanded={isDoseGuideOpen}
+                onClick={() => setIsDoseGuideOpen(v => !v)}
+            >
+                <span className="list-row-text">
+                    <span className="list-row-title">{t('dose.guide.title')}</span>
+                </span>
+                {doseGuide?.level && (
+                    <span className={`list-row-value ${LEVEL_TEXT[doseGuide.level]}`}>
+                        {t(`dose.guide.level.${doseGuide.level}`)}
+                    </span>
+                )}
+                <span className="list-row-chevron" aria-hidden="true">
+                    <ChevronDown size={16} className={`chev ${isDoseGuideOpen ? 'rotate-180' : ''}`} />
+                </span>
+            </button>
+            {isDoseGuideOpen && (
+                <>
+                    <ListSep />
+                    <div className="space-y-1 px-4 py-3 text-[0.9375rem] leading-[1.375rem] text-[var(--c-muted)]">
+                        {ester === Ester.CPA ? (
+                            (['rec', 'combo', 'ultralow'] as const).map(key => (
+                                <p key={key} className="m-0">{t(`dose.guide.cpa_hint.${key}`)}</p>
+                            ))
+                        ) : doseGuide && (
+                            <>
+                                {!doseGuide.showRateHint && (
+                                    <p className="m-0">
                                         {t('dose.guide.current')}: {doseGuide.value !== null ? `${formatGuideNumber(doseGuide.value)} ${guideUnitLabel}` : t('dose.guide.current_blank')}
                                     </p>
-                                    {guideRangeText && (
-                                        <p className="text-[0.625rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] leading-snug">
-                                            {t('dose.guide.reference')}: {guideRangeText}
-                                        </p>
-                                    )}
-                                    {doseGuide.showRateHint && (
-                                        <p className="text-[0.6875rem] text-amber-700 dark:text-amber-500 leading-snug">
-                                            {t('dose.guide.patch_rate_hint')}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Recent-use heads-up — logged doses already running high */}
-                        {doseAdvisory && (
-                            <div className="mt-2 pt-2 border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]">
-                                <DoseAdvisoryLine advisory={doseAdvisory} t={t} />
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
-
-            {/* Footer Buttons */}
-            <div className={`flex flex-wrap gap-y-2 justify-between items-center shrink-0 border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] ${!isInline ? 'px-6 py-3' : hideHeader ? 'py-2' : 'py-3'}`}>
-                <div className="flex gap-2 items-center flex-wrap min-h-10 w-full sm:w-auto">
-
-                    {/* Template Save Section */}
-                    <div className="flex items-center">
-                        <div className={`overflow-hidden flex items-center ${
-                            showSaveTemplateInput ? 'w-[14rem] sm:w-[13.5rem] opacity-100' : 'w-0 opacity-0'
-                        }`}>
-                            <input
-                                type="text"
-                                value={templateName}
-                                onChange={(e) => setTemplateName(e.target.value)}
-                                placeholder={t('template.name_placeholder')}
-                                className="flex-1 min-w-0 px-2.5 py-1.5 text-sm bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container-low)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-md focus:ring-1 focus:ring-[var(--color-m3-primary)]/30 focus:border-[var(--color-m3-primary)] outline-none text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]"
-                                style={{ fontSize: '16px' }}
-                            />
-                            <button
-                                onClick={handleSaveAsTemplate}
-                                className="p-1.5 ml-1 text-[var(--color-m3-primary)] hover:bg-[var(--color-m3-primary-container)] dark:hover:bg-[var(--color-m3-primary-container)]/20 rounded shrink-0"
-                            >
-                                <Check size={18} />
-                            </button>
-                            <button
-                                onClick={() => { setShowSaveTemplateInput(false); setTemplateName(''); }}
-                                className="p-1.5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container-high)] rounded shrink-0"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-                        
-                        <div className={`overflow-hidden ${
-                            showSaveTemplateInput ? 'w-0 opacity-0' : 'w-[2.35rem] opacity-100'
-                        }`}>
-                            <button
-                                onClick={() => {
-                                    setShowSaveTemplateInput(true);
-                                    setShowDeleteConfirm(false);
-                                    setShowTemplateMenu(false);
-                                }}
-                                className="p-2 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:text-[var(--color-m3-primary)] rounded flex items-center justify-center"
-                                title={t('template.save_title')}
-                            >
-                                <BookmarkPlus size={18} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Delete Event Section (Only when editing) */}
-                    {eventToEdit && (
-                        <div className="flex items-center">
-                            <div className={`overflow-hidden flex items-center ${
-                                showDeleteConfirm ? 'w-[8.75rem] sm:w-40 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded opacity-100 pl-3 pr-1 py-1' : 'w-0 opacity-0 border border-transparent'
-                            }`}>
-                                <span className="text-xs text-red-600 dark:text-red-400 font-medium whitespace-nowrap grow">{t('dialog.confirm_title')}?</span>
-                                <div className="flex items-center shrink-0 ml-2">
-                                    <button
-                                        onClick={() => {
-                                            onDelete(eventToEdit.id);
-                                            onCancel();
-                                        }}
-                                        className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded"
-                                        title={t('btn.ok')}
-                                    >
-                                        <Check size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => setShowDeleteConfirm(false)}
-                                        className="p-1 text-gray-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                                        title={t('btn.cancel')}
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className={`overflow-hidden ${
-                                showDeleteConfirm ? 'w-0 opacity-0' : 'w-[2.35rem] opacity-100'
-                            }`}>
-                                <button
-                                    onClick={() => {
-                                        setShowDeleteConfirm(true);
-                                        setShowSaveTemplateInput(false);
-                                        setShowTemplateMenu(false);
-                                    }}
-                                    className="p-2 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:text-red-500 rounded flex items-center justify-center"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex gap-2 ml-auto shrink-0 w-full sm:w-auto justify-end">
-                    {hideHeader && (
-                        <button
-                            onClick={onCancel}
-                            className="flex-1 sm:flex-none sm:min-w-[88px] flex items-center justify-center px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-md text-sm"
-                        >
-                            {t('btn.cancel')}
-                        </button>
-                    )}
-                    <button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="flex-1 sm:flex-none sm:min-w-[88px] px-4 py-2 bg-[var(--color-m3-primary)] hover:bg-[var(--color-m3-primary-light)] text-white rounded-md font-medium text-sm disabled:opacity-70 flex items-center justify-center gap-1.5"
-                    >
-                        {isSaving ? (
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                            <>
-                                <Save size={16} />
-                                <span>{t('btn.save')}</span>
+                                )}
+                                {guideRangeText && (
+                                    <p className="m-0">{t('dose.guide.reference')}: {guideRangeText}</p>
+                                )}
+                                {doseGuide.showRateHint && (
+                                    <p className="m-0 text-[var(--c-attention)]">{t('dose.guide.patch_rate_hint')}</p>
+                                )}
                             </>
                         )}
-                    </button>
+                    </div>
+                </>
+            )}
+        </>
+    ) : null;
+
+    // Injection guide from mtf.wiki, folded into a one-row disclosure.
+    const injectionGuideRows = route === Route.injection && !isTransmasc ? (
+        <>
+            <button
+                type="button"
+                className="list-row"
+                aria-expanded={isGuideOpen}
+                onClick={() => setIsGuideOpen(v => !v)}
+            >
+                <span className="list-row-text">
+                    <span className="list-row-title">{t('log.inj_guide')}</span>
+                </span>
+                <span className="list-row-chevron" aria-hidden="true">
+                    <ChevronDown size={16} className={`chev ${isGuideOpen ? 'rotate-180' : ''}`} />
+                </span>
+            </button>
+            {isGuideOpen && (
+                <>
+                    <ListSep />
+                    <div className="space-y-3 px-4 py-3 text-sm leading-[1.375rem] text-[var(--c-muted)]">
+                        <p className="m-0 font-semibold text-[var(--c-attention)]">{t('inj.guide.safety')}</p>
+                        <div className="space-y-1">
+                            <p className="m-0 font-semibold text-[var(--c-ink)]">{t('inj.guide.title')}</p>
+                            <p className="m-0">{t('inj.guide.route_methods')}</p>
+                            <p className="m-0 font-semibold text-[var(--c-danger)]">{t('inj.guide.route_warn')}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="m-0 font-semibold text-[var(--c-ink)]">{t('inj.guide.dosage_title')}</p>
+                            <p className="m-0">{t('inj.guide.dosage_ev')}</p>
+                            <p className="m-0">{t('inj.guide.dosage_ec')}</p>
+                            <a
+                                href="https://transfemscience.org/misc/injectable-e2-simulator/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    confirmAndOpenExternal('https://transfemscience.org/misc/injectable-e2-simulator/');
+                                }}
+                                className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-[var(--c-accent)] no-underline hover:text-[var(--c-accent-hover)]"
+                            >
+                                {t('inj.guide.sim_link')}
+                                <External size={16} />
+                            </a>
+                        </div>
+                        <div className="space-y-1.5">
+                            <p className="m-0 font-semibold text-[var(--c-ink)]">{t('inj.guide.notes_title')}</p>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+                                <p
+                                    key={n}
+                                    className={`m-0 ${n === 3 ? 'font-semibold text-[var(--c-danger)]' : n === 4 ? 'font-semibold text-[var(--c-attention)]' : ''}`}
+                                >
+                                    {t(`inj.guide.note_${n}`)}
+                                </p>
+                            ))}
+                        </div>
+                        <a
+                            href="https://mtf.wiki/zh-cn/docs/medicine/estrogen/injection"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                confirmAndOpenExternal('https://mtf.wiki/zh-cn/docs/medicine/estrogen/injection');
+                            }}
+                            className="inline-flex min-h-11 items-center gap-1.5 text-[var(--c-muted)] no-underline hover:text-[var(--c-accent)]"
+                        >
+                            {t('inj.guide.source')}
+                            <External size={16} />
+                        </a>
+                    </div>
+                </>
+            )}
+        </>
+    ) : null;
+
+    // Both guides share one group.
+    const guideGroup = doseGuideRows || injectionGuideRows ? (
+        <div className="list-group">
+            {doseGuideRows}
+            {doseGuideRows && injectionGuideRows && <ListSep />}
+            {injectionGuideRows}
+        </div>
+    ) : null;
+
+    const canAddQuick = Boolean(quickDoses && onAddQuickDose) && route !== Route.patchRemove;
+    const saveSection = (
+        <ListGroup header={t('log.save_header')} chevronIcon={chevronIcon}>
+            <ListRow
+                title={t('log.save_template')}
+                drillIn
+                chevron={showSaveTemplateInput ? <ChevronDown size={16} /> : chevronIcon}
+                aria-expanded={showSaveTemplateInput}
+                onClick={() => setShowSaveTemplateInput(v => !v)}
+            />
+            {showSaveTemplateInput && (
+                <div className="flex items-center gap-2 px-4 py-2">
+                    <input
+                        type="text"
+                        value={templateName}
+                        onChange={(e) => setTemplateName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveAsTemplate(); }}
+                        placeholder={t('template.name_placeholder')}
+                        aria-label={t('template.name_placeholder')}
+                        className="input-base min-w-0 flex-1"
+                        autoFocus
+                    />
+                    <Button variant="secondary" compact onClick={handleSaveAsTemplate}>
+                        {t('btn.save')}
+                    </Button>
+                </div>
+            )}
+            {canAddQuick && (
+                <ListRow
+                    title={quickExists
+                        ? t('log.add_quick_done')
+                        : <span className="text-[var(--c-accent)]">{t('log.add_quick')}</span>}
+                    disabled={quickExists}
+                    onClick={handleAddQuickDose}
+                />
+            )}
+        </ListGroup>
+    );
+
+    // ── Footer ────────────────────────────────────────────────────────
+    const saveButton = (
+        <Button
+            variant="primary"
+            block={!isInline}
+            compact={isInline}
+            onClick={handleSave}
+            disabled={isSaving}
+        >
+            <Check size={20} />
+            <span>{saveLabel}</span>
+        </Button>
+    );
+
+    const footer = isInline ? (
+        <div className="flex shrink-0 flex-col gap-3 pt-2">
+            <p className="m-0 text-sm leading-[1.375rem] text-[var(--c-ink)]" aria-live="polite">{sentence}</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                {eventToEdit ? (
+                    <Button variant="destructive" className="-ml-3" onClick={handleDeleteEvent}>
+                        {t('log.delete_dose')}
+                    </Button>
+                ) : <span />}
+                <div className="flex items-center gap-2">
+                    {hideHeader && (
+                        <Button variant="secondary" compact onClick={onCancel}>
+                            {t('btn.cancel')}
+                        </Button>
+                    )}
+                    {saveButton}
                 </div>
             </div>
+        </div>
+    ) : (
+        <div className="flex shrink-0 flex-col gap-3 border-t border-[var(--c-hairline)] bg-[var(--c-paper)] px-4 pb-4 pt-3">
+            <p className="m-0 text-sm leading-[1.375rem] text-[var(--c-ink)]" aria-live="polite">{sentence}</p>
+            {saveButton}
+            {eventToEdit && (
+                <Button variant="destructive" className="-ml-3 self-start" onClick={handleDeleteEvent}>
+                    {t('log.delete_dose')}
+                </Button>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="flex h-full min-h-0 flex-col">
+            {!isInline && !hideHeader && (
+                <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3">
+                    <h2 id={titleId} className="m-0 text-2xl font-bold text-[var(--c-ink)]">{title}</h2>
+                    <Button variant="icon" aria-label={t('log.close')} onClick={onCancel}>
+                        <Close size={22} />
+                    </Button>
+                </div>
+            )}
+
+            <div className={isInline
+                ? 'flex flex-col gap-6 pb-4'
+                : 'flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-6 pt-1 [&>*]:shrink-0'}
+            >
+                {whatSection}
+                {whenSection}
+                {amountFields}
+                {guideGroup}
+                {doseAdvisory && route !== Route.patchRemove && (
+                    <div className="px-4">
+                        <DoseAdvisoryLine advisory={doseAdvisory} t={t} />
+                    </div>
+                )}
+                {saveSection}
+            </div>
+
+            {footer}
         </div>
     );
 };

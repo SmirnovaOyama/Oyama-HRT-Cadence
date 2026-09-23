@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { apiErrorCode } from '../services/apiClient';
-import { ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
+import { useDialog } from '../contexts/DialogContext';
+import { BackHeader, Button } from '../components/ui';
+import { YouPage } from './you/shared';
+import { BusySpinner, ErrorNote, Field, Lead, PasswordInput } from './account/shared';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { authService } from '../services/auth';
@@ -8,6 +11,7 @@ import { authService } from '../services/auth';
 const DeleteAccount: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const { t } = useTranslation();
     const { deleteAccount, token } = useAuth();
+    const { showDialog } = useDialog();
     const [password, setPassword] = useState('');
     const [code, setCode] = useState('');
     const [backupCode, setBackupCode] = useState('');
@@ -16,9 +20,6 @@ const DeleteAccount: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const on = 'text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]';
-    const muted = 'text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]';
-    const inputCls = `w-full px-4 py-3 text-sm bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container-low)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-md focus:border-red-500 dark:focus:border-red-500 outline-none ${on} placeholder:text-[var(--color-m3-outline)] dark:placeholder:text-[var(--color-m3-dark-outline)]`;
 
     useEffect(() => {
         if (!token) return;
@@ -29,8 +30,13 @@ const DeleteAccount: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     const twoFAReady = !totpEnabled || (useBackup ? !!backupCode.trim() : code.length === 6);
 
-    const handleSubmit = async () => {
-        if (!password || !twoFAReady) return;
+    const handleSubmit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!password || !twoFAReady || isLoading) return;
+        showDialog('confirm', t('account.delete.confirm'), () => { void runDelete(); });
+    };
+
+    const runDelete = async () => {
         setIsLoading(true);
         setError('');
         try {
@@ -56,93 +62,71 @@ const DeleteAccount: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
 
     return (
-        <div className="relative pb-32">
-            <div className="sticky top-0 z-20 bg-[var(--color-m3-surface-dim)] dark:bg-[var(--color-m3-dark-surface)] px-6 md:px-10 pt-8 pb-3">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 -ml-2 px-2 py-1.5 rounded-md hover:bg-[var(--color-m3-surface-container-low)] dark:hover:bg-[var(--color-m3-dark-surface-container-low)] transition-colors"
-                >
-                    <ArrowLeft size={18} strokeWidth={1.5} className={`${muted} shrink-0`} />
-                    <span className={`text-xl font-semibold ${on}`}>{t('account.delete_account')}</span>
-                </button>
-            </div>
+        <YouPage>
+            <BackHeader parentLabel={t('account.title')} onBack={onBack} title={t('account.page.delete')} />
 
-            <div className="px-6 md:px-10 mt-2 max-w-md space-y-5">
-                <div className="flex items-start gap-3">
-                    <AlertTriangle size={18} className="text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                        <p className={`text-sm leading-relaxed ${muted}`}>{t('account.delete_account_desc')}</p>
-                        <p className="text-sm font-medium text-red-600 dark:text-red-400 leading-relaxed">{t('account.delete_warning')}</p>
-                    </div>
-                </div>
+            <form onSubmit={handleSubmit} className="mt-2 flex max-w-md flex-col gap-6">
+                <Lead note={t('account.delete.lead')}>{t('account.delete.warning')}</Lead>
 
-                {error && (
-                    <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
-                )}
+                <ErrorNote>{error}</ErrorNote>
 
-                <div>
-                    <label className={`block text-xs font-medium mb-1.5 ${muted}`}>{t('account.enter_password_confirm')}</label>
-                    <input
-                        type="password"
+                <Field label={t('account.delete.password')} htmlFor="da-password">
+                    <PasswordInput
+                        id="da-password"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        className={inputCls}
+                        autoComplete="current-password"
                         autoFocus
-                        style={{ fontSize: '16px' }}
                     />
-                </div>
+                </Field>
 
                 {totpEnabled && (
                     useBackup ? (
-                        <div>
-                            <label className={`block text-xs font-medium mb-1.5 ${muted}`}>{t('auth.backup_code_label')}</label>
-                            <input
-                                type="text"
-                                value={backupCode}
-                                onChange={e => setBackupCode(e.target.value.toUpperCase())}
-                                className={`${inputCls} font-mono tracking-[0.1em] text-center`}
-                                placeholder={t('auth.backup_code_placeholder')}
-                                autoComplete="off"
-                                style={{ fontSize: '16px' }}
-                            />
-                            <button type="button" onClick={() => { setUseBackup(false); setBackupCode(''); }}
-                                className={`mt-2 text-xs ${muted} hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] transition-colors`}>
-                                ← {t('account.2fa_code')}
-                            </button>
+                        <div className="flex flex-col gap-1">
+                            <Field label={t('account.field.backup_code')} htmlFor="da-backup">
+                                <input
+                                    id="da-backup"
+                                    type="text"
+                                    value={backupCode}
+                                    onChange={e => setBackupCode(e.target.value.toUpperCase())}
+                                    className="input-base text-center font-mono"
+                                    placeholder={t('auth.backup_code_placeholder')}
+                                    autoComplete="off"
+                                />
+                            </Field>
+                            <Button variant="plain" className="self-start" onClick={() => { setUseBackup(false); setBackupCode(''); }}>
+                                {t('account.auth.use_app_code')}
+                            </Button>
                         </div>
                     ) : (
-                        <div>
-                            <label className={`block text-xs font-medium mb-1.5 ${muted}`}>{t('account.2fa_code')}</label>
-                            <input
-                                type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]{6}"
-                                maxLength={6}
-                                value={code}
-                                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                className={`${inputCls} font-mono tracking-[0.4em] text-center`}
-                                placeholder="000000"
-                                autoComplete="one-time-code"
-                                style={{ fontSize: '16px' }}
-                            />
-                            <button type="button" onClick={() => { setUseBackup(true); setCode(''); }}
-                                className={`mt-2 text-xs ${muted} hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] transition-colors`}>
-                                {t('auth.use_backup_code')}
-                            </button>
+                        <div className="flex flex-col gap-1">
+                            <Field label={t('account.field.code')} htmlFor="da-code">
+                                <input
+                                    id="da-code"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]{6}"
+                                    maxLength={6}
+                                    value={code}
+                                    onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    className="input-base text-center font-mono tabular-nums"
+                                    placeholder="000000"
+                                    autoComplete="one-time-code"
+                                />
+                            </Field>
+                            <Button variant="plain" className="self-start" onClick={() => { setUseBackup(true); setCode(''); }}>
+                                {t('account.auth.use_backup')}
+                            </Button>
                         </div>
                     )
                 )}
 
-                <button
-                    onClick={handleSubmit}
-                    disabled={!password || !twoFAReady || isLoading}
-                    className="w-full py-2.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                    {isLoading && <Loader2 size={15} className="animate-spin" />}
-                    {t('account.delete_account')}
-                </button>
-            </div>
-        </div>
+                <Button type="submit" variant="destructive" className="self-start" disabled={!password || !twoFAReady || isLoading}>
+                    {isLoading && <BusySpinner />}
+                    {t('account.page.delete')}
+                </Button>
+            </form>
+        </YouPage>
     );
 };
 

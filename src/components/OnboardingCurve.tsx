@@ -185,8 +185,8 @@ export const useOnboardingCurve = (isTransmasc: boolean): CurveData | null => {
 };
 
 /** Matches the onboarding page's own background, so a marker reads as hollow. */
-const HOLLOW = 'fill-[var(--color-m3-surface-dim)] dark:fill-[var(--color-m3-dark-surface)]';
-const RULE = 'stroke-[var(--color-m3-outline-variant)] dark:stroke-[var(--color-m3-dark-outline-variant)]';
+const HOLLOW = 'fill-[var(--c-paper)]';
+const RULE = 'stroke-[var(--c-rule)]';
 
 const TICKS: { day: number; anchor: 'start' | 'middle' | 'end' }[] = [
     { day: 0, anchor: 'start' },
@@ -226,7 +226,7 @@ const OnboardingCurve: React.FC<OnboardingCurveProps> = ({ data, beat, playKey, 
             preserveAspectRatio="xMidYMid meet"
             aria-hidden="true"
             focusable="false"
-            className="block h-auto w-full text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)]"
+            className="block h-auto w-full text-[var(--c-accent)]"
         >
             {/* The spine of every beat, so it is there from the first paint
                 with no animation of its own. */}
@@ -252,16 +252,16 @@ const OnboardingCurve: React.FC<OnboardingCurveProps> = ({ data, beat, playKey, 
                                     className={RULE}
                                 />
                             ))}
-                            <g className="text-muted">
+                            <g className="text-[var(--c-muted)]">
                                 {/* The only numerals on screen are days. A level
                                     on the y axis would be a number to aim at, and
                                     this is somebody else's body. */}
                                 {TICKS.map(({ day, anchor }) => (
-                                    <text key={day} x={X(day)} y={131} fontSize={8.5} textAnchor={anchor} fill="currentColor">
+                                    <text key={day} x={X(day)} y={135} fontSize={13} textAnchor={anchor} fill="currentColor">
                                         {day}
                                     </text>
                                 ))}
-                                <text x={X0} y={12} fontSize={8.5} textAnchor="start" fill="currentColor">
+                                <text x={X0} y={12} fontSize={13} textAnchor="start" fill="currentColor">
                                     {data.unit}
                                 </text>
                             </g>
@@ -295,21 +295,19 @@ const OnboardingCurve: React.FC<OnboardingCurveProps> = ({ data, beat, playKey, 
                             <path className="oc-ghost-in" d={data.modelD} fill="none" stroke="currentColor" strokeWidth={1.75} strokeDasharray="3 4" strokeLinejoin="round" strokeLinecap="round" />
                             <path className="oc-cal-in" d={data.calD} fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
                             {data.labs.map(({ x, y }, i) => (
-                                <rect
+                                <path
                                     key={x}
-                                    /* ResultChart's lab marker: an 8×8 square on
-                                       its corner, in that chart's own lab colour.
-                                       The first real result someone enters should
-                                       look like the thing they were shown here. */
-                                    className={`oc-pop ${HOLLOW} text-[#B5664C] dark:text-[#E0A38C]`}
+                                    /* A blood test: a solid ink diamond, the same
+                                       mark the main chart uses, so a measurement
+                                       reads apart from the accent-coloured
+                                       estimate it corrects. Drawn as a path, not a
+                                       rotated rect: .oc-pop animates `transform`,
+                                       which would override a rotate() attribute
+                                       and leave a plain square. */
+                                    className="oc-pop text-[var(--c-ink)]"
                                     style={{ animationDelay: `${i * 180}ms` }}
-                                    x={x - 4}
-                                    y={y - 4}
-                                    width={8}
-                                    height={8}
-                                    transform={`rotate(45 ${x} ${y})`}
-                                    strokeWidth={1.75}
-                                    stroke="currentColor"
+                                    d={`M ${x} ${y - 5.5} L ${x + 5.5} ${y} L ${x} ${y + 5.5} L ${x - 5.5} ${y} Z`}
+                                    fill="currentColor"
                                 />
                             ))}
                         </>
@@ -323,7 +321,7 @@ const OnboardingCurve: React.FC<OnboardingCurveProps> = ({ data, beat, playKey, 
             that has to be read whether or not the sequence ever plays, so it
             sits directly under the chart rather than below a legend that only
             arrives with the last beat. */}
-        <p className="mt-2 text-[0.75rem] leading-relaxed text-muted">{caption}</p>
+        <p className="m-0 mt-3 text-sm text-[var(--c-muted)]">{caption}</p>
 
         {/* Laid out from the first frame and only made visible in the last
             beat, so its arrival does not shove the rows below it down the
@@ -331,7 +329,7 @@ const OnboardingCurve: React.FC<OnboardingCurveProps> = ({ data, beat, playKey, 
         {data && (
             <div
                 key={playKey}
-                className={`mt-1.5 flex items-center gap-4 text-[0.6875rem] text-muted ${beat === 2 ? 'oc-legend-in' : 'invisible'}`}
+                className={`mt-2 flex min-h-11 flex-wrap items-center gap-x-4 text-sm text-[var(--c-muted)] ${beat === 2 ? 'oc-legend-in' : 'invisible'}`}
             >
                 {/* One series in two states, so both swatches are the same
                     colour and only the dashes tell them apart. */}
@@ -355,7 +353,7 @@ const Swatch: React.FC<{ dashed?: boolean }> = ({ dashed }) => (
         width={14}
         height={4}
         aria-hidden="true"
-        className="shrink-0 text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)]"
+        className="shrink-0 text-[var(--c-accent)]"
     >
         <line
             x1={0}

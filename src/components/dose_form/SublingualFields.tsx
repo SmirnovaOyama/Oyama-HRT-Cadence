@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { Route, Ester, SL_TIER_ORDER, SublingualTierParams } from '../../../logic';
+import { Ester, SL_TIER_ORDER, SublingualTierParams } from '../../../logic';
 import CustomSelect from '../CustomSelect';
+import { Switch } from '../ui';
+import AmountSection, { AmountBasis } from './AmountSection';
+import DoseStepper from './DoseStepper';
+import { GroupHeader, ListSep } from './shared';
 
 interface SublingualFieldsProps {
     ester: Ester;
@@ -9,6 +13,8 @@ interface SublingualFieldsProps {
     e2Dose: string;
     onRawChange: (val: string) => void;
     onE2Change: (val: string) => void;
+    basis: AmountBasis;
+    onBasisChange: (basis: AmountBasis) => void;
     slTier: number;
     setSlTier: (val: number) => void;
     useCustomTheta: boolean;
@@ -18,15 +24,18 @@ interface SublingualFieldsProps {
     customHoldValue: number;
     setCustomHoldValue: (val: number) => void;
     thetaFromHold: (hold: number) => number;
-    route: Route;
 }
 
+/** Amount, then how long the tablet is held: a preset tier from a list
+ *  view, or (switch on) a hold time of your own in minutes. */
 const SublingualFields: React.FC<SublingualFieldsProps> = ({
     ester,
     rawDose,
     e2Dose,
     onRawChange,
     onE2Change,
+    basis,
+    onBasisChange,
     slTier,
     setSlTier,
     useCustomTheta,
@@ -36,9 +45,10 @@ const SublingualFields: React.FC<SublingualFieldsProps> = ({
     customHoldValue,
     setCustomHoldValue,
     thetaFromHold,
-    route
 }) => {
     const { t } = useTranslation();
+    const customTitleId = useId();
+    const minutes = t('unit.min_short');
 
     const handleCustomHoldChange = (str: string) => {
         setCustomHoldInput(str);
@@ -51,100 +61,63 @@ const SublingualFields: React.FC<SublingualFieldsProps> = ({
     const tierOptions = SL_TIER_ORDER.map((tierKey, index) => ({
         value: String(index),
         label: t(`sl.tier.${tierKey}`),
-        description: `${SublingualTierParams[tierKey].hold} min`
+        description: `${SublingualTierParams[tierKey].hold} ${minutes}`,
     }));
 
+    const thetaPct = Math.round(thetaFromHold(customHoldValue) * 100);
+
     return (
-        <div className="space-y-4">
-            <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 pl-1">{t('field.sl_absorption')}</label>
-                    <button
-                        onClick={() => setUseCustomTheta(!useCustomTheta)}
-                        className="text-xs font-semibold text-[var(--color-m3-primary)]"
-                    >
-                        {useCustomTheta ? t('sl.use_presets') : t('sl.use_custom')}
-                    </button>
+        <>
+            <AmountSection
+                ester={ester}
+                rawDose={rawDose}
+                e2Dose={e2Dose}
+                onRawChange={onRawChange}
+                onE2Change={onE2Change}
+                basis={basis}
+                onBasisChange={onBasisChange}
+                step={0.5}
+            />
+
+            <section>
+                <GroupHeader>{t('log.sl_header')}</GroupHeader>
+                <div className="list-group">
+                    {useCustomTheta ? (
+                        <DoseStepper
+                            value={customHoldInput}
+                            onChange={handleCustomHoldChange}
+                            step={1}
+                            min={1}
+                            max={60}
+                            unit={minutes}
+                            label={t('log.sl_minutes')}
+                        />
+                    ) : (
+                        <CustomSelect
+                            bare
+                            label={t('log.sl_minutes')}
+                            value={String(slTier)}
+                            onChange={(val) => setSlTier(parseInt(val, 10))}
+                            options={tierOptions}
+                        />
+                    )}
+                    <ListSep />
+                    <div className="list-row">
+                        <span className="list-row-text">
+                            <span id={customTitleId} className="list-row-title">{t('log.sl_custom')}</span>
+                        </span>
+                        <Switch
+                            checked={useCustomTheta}
+                            onChange={setUseCustomTheta}
+                            aria-labelledby={customTitleId}
+                        />
+                    </div>
                 </div>
-
-                {!useCustomTheta ? (
-                    <CustomSelect
-                        value={String(slTier)}
-                        onChange={(val) => setSlTier(parseInt(val, 10))}
-                        options={tierOptions}
-                    />
-                ) : (
-                    <div className="pt-2 pb-1 space-y-2">
-                        <label className="text-xs font-medium text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('sl.hold_time_min')}</label>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="number" inputMode="decimal"
-                                min="1" max="60"
-                                value={customHoldInput}
-                                onChange={e => handleCustomHoldChange(e.target.value)}
-                                className="w-16 h-9 px-2 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-md text-center text-sm font-medium focus:ring-1 focus:ring-[var(--color-m3-primary)]/30 focus:border-[var(--color-m3-primary)] outline-none text-gray-900 dark:text-gray-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                style={{ fontSize: '16px' }}
-                            />
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{t('unit.min_short')}</span>
-                            <input
-                                type="range"
-                                min="1" max="60"
-                                value={customHoldValue}
-                                onChange={e => {
-                                    const v = parseInt(e.target.value);
-                                    setCustomHoldValue(v);
-                                    setCustomHoldInput(v.toString());
-                                }}
-                                className="flex-1 h-1 accent-[var(--color-m3-primary)]"
-                            />
-                        </div>
-                        <p className="text-[0.6875rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{t('sl.theta_approx')}: {thetaFromHold(customHoldValue).toFixed(3)} (Keep E2)</p>
-                    </div>
-                )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {(ester !== Ester.E2) && (
-                    <div className={`space-y-2 ${(ester === Ester.EV && route === Route.sublingual) ? 'col-span-2' : ''}`}>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 pl-1">{t('field.dose_raw')}</label>
-                        <input
-                            type="number" inputMode="decimal"
-                            min="0"
-                            step="0.001"
-                            value={rawDose} onChange={e => onRawChange(e.target.value)}
-                            className="w-full p-3 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-1 focus:ring-[var(--color-m3-primary)]/30 focus:border-[var(--color-m3-primary)] outline-none text-gray-900 dark:text-gray-100 font-medium text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0.0"
-                            style={{ fontSize: '16px' }}
-                        />
-                    </div>
-                )}
-
-                {!(ester === Ester.EV && route === Route.sublingual) && ester !== Ester.CPA && (
-                    <div className={`space-y-2 ${(ester === Ester.E2) ? "col-span-2" : ""}`}>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 pl-1">
-                            {t('field.dose_e2')}
-                        </label>
-                        <input
-                            type="number" inputMode="decimal"
-                            min="0"
-                            step="0.001"
-                            value={e2Dose} onChange={e => onE2Change(e.target.value)}
-                            className="w-full p-3 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-md focus:ring-1 focus:ring-[var(--color-m3-primary)]/30 focus:border-[var(--color-m3-primary)] outline-none text-gray-900 dark:text-gray-100 font-medium text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0.0"
-                            style={{ fontSize: '16px' }}
-                        />
-                    </div>
-                )}
-
-                {(ester === Ester.EV && route === Route.sublingual) && (
-                    <div className="col-span-2">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 pl-1">
-                            {t('field.dose_e2')}: {e2Dose ? `${e2Dose} mg` : '--'}
-                        </p>
-                    </div>
-                )}
-            </div>
-        </div>
+                <p className="list-group-footer m-0">
+                    {useCustomTheta ? t('log.sl_theta').replace('{pct}', String(thetaPct)) : t('log.sl_hold_note')}
+                </p>
+            </section>
+        </>
     );
 };
 

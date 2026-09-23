@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronDown, Copy, Eye, EyeOff, Link2, Loader2, LockKeyhole, Trash2 } from 'lucide-react';
+import { InTarget, Link, Lock, Sync } from '../components/icons';
 import { DoseEvent, HRTMode, SimulationResult } from '../../logic';
 import { useTranslation } from '../contexts/LanguageContext';
 import { getShareCopy } from '../i18n/share';
@@ -8,9 +8,25 @@ import { useDialog } from '../contexts/DialogContext';
 import { LOCALE_MAP } from '../utils/helpers';
 import DateTimePicker from '../components/DateTimePicker';
 import { buildSharedDosageSnapshot } from '../services/shareSnapshot';
+import { BackHeader, Button, ListGroup, ListRow, Switch } from '../components/ui';
+import { LIST_CHECK, YouPage } from './you/shared';
+import { BusySpinner, Card, ErrorNote, Field, Groups, Lead, Loading, Note, PasswordInput } from './account/shared';
+
+const DAY_MS = 24 * 60 * 60_000;
+
+/** Ready-made lifetimes for a link, in the order people usually want them. */
+type ExpiryPreset = '1d' | '7d' | '30d' | '90d';
+const EXPIRY_PRESETS: { id: ExpiryPreset; days: number }[] = [
+    { id: '1d', days: 1 },
+    { id: '7d', days: 7 },
+    { id: '30d', days: 30 },
+    { id: '90d', days: 90 },
+];
 
 interface ShareSettingsProps {
     onBack: () => void;
+    /** Name of the screen Back returns to. Defaults to the You tab. */
+    parentLabel?: string;
     authToken: string;
     mode: HRTMode;
     events: DoseEvent[];
@@ -24,22 +40,33 @@ const toLocalDateTimeValue = (timestamp: number): string => {
 };
 
 // `toLocaleString()` renders seconds, which makes every timestamp in the list
-// read as noise. Share stamps only ever matter to the minute.
-const formatStamp = (timestamp: number, lang: string): string =>
-    new Date(timestamp).toLocaleString(LOCALE_MAP[lang] || 'en-US', {
+// read as noise. Share stamps only ever matter to the minute, and the year is
+// shown only when it isn't this one, so the value stays short beside its row.
+const formatStamp = (timestamp: number, lang: string): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleString(LOCALE_MAP[lang] || 'en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric',
+        ...(date.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' as const } : {}),
         hour: '2-digit',
         minute: '2-digit',
     });
+};
 
-const badgeBase = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium leading-none';
-const liveBadgeClass = `${badgeBase} bg-[var(--color-m3-primary-container)] text-[var(--color-m3-on-primary-container)] dark:bg-[var(--color-m3-dark-primary-container)] dark:text-[var(--color-m3-dark-on-primary-container)]`;
-const metaBadgeClass = `${badgeBase} bg-[var(--color-m3-surface-container)] text-muted dark:bg-[var(--color-m3-dark-surface-container)]`;
+// A short date for list rows ("Sep 23", with the year only when it isn't this
+// one), kept on one line: the space inside it is non-breaking.
+const formatDay = (timestamp: number, lang: string): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString(LOCALE_MAP[lang] || 'en-US', {
+        month: 'short',
+        day: 'numeric',
+        ...(date.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' as const } : {}),
+    }).replace(/ /g, '\u00A0');
+};
 
 const ShareSettings: React.FC<ShareSettingsProps> = ({
     onBack,
+    parentLabel,
     authToken,
     mode,
     events,
@@ -52,7 +79,7 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
     const [passwordEnabled, setPasswordEnabled] = useState(false);
     const [liveEnabled, setLiveEnabled] = useState(false);
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
+    const [expiryChoice, setExpiryChoice] = useState<ExpiryPreset | 'custom'>('7d');
     const [expiresAtInput, setExpiresAtInput] = useState('');
     const [isExpiryPickerOpen, setIsExpiryPickerOpen] = useState(false);
     const [createdShare, setCreatedShare] = useState<CreatedShare | null>(null);
@@ -68,8 +95,8 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
         setPasswordEnabled(false);
         setLiveEnabled(false);
         setPassword('');
-        setShowPassword(false);
-        setExpiresAtInput(toLocalDateTimeValue(Date.now() + 7 * 24 * 60 * 60_000));
+        setExpiryChoice('7d');
+        setExpiresAtInput(toLocalDateTimeValue(Date.now() + 7 * DAY_MS));
         setIsExpiryPickerOpen(false);
         setCreatedShare(null);
         setSubmitting(false);
@@ -95,7 +122,8 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
         setError(null);
         setSubmitting(true);
         try {
-            const expiresAt = new Date(expiresAtInput).getTime();
+            const preset = EXPIRY_PRESETS.find(p => p.id === expiryChoice);
+            const expiresAt = preset ? Date.now() + preset.days * DAY_MS : new Date(expiresAtInput).getTime();
             if (
                 !Number.isFinite(expiresAt)
                 || expiresAt <= Date.now()
@@ -163,246 +191,212 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
         });
     };
 
+    const statusWords = (share: { live: boolean; passwordRequired: boolean }) => (
+        <>
+            {share.live && (
+                <span className="inline-flex items-center gap-1">
+                    <Sync size={16} className="flex-none" />
+                    {copy.liveBadge}
+                </span>
+            )}
+            {share.passwordRequired && (
+                <span className="inline-flex items-center gap-1">
+                    <Lock size={16} className="flex-none" />
+                    {copy.protected}
+                </span>
+            )}
+        </>
+    );
+
+    const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+    const handleNativeShare = async () => {
+        if (!createdShare || !canShare) return;
+        try {
+            await navigator.share({ title: copy.publicTitle, url: createdShare.url });
+        } catch { /* dismissed */ }
+    };
+
     return (
-        <div className="relative space-y-4 pb-32">
-            <div className="sticky top-0 z-20 bg-[var(--color-m3-surface-dim)] px-6 pb-3 pt-8 dark:bg-[var(--color-m3-dark-surface)] md:px-8">
-                <button
-                    type="button"
-                    onClick={onBack}
-                    className="-ml-2 flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)]"
-                >
-                    <ArrowLeft size={18} className="shrink-0 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]" />
-                    <span className="text-xl font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                        {copy.modalTitle}
-                    </span>
-                </button>
-            </div>
+        <YouPage>
+            <BackHeader parentLabel={parentLabel ?? t('you.title')} onBack={onBack} title={t('account.page.share')} />
+            <Lead className="mt-2" note={t('account.share.lead_note')}>{copy.modalDescription}</Lead>
 
-            <div className="max-w-2xl px-6 md:px-8">
-                <p className="pb-5 text-sm leading-relaxed text-muted">{copy.modalDescription}</p>
-                    {createdShare ? (
-                        <div className="pb-0 pt-5">
-                            <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-2 text-body">
-                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-m3-primary-container)] text-[var(--color-m3-on-primary-container)]">
-                                    <Check size={14} strokeWidth={2.25} />
-                                </span>
-                                <p className="text-[0.9375rem] font-medium">{copy.created}</p>
-                                {createdShare.live && (
-                                    <span className={liveBadgeClass}>{copy.liveBadge}</span>
-                                )}
-                                {createdShare.passwordRequired && (
-                                    <span className={metaBadgeClass}>
-                                        <LockKeyhole size={12} />
-                                        {copy.protected}
-                                    </span>
+            <Groups className="mt-6">
+                {createdShare ? (
+                    <Card aria-live="polite">
+                        <div className="flex items-start gap-3">
+                            <InTarget size={22} className="mt-px flex-none text-[var(--c-target)]" />
+                            <div className="flex min-w-0 flex-col">
+                                <p className="m-0 text-base font-semibold text-[var(--c-ink)]">{copy.created}</p>
+                                {(createdShare.live || createdShare.passwordRequired) && (
+                                    <p className="m-0 flex flex-wrap gap-x-3 text-sm text-[var(--c-muted)]">{statusWords(createdShare)}</p>
                                 )}
                             </div>
-
-                            <label className="sr-only" htmlFor="created-share-link">
-                                {copy.copy}
-                            </label>
-                            <div className="flex flex-col gap-1 border-b border-[var(--color-m3-outline-variant)] py-1 dark:border-[var(--color-m3-dark-outline-variant)] sm:flex-row sm:items-center sm:gap-3">
-                                <input
-                                    ref={linkInputRef}
-                                    id="created-share-link"
-                                    readOnly
-                                    value={createdShare.url}
-                                    className="min-w-0 flex-1 select-all truncate border-0 bg-transparent py-2.5 font-mono text-[0.8125rem] text-body outline-none"
-                                    onFocus={(event) => event.currentTarget.select()}
-                                />
-                                {/* Both labels share one grid cell so the button keeps a single
-                                    width across the copy → copied swap, in every locale. */}
-                                <button
-                                    type="button"
-                                    onClick={handleCopy}
-                                    className="-mr-2 grid shrink-0 place-items-center self-end rounded-md px-2.5 py-2 text-[0.9375rem] font-medium text-[var(--color-m3-primary)] transition-colors hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] sm:self-auto"
-                                >
-                                    <span className={`col-start-1 row-start-1 inline-flex items-center gap-1.5 ${copied ? 'invisible' : ''}`}>
-                                        <Copy size={14} />
-                                        {copy.copy}
-                                    </span>
-                                    <span className={`col-start-1 row-start-1 inline-flex items-center gap-1.5 ${copied ? '' : 'invisible'}`}>
-                                        <Check size={14} />
-                                        {copy.copied}
-                                    </span>
-                                </button>
-                            </div>
-
-                            {createdShare.passwordRequired && (
-                                <p className="mt-3 text-sm leading-relaxed text-muted">{copy.passwordHint}</p>
+                        </div>
+                        <label className="sr-only" htmlFor="created-share-link">{copy.copy}</label>
+                        <input
+                            ref={linkInputRef}
+                            id="created-share-link"
+                            readOnly
+                            value={createdShare.url}
+                            className="input-base select-all truncate bg-[var(--c-plate)] font-mono text-sm"
+                            onFocus={(event) => event.currentTarget.select()}
+                        />
+                        {createdShare.passwordRequired && <Note>{copy.passwordHint}</Note>}
+                        <div className="flex gap-3">
+                            {/* Both labels share one grid cell so the button keeps a single
+                                width across the copy to copied swap, in every locale. */}
+                            <Button variant="secondary" compact className="grid flex-1 place-items-center" onClick={handleCopy}>
+                                <span className={`col-start-1 row-start-1 ${copied ? 'invisible' : ''}`}>{copy.copy}</span>
+                                <span className={`col-start-1 row-start-1 ${copied ? '' : 'invisible'}`}>{copy.copied}</span>
+                            </Button>
+                            {canShare && (
+                                <Button variant="secondary" compact className="flex-1" onClick={handleNativeShare}>
+                                    {copy.action}
+                                </Button>
                             )}
                         </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="border-b border-[var(--color-m3-outline-variant)] pb-6 dark:border-[var(--color-m3-dark-outline-variant)]">
-                            <div className="callout mb-5">
-                                {liveEnabled ? copy.liveSnapshotNote : copy.snapshotNote}
-                            </div>
-
-                            <div className="mb-5 flex items-center justify-between gap-4 border-b border-[var(--color-m3-outline-variant)] py-[18px] dark:border-[var(--color-m3-dark-outline-variant)]">
-                                <label htmlFor="share-live-toggle" className="cursor-pointer text-[0.9375rem] font-medium text-body">
-                                    {copy.liveToggle}
-                                </label>
-                                <button
-                                    id="share-live-toggle"
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={liveEnabled}
-                                    onClick={() => setLiveEnabled(value => !value)}
-                                    className={`relative inline-flex switch-track h-6 w-11 shrink-0 items-center rounded-full ${liveEnabled ? 'bg-[var(--color-m3-primary)]' : 'bg-[var(--color-m3-outline-variant)] dark:bg-[var(--color-m3-dark-outline-variant)]'}`}
-                                >
-                                    <span className={`inline-block switch-knob h-4 w-4 rounded-full bg-white shadow-sm ${liveEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                                </button>
-                            </div>
-
-                            <div className="mb-5">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div>
-                                        <label htmlFor="share-password-toggle" className="text-sm font-medium text-body cursor-pointer">
-                                            {copy.passwordToggle}
-                                        </label>
-                                    </div>
-                                    <button
-                                        id="share-password-toggle"
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={passwordEnabled}
-                                        onClick={() => {
-                                            setPasswordEnabled(value => !value);
-                                            setError(null);
-                                        }}
-                                        className={`relative inline-flex switch-track h-6 w-11 shrink-0 items-center rounded-full ${passwordEnabled ? 'bg-[var(--color-m3-primary)]' : 'bg-[var(--color-m3-outline-variant)] dark:bg-[var(--color-m3-dark-outline-variant)]'}`}
-                                    >
-                                        <span className={`inline-block switch-knob h-4 w-4 rounded-full bg-white shadow-sm ${passwordEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                                    </button>
-                                </div>
-
-                                {passwordEnabled && (
-                                    <div className="mt-3">
-                                        <label htmlFor="share-password" className="block mb-1.5 text-xs font-medium text-muted">
-                                            {copy.passwordLabel}
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                id="share-password"
-                                                type={showPassword ? 'text' : 'password'}
-                                                value={password}
-                                                onChange={(event) => setPassword(event.target.value)}
-                                                className="input-base pr-11"
-                                                placeholder={copy.passwordPlaceholder}
-                                                minLength={8}
-                                                maxLength={128}
-                                                autoComplete="new-password"
-                                                required
-                                                autoFocus
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(value => !value)}
-                                                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted hover:text-body"
-                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                                            >
-                                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="mb-5">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsExpiryPickerOpen(value => !value)}
-                                    aria-expanded={isExpiryPickerOpen}
-                                    className="flex w-full items-center justify-between border-b border-[var(--color-m3-outline-variant)] py-[18px] text-start dark:border-[var(--color-m3-dark-outline-variant)]"
-                                >
-                                    <span className="text-[0.9375rem] text-body">{copy.expiryLabel}</span>
-                                    <span className="flex items-center gap-1.5 text-muted">
-                                        <span className="text-sm tabular-nums">
-                                            {expiresAtInput ? formatStamp(new Date(expiresAtInput).getTime(), lang) : '—'}
-                                        </span>
-                                        <ChevronDown size={14} className={`chev ${isExpiryPickerOpen ? 'rotate-180' : ''}`} />
-                                    </span>
-                                </button>
-                                <DateTimePicker
-                                    isOpen={isExpiryPickerOpen}
-                                    inline
-                                    onClose={() => setIsExpiryPickerOpen(false)}
-                                    onConfirm={(date) => setExpiresAtInput(toLocalDateTimeValue(date.getTime()))}
-                                    initialDate={expiresAtInput ? new Date(expiresAtInput) : new Date(Date.now() + 7 * 24 * 60 * 60_000)}
-                                    mode="datetime"
-                                    title={copy.expiryLabel}
+                        <Button variant="plain" className="self-start" onClick={() => { setCreatedShare(null); setCopied(false); }}>
+                            {t('account.share.another')}
+                        </Button>
+                    </Card>
+                ) : (
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                        <div className="flex flex-col gap-4">
+                            <ListGroup
+                                header={t('account.share.options')}
+                                footer={liveEnabled ? t('account.share.live_footer') : t('account.share.static_footer')}
+                            >
+                                <ListRow
+                                    title={<span id="share-live-label">{copy.liveToggle}</span>}
+                                    trailing={
+                                        <Switch
+                                            id="share-live-toggle"
+                                            checked={liveEnabled}
+                                            onChange={setLiveEnabled}
+                                            aria-labelledby="share-live-label"
+                                        />
+                                    }
                                 />
-                                <p className="mt-1.5 text-xs text-muted">{copy.expiryHint}</p>
-                            </div>
+                                <ListRow
+                                    title={<span id="share-password-label">{copy.passwordToggle}</span>}
+                                    trailing={
+                                        <Switch
+                                            id="share-password-toggle"
+                                            checked={passwordEnabled}
+                                            onChange={(value) => { setPasswordEnabled(value); setError(null); }}
+                                            aria-labelledby="share-password-label"
+                                        />
+                                    }
+                                />
+                            </ListGroup>
 
-                            {error && (
-                                <p className="mb-4 text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
+                            {passwordEnabled && (
+                                <Field label={copy.passwordLabel} htmlFor="share-password" hint={copy.passwordHint}>
+                                    <PasswordInput
+                                        id="share-password"
+                                        value={password}
+                                        onChange={(event) => setPassword(event.target.value)}
+                                        placeholder={copy.passwordPlaceholder}
+                                        minLength={8}
+                                        maxLength={128}
+                                        autoComplete="new-password"
+                                        required
+                                        autoFocus
+                                    />
+                                </Field>
                             )}
+                        </div>
 
-                            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                                <button type="button" onClick={onBack} className="btn-secondary">
-                                    {t('btn.cancel')}
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting || !events.length || (passwordEnabled && password.length < 8)}
-                                    className="btn-primary min-w-[8.5rem]"
-                                >
-                                    {submitting ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
-                                    {submitting ? copy.creating : copy.create}
-                                </button>
-                            </div>
-                        </form>
-                    )}
-
-                    <div className="pb-6 pt-5">
-                        <h3 className="text-[0.9375rem] font-medium text-body">{copy.manageTitle}</h3>
-                        <p className="mt-1 text-sm leading-relaxed text-muted">{copy.manageDescription}</p>
-                        {sharesLoading ? (
-                            <div className="flex items-center gap-2 py-4 text-sm text-muted">
-                                <Loader2 size={14} className="animate-spin" /> {copy.loading}
-                            </div>
-                        ) : shares.length === 0 ? (
-                            <p className="py-4 text-sm text-muted">{copy.noneActive}</p>
-                        ) : (
-                            <div className="mt-3 border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]">
-                                {shares.map(share => (
-                                    <div key={share.id} className="flex items-center gap-3 border-b border-[var(--color-m3-outline-variant)] py-3.5 last:border-b-0 dark:border-[var(--color-m3-dark-outline-variant)]">
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                                                <p className="text-sm font-medium text-body">
-                                                    {copy.sharedOn} {formatStamp(share.createdAt, lang)}
-                                                </p>
-                                                {share.live && (
-                                                    <span className={liveBadgeClass}>{copy.liveBadge}</span>
-                                                )}
-                                                {share.passwordRequired && (
-                                                    <span className={metaBadgeClass}>
-                                                        <LockKeyhole size={12} />
-                                                        {copy.protected}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="mt-1 truncate text-xs text-muted">
-                                                {copy.expiresOn} {share.expiresAt ? formatStamp(share.expiresAt, lang) : copy.neverExpires}
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRevoke(share)}
-                                            disabled={revokingId === share.id}
-                                            className="-mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/20"
-                                        >
-                                            {revokingId === share.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                                            {copy.revoke}
-                                        </button>
-                                    </div>
+                        <div className="flex flex-col gap-3">
+                            <ListGroup
+                                header={copy.expiryLabel}
+                                footer={copy.expiryHint}
+                                selection="single"
+                                checkIcon={LIST_CHECK}
+                            >
+                                {EXPIRY_PRESETS.map(({ id, days }) => (
+                                    <ListRow
+                                        key={id}
+                                        title={t(`account.share.expiry_${id}`)}
+                                        value={expiryChoice === id ? formatStamp(Date.now() + days * DAY_MS, lang) : undefined}
+                                        selected={expiryChoice === id}
+                                        onClick={() => { setExpiryChoice(id); setIsExpiryPickerOpen(false); setError(null); }}
+                                    />
                                 ))}
-                            </div>
-                        )}
-                    </div>
-            </div>
-        </div>
+                                <ListRow
+                                    title={t('account.share.expiry_custom')}
+                                    value={expiryChoice === 'custom' && expiresAtInput ? formatStamp(new Date(expiresAtInput).getTime(), lang) : undefined}
+                                    selected={expiryChoice === 'custom'}
+                                    aria-expanded={isExpiryPickerOpen}
+                                    onClick={() => {
+                                        setExpiryChoice('custom');
+                                        setIsExpiryPickerOpen(value => expiryChoice === 'custom' ? !value : true);
+                                        setError(null);
+                                    }}
+                                />
+                            </ListGroup>
+                            <DateTimePicker
+                                isOpen={isExpiryPickerOpen}
+                                inline
+                                onClose={() => setIsExpiryPickerOpen(false)}
+                                onConfirm={(date) => setExpiresAtInput(toLocalDateTimeValue(date.getTime()))}
+                                initialDate={expiresAtInput ? new Date(expiresAtInput) : new Date(Date.now() + 7 * DAY_MS)}
+                                mode="datetime"
+                                title={copy.expiryLabel}
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            <ErrorNote>{error}</ErrorNote>
+                            {!events.length && <Note>{copy.noData}</Note>}
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                block
+                                disabled={submitting || !events.length || (passwordEnabled && password.length < 8)}
+                            >
+                                {submitting ? <BusySpinner /> : <Link size={20} />}
+                                {submitting ? copy.creating : copy.create}
+                            </Button>
+                        </div>
+                    </form>
+                )}
+
+                {sharesLoading ? (
+                    <Loading label={copy.loading} />
+                ) : shares.length === 0 ? (
+                    <ListGroup header={copy.manageTitle}>
+                        <ListRow title={<span className="text-[var(--c-muted)]">{copy.noneActive}</span>} />
+                    </ListGroup>
+                ) : (
+                    <ListGroup header={copy.manageTitle} footer={t('account.share.manage_footer')}>
+                        {shares.map(share => (
+                            <ListRow
+                                key={share.id}
+                                title={<span className="block truncate">{copy.sharedOn} {formatDay(share.createdAt, lang)}</span>}
+                                sub={
+                                    <span className="flex flex-wrap gap-x-3">
+                                        <span>{share.expiresAt ? `${copy.expiresOn} ${formatDay(share.expiresAt, lang)}` : copy.neverExpires}</span>
+                                        {statusWords(share)}
+                                    </span>
+                                }
+                                trailing={
+                                    <Button
+                                        variant="destructive"
+                                        className="-me-2"
+                                        onClick={() => handleRevoke(share)}
+                                        disabled={revokingId === share.id}
+                                    >
+                                        {revokingId === share.id ? <BusySpinner /> : copy.revoke}
+                                    </Button>
+                                }
+                            />
+                        ))}
+                    </ListGroup>
+                )}
+            </Groups>
+        </YouPage>
     );
 };
 

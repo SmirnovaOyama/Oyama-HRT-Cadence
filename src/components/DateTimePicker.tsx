@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarDays, Clock3, ChevronDown, Check } from 'lucide-react';
+import { Check } from './icons';
+import { Button } from './ui';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useEscape } from '../hooks/useEscape';
 import { LOCALE_MAP } from '../utils/helpers';
@@ -20,6 +21,8 @@ type DatePart = 'year' | 'month' | 'day' | 'hour' | 'minute';
 interface PartOption {
     value: number;
     label: string;
+    /** Shorter form for the closed pill, e.g. "Sep" for "September". */
+    short?: string;
 }
 
 interface PartSelectProps {
@@ -29,6 +32,9 @@ interface PartSelectProps {
     onChange: (value: number) => void;
 }
 
+/** One part of the date or time: a tinted pill (like the iOS compact date
+ *  picker) that opens a hairline-bordered list with a check on the chosen
+ *  value. No shadow. */
 const PartSelect: React.FC<PartSelectProps> = ({ label, value, options, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -49,8 +55,19 @@ const PartSelect: React.FC<PartSelectProps> = ({ label, value, options, onChange
             ) return;
             setIsOpen(false);
         };
+        const handleKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.stopPropagation();
+                setIsOpen(false);
+                triggerRef.current?.focus();
+            }
+        };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleKey, true);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKey, true);
+        };
     }, [isOpen]);
 
     useLayoutEffect(() => {
@@ -60,14 +77,15 @@ const PartSelect: React.FC<PartSelectProps> = ({ label, value, options, onChange
             const rect = triggerRef.current!.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
             const spaceAbove = rect.top;
-            const flip = spaceBelow < 160 && spaceAbove > spaceBelow;
-            const maxHeight = Math.max(120, Math.min(240, (flip ? spaceAbove : spaceBelow) - 16));
-            const width = Math.max(rect.width, 72);
+            const flip = spaceBelow < 200 && spaceAbove > spaceBelow;
+            const maxHeight = Math.max(160, Math.min(288, (flip ? spaceAbove : spaceBelow) - 16));
+            const width = Math.max(rect.width + 48, 120);
+            const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
 
             if (flip) {
-                setPositionStyle({ bottom: window.innerHeight - rect.top + 4, left: rect.left, width, maxHeight });
+                setPositionStyle({ bottom: window.innerHeight - rect.top + 6, left, width, maxHeight });
             } else {
-                setPositionStyle({ top: rect.bottom + 4, left: rect.left, width, maxHeight });
+                setPositionStyle({ top: rect.bottom + 6, left, width, maxHeight });
             }
         };
 
@@ -84,30 +102,25 @@ const PartSelect: React.FC<PartSelectProps> = ({ label, value, options, onChange
         if (!isOpen) return;
         const el = listRef.current?.querySelector('[data-selected="true"]') as HTMLElement | null;
         el?.scrollIntoView({ block: 'center' });
+        el?.focus();
     }, [isOpen]);
 
     const selected = options.find(option => option.value === value);
 
     return (
-        <div className="relative">
+        <>
             <button
                 type="button"
                 ref={triggerRef}
                 onClick={() => setIsOpen(open => !open)}
-                aria-label={label}
+                aria-label={`${label}: ${selected?.label ?? value}`}
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
-                className={`w-full min-h-11 flex items-center justify-between gap-1 rounded-lg border px-2.5 py-2 text-sm tabular-nums outline-none transition-colors motion-reduce:transition-none
-                    bg-white dark:bg-neutral-900 text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]
-                    ${isOpen
-                        ? 'border-[var(--color-m3-primary)] ring-1 ring-[var(--color-m3-primary)]/20'
-                        : 'border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] hover:border-[var(--color-m3-outline)] dark:hover:border-[var(--color-m3-dark-outline)]'}`}
+                className={`inline-flex h-11 min-w-11 items-center justify-center rounded-[10px] px-3 text-[1.0625rem] leading-6 tabular-nums transition-colors motion-reduce:transition-none ${isOpen
+                    ? 'bg-[var(--c-accent-container)] text-[var(--c-on-accent-container)]'
+                    : 'bg-[var(--c-plate)] text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]'}`}
             >
-                <span className="truncate">{selected?.label ?? value}</span>
-                <ChevronDown
-                    size={14}
-                    className={`chev shrink-0 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] ${isOpen ? 'rotate-180' : ''}`}
-                />
+                {selected?.short ?? selected?.label ?? value}
             </button>
 
             {isOpen && portalTarget && createPortal(
@@ -116,29 +129,29 @@ const PartSelect: React.FC<PartSelectProps> = ({ label, value, options, onChange
                     role="listbox"
                     aria-label={label}
                     style={positionStyle}
-                    className="dropdown-in fixed z-[80] overflow-y-auto rounded-lg border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] bg-white dark:bg-neutral-900 shadow-[var(--shadow-m3-3)] py-1"
+                    className="dropdown-in fixed z-[80] overflow-y-auto rounded-[14px] border border-[var(--c-hairline)] bg-[var(--c-surface)] py-1.5"
                 >
-                    {options.map(option => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            role="option"
-                            aria-selected={option.value === value}
-                            data-selected={option.value === value}
-                            onClick={() => { onChange(option.value); setIsOpen(false); }}
-                            className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-start tabular-nums
-                                ${option.value === value
-                                    ? 'bg-[var(--color-m3-primary-container)] dark:bg-[var(--color-m3-dark-primary-container)] text-[var(--color-m3-on-primary-container)] dark:text-[var(--color-m3-dark-on-primary-container)] font-medium'
-                                    : 'text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container-high)]'}`}
-                        >
-                            <span>{option.label}</span>
-                            {option.value === value && <Check size={14} className="text-[var(--color-m3-primary)]" strokeWidth={2.5} />}
-                        </button>
-                    ))}
+                    {options.map(option => {
+                        const isSelected = option.value === value;
+                        return (
+                            <button
+                                key={option.value}
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                data-selected={isSelected}
+                                onClick={() => { onChange(option.value); setIsOpen(false); triggerRef.current?.focus(); }}
+                                className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2 text-start text-[1.0625rem] leading-6 tabular-nums text-[var(--c-ink)] hover:bg-[var(--c-plate)] focus-visible:bg-[var(--c-plate)] focus-visible:outline-none"
+                            >
+                                <span>{option.label}</span>
+                                {isSelected && <Check size={22} className="shrink-0 text-[var(--c-accent)]" />}
+                            </button>
+                        );
+                    })}
                 </div>,
                 portalTarget,
             )}
-        </div>
+        </>
     );
 };
 
@@ -169,7 +182,8 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
         if (!isOpen) return;
         const candidate = initialDate ? new Date(initialDate) : new Date();
         setSelectedDate(Number.isNaN(candidate.getTime()) ? new Date() : candidate);
-    }, [isOpen, initialDate]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     useLayoutEffect(() => {
         if (!isOpen || inline) return;
@@ -203,8 +217,22 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
         Array.from({ length: 12 }, (_, month) => ({
             value: month,
             label: new Date(2020, month, 1).toLocaleDateString(locale, { month: 'long' }),
+            short: new Date(2020, month, 1).toLocaleDateString(locale, { month: 'short' }),
         }))
     ), [locale]);
+
+    // Year, month and day in the order the language writes them.
+    const dateOrder = useMemo<('year' | 'month' | 'day')[]>(() => {
+        try {
+            const parts = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' })
+                .formatToParts(new Date(2020, 8, 26))
+                .map(p => p.type)
+                .filter((type): type is 'year' | 'month' | 'day' => type === 'year' || type === 'month' || type === 'day');
+            return parts.length === 3 ? parts : ['year', 'month', 'day'];
+        } catch {
+            return ['year', 'month', 'day'];
+        }
+    }, [locale]);
 
     const daysInSelectedMonth = new Date(
         selectedDate.getFullYear(),
@@ -241,31 +269,89 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
         if (inline) onConfirm(next);
     };
 
-    const labelClass = 'block mb-1.5 text-xs font-medium text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]';
-
-    const renderPart = (
-        label: string,
-        part: DatePart,
-        value: number,
-        options: PartOption[],
-    ) => (
-        <div className="min-w-0">
-            <span className={labelClass}>{label}</span>
-            <PartSelect
-                label={label}
-                value={value}
-                options={options}
-                onChange={next => setPart(part, next)}
-            />
-        </div>
-    );
-
     if (!isOpen) return inline ? null : <div ref={anchorRef} className="hidden" />;
     if (!inline && !portalTarget) return <div ref={anchorRef} className="hidden" />;
 
     const showDate = mode !== 'time';
     const showTime = mode !== 'date';
+
+    const datePart = (part: 'year' | 'month' | 'day') => {
+        if (part === 'year') {
+            return (
+                <PartSelect
+                    key="year"
+                    label={t('time.year')}
+                    value={selectedDate.getFullYear()}
+                    options={years.map(year => ({ value: year, label: String(year) }))}
+                    onChange={next => setPart('year', next)}
+                />
+            );
+        }
+        if (part === 'month') {
+            return (
+                <PartSelect
+                    key="month"
+                    label={t('time.month')}
+                    value={selectedDate.getMonth()}
+                    options={months}
+                    onChange={next => setPart('month', next)}
+                />
+            );
+        }
+        return (
+            <PartSelect
+                key="day"
+                label={t('time.day')}
+                value={selectedDate.getDate()}
+                options={days.map(day => ({ value: day, label: String(day) }))}
+                onChange={next => setPart('day', next)}
+            />
+        );
+    };
+
+    // Two list rows: Date with its pills, Time with its pills.
+    const body = (
+        <div className="list-group">
+            {showDate && (
+                <div className="list-row flex-wrap py-2">
+                    <span className="list-row-text">
+                        <span className="list-row-title">{t('log.picker_date')}</span>
+                    </span>
+                    <span className="flex flex-wrap items-center justify-end gap-1.5">
+                        {dateOrder.map(datePart)}
+                    </span>
+                </div>
+            )}
+            {showDate && showTime && <div className="list-sep" role="presentation" aria-hidden="true" />}
+            {showTime && (
+                <div className="list-row py-2">
+                    <span className="list-row-text">
+                        <span className="list-row-title">{t('log.picker_time')}</span>
+                    </span>
+                    <span className="flex items-center gap-1 tabular-nums">
+                        <PartSelect
+                            label={t('time.hour')}
+                            value={selectedDate.getHours()}
+                            options={hours.map(hour => ({ value: hour, label: String(hour).padStart(2, '0') }))}
+                            onChange={next => setPart('hour', next)}
+                        />
+                        <span aria-hidden="true" className="text-[1.0625rem] font-semibold text-[var(--c-muted)]">:</span>
+                        <PartSelect
+                            label={t('time.minute')}
+                            value={selectedDate.getMinutes()}
+                            options={minutes.map(minute => ({ value: minute, label: String(minute).padStart(2, '0') }))}
+                            onChange={next => setPart('minute', next)}
+                        />
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+
+    if (inline) return <div className="mt-3">{body}</div>;
+
     const dateSummary = selectedDate.toLocaleDateString(locale, {
+        weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -276,89 +362,24 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
         hour12: false,
     });
 
-    const body = (
-        <div className={inline ? 'pt-3 pb-1 space-y-5' : 'px-5 py-5 space-y-5'}>
-            {showDate && (
-                <section>
-                    <div className="flex items-center gap-2 mb-3 text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                        <CalendarDays size={16} />
-                        <span className="text-sm font-medium">{t('date.select')}</span>
-                    </div>
-                    <div className="grid grid-cols-[1.05fr_1.35fr_0.8fr] gap-2.5">
-                        {renderPart(
-                            t('time.year'),
-                            'year',
-                            selectedDate.getFullYear(),
-                            years.map(year => ({ value: year, label: String(year) })),
-                        )}
-                        {renderPart(t('time.month'), 'month', selectedDate.getMonth(), months)}
-                        {renderPart(
-                            t('time.day'),
-                            'day',
-                            selectedDate.getDate(),
-                            days.map(day => ({ value: day, label: String(day).padStart(2, '0') })),
-                        )}
-                    </div>
-                </section>
-            )}
-
-            {showTime && (
-                <section>
-                    <div className="flex items-center gap-2 mb-3 text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]">
-                        <Clock3 size={16} />
-                        <span className="text-sm font-medium">{t('time.select')}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2.5">
-                        {renderPart(
-                            t('time.hour'),
-                            'hour',
-                            selectedDate.getHours(),
-                            hours.map(hour => ({ value: hour, label: String(hour).padStart(2, '0') })),
-                        )}
-                        {renderPart(
-                            t('time.minute'),
-                            'minute',
-                            selectedDate.getMinutes(),
-                            minutes.map(minute => ({ value: minute, label: String(minute).padStart(2, '0') })),
-                        )}
-                    </div>
-                </section>
-            )}
-        </div>
-    );
-
-    if (inline) return <div className="mb-3">{body}</div>;
-
     const inner = (
-        <div className="rounded-xl border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container)]">
-            <div className="px-5 pt-5 pb-4 border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]">
-                {title && (
-                    <p className="text-sm font-semibold text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] mb-1">
-                        {title}
-                    </p>
-                )}
-                <p className="text-sm tabular-nums text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                    {[showDate ? dateSummary : null, showTime ? timeSummary : null].filter(Boolean).join(' · ')}
+        <div className="flex flex-col gap-4 p-4">
+            <div className="px-1">
+                {title && <h2 className="m-0 text-xl font-semibold text-[var(--c-ink)]">{title}</h2>}
+                <p className="m-0 text-sm tabular-nums text-[var(--c-muted)]">
+                    {[showDate ? dateSummary : null, showTime ? timeSummary : null].filter(Boolean).join(', ')}
                 </p>
             </div>
 
             {body}
 
-            <div className="px-5 pb-5 pt-3 flex justify-end gap-2 border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-4 py-2.5 text-sm font-medium rounded-md text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container-high)]"
-                >
+            <div className="flex gap-3">
+                <Button variant="secondary" compact className="flex-1 basis-0" onClick={onClose}>
                     {t('btn.cancel')}
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onConfirm(selectedDate)}
-                    className="px-5 py-2.5 text-sm font-medium rounded-md bg-[var(--color-m3-primary)] hover:bg-[var(--color-m3-primary-light)] text-white"
-                >
+                </Button>
+                <Button variant="primary" compact className="flex-1 basis-0" onClick={() => onConfirm(selectedDate)}>
                     {t('btn.ok')}
-                </button>
+                </Button>
             </div>
         </div>
     );
@@ -372,12 +393,14 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
                         type="button"
                         aria-label={t('btn.cancel')}
                         onClick={onClose}
-                        className="fixed inset-0 z-[60] bg-black/30 dark:bg-black/50"
+                        className="fixed inset-0 z-[60] bg-[var(--c-scrim)]"
                     />
                     <div
                         ref={containerRef}
+                        role="dialog"
+                        aria-modal="true"
                         style={positionStyle}
-                        className={`fixed z-[70] bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container)] overflow-hidden shadow-[var(--shadow-m3-3)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] ${Object.keys(positionStyle).length > 0 ? 'rounded-[var(--radius-xl)]' : 'bottom-0 left-0 right-0 w-full rounded-t-[var(--radius-xl)] border-b-0'}`}
+                        className={`fixed z-[70] overflow-hidden border border-[var(--c-hairline)] bg-[var(--c-paper)] ${Object.keys(positionStyle).length > 0 ? 'rounded-[20px]' : 'bottom-0 left-0 right-0 w-full rounded-t-[28px] border-b-0 pb-[env(safe-area-inset-bottom)]'}`}
                     >
                         {inner}
                     </div>

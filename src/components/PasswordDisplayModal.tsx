@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
-import { Copy } from 'lucide-react';
 import { useEscape } from '../hooks/useEscape';
+import { Button } from './ui';
 
 const PasswordDisplayModal = ({ isOpen, onClose, password }: { isOpen: boolean, onClose: () => void, password: string }) => {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
+    const titleId = useId();
 
     useEscape(onClose, isOpen);
 
@@ -18,22 +19,26 @@ const PasswordDisplayModal = ({ isOpen, onClose, password }: { isOpen: boolean, 
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay z-[60] p-4">
+        <div className="modal-overlay z-[60]">
             <div className="modal-shell">
-                <div className="modal-card">
-                    <h3 className="modal-title text-center">{t('export.password_title')}</h3>
-                    <p className="text-xs text-muted mb-4 text-center leading-relaxed">{t('export.password_desc')}</p>
-
-                    <div className="callout mb-4 flex items-center justify-between">
-                        <span className="font-mono text-sm font-medium tracking-widest select-all text-body">{password}</span>
-                        <button onClick={handleCopy} className="p-1.5 text-muted hover:text-body">
-                            {copied ? <span className="text-xs">{t('qr.copied')}</span> : <Copy size={18} />}
-                        </button>
+                <div className="modal-card flex flex-col gap-4" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+                    <div className="flex flex-col gap-1">
+                        <h2 id={titleId} className="modal-title m-0">{t('account.export.password_title')}</h2>
+                        <p className="m-0 text-sm text-[var(--c-muted)]">{t('export.password_desc')}</p>
                     </div>
 
-                    <button onClick={onClose} className="btn-primary w-full">
-                        {t('btn.ok')}
-                    </button>
+                    <p className="m-0 select-all break-all rounded-xl bg-[var(--c-plate)] px-4 py-3 font-mono text-base text-[var(--c-ink)]">
+                        {password}
+                    </p>
+
+                    <div className="flex gap-3">
+                        <Button variant="secondary" compact className="flex-1" onClick={handleCopy} aria-live="polite">
+                            {copied ? t('account.copied') : t('btn.copy')}
+                        </Button>
+                        <Button variant="primary" compact className="flex-1" onClick={onClose}>
+                            {t('account.done')}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

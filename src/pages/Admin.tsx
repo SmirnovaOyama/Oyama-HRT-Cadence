@@ -1,28 +1,31 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Trash2, Loader2, AlertCircle, Server, Search, KeyRound, PenLine, ImageOff, X, ChevronLeft, ChevronRight, Cloud, Trash, Users, ArrowLeft, ShieldCheck, ShieldOff, Megaphone } from 'lucide-react';
+import {
+    Attention, ChevronLeft, ChevronRight, Close, Cloud, Delete, Notice, Search, Verified,
+} from '../components/icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/LanguageContext';
 import { formatBytes } from '../utils/helpers';
 import { adminService, AdminUser, AdminUser2FA, BackupMeta, TwoFactorScope, StorageReport } from '../services/admin';
 import { useDialog } from '../contexts/DialogContext';
-import { settingsMuted, settingsOn } from '../components/SettingsListItem';
 import { noticeService, NoticeLevel, SiteNotice } from '../services/notice';
 import { Lang } from '../i18n/translations';
+import { BackHeader, Button, ListGroup, ListRow, PageHeader, SegmentedControl } from '../components/ui';
+import { Avatar, LIST_CHECK, LIST_CHEVRON, YouPage } from './you/shared';
+import { ActionTitle, BusySpinner, DangerTitle, ErrorNote, Field, Loading, Note, Panel, PasswordInput } from './account/shared';
+
+/* The admin console. It is an operator's tool, so its words stay in English
+   (as they always have); only the look follows Cadence. */
 
 type AdminCat = 'users' | 'notice' | 'system';
-type MobileView = 'list' | AdminCat;
-type UserPanel = null | { type: 'password'; user: AdminUser } | { type: 'edit'; user: AdminUser } | { type: 'backups'; user: AdminUser } | { type: '2fa'; user: AdminUser };
-
-const divider = 'border-b border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]';
-const rowBase = `w-full flex items-center justify-between py-[18px] ${divider} text-start`;
-const rowLabel = 'text-[0.9375rem] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)]';
-const rowValue = `flex items-center gap-1 text-[0.9375rem] ${settingsMuted}`;
-const iconBtn = `p-2 rounded-lg ${settingsMuted} hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] transition-colors`;
-const dangerIconBtn = `p-2 rounded-lg ${settingsMuted} hover:text-red-500 dark:hover:text-red-400 hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] transition-colors`;
-const textBtn = 'shrink-0 px-3 py-1.5 text-xs font-medium text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)] rounded-lg hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] transition-colors disabled:opacity-40 disabled:pointer-events-none';
-const dangerTextBtn = 'shrink-0 px-3 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 rounded-lg hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] transition-colors disabled:opacity-40 disabled:pointer-events-none';
+type UserPanel =
+    | null
+    | { type: 'actions'; user: AdminUser }
+    | { type: 'password'; user: AdminUser }
+    | { type: 'edit'; user: AdminUser }
+    | { type: 'backups'; user: AdminUser }
+    | { type: '2fa'; user: AdminUser };
 
 let _savedCat: AdminCat = 'users';
-let _savedMobileView: MobileView = 'list';
 
 function timeAgo(ts: number | null | undefined): string {
     if (!ts) return '—';
@@ -33,14 +36,14 @@ function timeAgo(ts: number | null | undefined): string {
     return Math.floor(diff / 86400) + 'd ago';
 }
 
-const Admin: React.FC = () => {
+const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+    const { t } = useTranslation();
     const { token } = useAuth();
     const { showDialog } = useDialog();
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [cat, setCat] = useState<AdminCat>(_savedCat);
-    const [mobileView, setMobileView] = useState<MobileView>(_savedMobileView);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchDebounce, setSearchDebounce] = useState('');
     const [panel, setPanel] = useState<UserPanel>(null);
@@ -71,27 +74,15 @@ const Admin: React.FC = () => {
     const [noticeEnd, setNoticeEnd] = useState('');
     const [noticeLang, setNoticeLang] = useState<'default' | Lang>('default');
 
-    const cats: { id: AdminCat; label: string; Icon: React.ElementType; hint: string }[] = [
-        { id: 'users', label: 'Users', Icon: Users, hint: 'Accounts · Passwords · 2FA · Cloud backups' },
-        { id: 'notice', label: 'Notice', Icon: Megaphone, hint: 'Site-wide banner · Per-language text · Schedule' },
-        { id: 'system', label: 'System', Icon: Server, hint: 'Storage · Status · Environment' },
+    const cats: { value: AdminCat; label: string }[] = [
+        { value: 'users', label: 'Users' },
+        { value: 'notice', label: 'Notice' },
+        { value: 'system', label: 'System' },
     ];
 
     const selectCat = (c: AdminCat) => {
         _savedCat = c;
         setCat(c);
-    };
-
-    const enterMobileCat = (c: AdminCat) => {
-        _savedCat = c;
-        _savedMobileView = c;
-        setCat(c);
-        setMobileView(c);
-    };
-
-    const exitMobileCat = () => {
-        _savedMobileView = 'list';
-        setMobileView('list');
     };
 
     const [storage, setStorage] = useState<StorageReport | null>(null);
@@ -254,179 +245,203 @@ const Admin: React.FC = () => {
         });
     };
 
+    const panelSubtitle = (type: NonNullable<UserPanel>['type']) =>
+        type === 'password' ? 'Change password'
+            : type === 'edit' ? 'Edit profile'
+                : type === '2fa' ? 'Two-step sign-in'
+                    : type === 'backups' ? 'Cloud backups'
+                        : 'Manage account';
+
     const renderPanel = () => {
         if (!panel) return null;
+        const user = panel.user;
 
         return (
             <div className="modal-overlay" onClick={() => setPanel(null)}>
                 <div className="modal-shell-wide" onClick={e => e.stopPropagation()}>
-                    <div className="modal-card">
-                        <div className="flex items-start justify-between mb-4">
-                            <div>
-                                <h3 className={`text-[0.9375rem] font-semibold ${settingsOn}`}>{panel.user.username}</h3>
-                                <p className={`text-xs ${settingsMuted} mt-0.5`}>{panel.type === 'password' ? 'Change Password' : panel.type === 'edit' ? 'Edit Profile' : panel.type === '2fa' ? 'Two-Factor Authentication' : 'Cloud Backups'}</p>
+                    <div className="modal-card flex flex-col gap-5" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <Avatar username={user.username} size={40} />
+                                <div className="min-w-0">
+                                    <h2 id="admin-panel-title" className="modal-title m-0 truncate">{user.username}</h2>
+                                    <p className="m-0 text-sm text-[var(--c-muted)]">{panelSubtitle(panel.type)}</p>
+                                </div>
                             </div>
-                            <button onClick={() => setPanel(null)} className={`${iconBtn} -mr-1 -mt-1`} aria-label="Close">
-                                <X size={16} strokeWidth={1.5} />
-                            </button>
+                            <Button variant="icon" onClick={() => setPanel(null)} aria-label="Close" className="-me-2">
+                                <Close size={22} />
+                            </Button>
                         </div>
 
-                        {panel.type === 'password' && (
-                            <div className="space-y-4">
-                                <p className={`text-sm ${settingsMuted}`}>Set a new password for <span className={`font-medium ${settingsOn}`}>{panel.user.username}</span>.</p>
-                                <input
-                                    type="password"
-                                    value={newPassword}
-                                    onChange={e => setNewPassword(e.target.value)}
-                                    placeholder="New password (min 8 chars)"
-                                    className="input-base"
-                                    autoFocus
-                                />
-                                <div className="flex justify-end gap-2">
-                                    <button onClick={() => setPanel(null)} className="btn-secondary">Cancel</button>
-                                    <button
-                                        onClick={submitPassword}
-                                        disabled={newPassword.length < 8}
-                                        className="btn-primary"
-                                    >
-                                        Update Password
-                                    </button>
-                                </div>
+                        {panel.type === 'actions' && (
+                            <div className="flex flex-col gap-6">
+                                <ListGroup chevronIcon={LIST_CHEVRON}>
+                                    <ListRow
+                                        title="Cloud backups"
+                                        value={(user.backup_count ?? 0) > 0 ? String(user.backup_count) : undefined}
+                                        drillIn
+                                        onClick={() => openBackupsPanel(user)}
+                                    />
+                                    <ListRow
+                                        title="Two-step sign-in"
+                                        drillIn
+                                        onClick={() => openTwoFAPanel(user)}
+                                    />
+                                    <ListRow
+                                        title="Change password"
+                                        drillIn
+                                        onClick={() => openPasswordPanel(user)}
+                                    />
+                                    <ListRow
+                                        title="Edit profile"
+                                        drillIn
+                                        onClick={() => openEditPanel(user)}
+                                    />
+                                </ListGroup>
+                                <ListGroup>
+                                    <ListRow
+                                        title={<DangerTitle>Delete user</DangerTitle>}
+                                        onClick={() => handleDeleteUser(user)}
+                                    />
+                                </ListGroup>
                             </div>
                         )}
 
-                        {panel.type === 'edit' && (
-                            <div className="space-y-5">
-                                <div className="space-y-2">
-                                    <label className={`block text-xs font-medium ${settingsMuted}`}>Username</label>
-                                    <input
-                                        type="text"
-                                        value={newUsername}
-                                        onChange={e => setNewUsername(e.target.value)}
-                                        placeholder="New username"
-                                        className="input-base"
+                        {panel.type === 'password' && (
+                            <form
+                                className="flex flex-col gap-4"
+                                onSubmit={e => { e.preventDefault(); if (newPassword.length >= 8) void submitPassword(); }}
+                            >
+                                <Field label="New password" htmlFor="admin-new-password" hint="At least 8 characters. Every session of this account is signed out.">
+                                    <PasswordInput
+                                        id="admin-new-password"
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        autoComplete="new-password"
                                         autoFocus
                                     />
-                                    <div className="flex justify-end">
-                                        <button
-                                            onClick={submitUsername}
-                                            disabled={!newUsername.trim() || newUsername.trim() === panel.user.username}
-                                            className="btn-primary"
-                                        >
-                                            Save Username
-                                        </button>
-                                    </div>
+                                </Field>
+                                <div className="flex gap-3">
+                                    <Button variant="secondary" compact className="flex-1" onClick={() => setPanel(null)}>Cancel</Button>
+                                    <Button type="submit" variant="primary" compact className="flex-1" disabled={newPassword.length < 8}>
+                                        Update password
+                                    </Button>
                                 </div>
-                                <div className={`border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] pt-4 space-y-2`}>
-                                    <label className={`block text-xs font-medium ${settingsMuted}`}>Avatar</label>
-                                    <button
-                                        onClick={() => handleResetAvatar(panel.user)}
-                                        className="btn-secondary text-red-500 dark:text-red-400"
+                            </form>
+                        )}
+
+                        {panel.type === 'edit' && (
+                            <div className="flex flex-col gap-6">
+                                <form
+                                    className="flex flex-col gap-4"
+                                    onSubmit={e => {
+                                        e.preventDefault();
+                                        if (newUsername.trim() && newUsername.trim() !== user.username) void submitUsername();
+                                    }}
+                                >
+                                    <Field label="Username" htmlFor="admin-username">
+                                        <input
+                                            id="admin-username"
+                                            type="text"
+                                            value={newUsername}
+                                            onChange={e => setNewUsername(e.target.value)}
+                                            className="input-base"
+                                            autoCapitalize="off"
+                                            autoCorrect="off"
+                                            spellCheck={false}
+                                            autoFocus
+                                        />
+                                    </Field>
+                                    <Button
+                                        type="submit"
+                                        variant="primary"
+                                        compact
+                                        className="self-end"
+                                        disabled={!newUsername.trim() || newUsername.trim() === user.username}
                                     >
-                                        <ImageOff size={15} strokeWidth={1.5} /> Reset Avatar
-                                    </button>
-                                </div>
+                                        Save username
+                                    </Button>
+                                </form>
+                                <ListGroup footer="Removes the uploaded picture; the initial is shown instead.">
+                                    <ListRow
+                                        title={<DangerTitle>Reset avatar</DangerTitle>}
+                                        onClick={() => handleResetAvatar(user)}
+                                    />
+                                </ListGroup>
                             </div>
                         )}
 
                         {panel.type === '2fa' && (
                             twoFALoading ? (
-                                <div className="flex justify-center py-12"><Loader2 className={`animate-spin ${settingsMuted}`} size={20} /></div>
+                                <Loading />
                             ) : !twoFA ? (
-                                <p className={`text-sm ${settingsMuted} text-center py-8`}>Could not load 2FA status.</p>
+                                <Panel><Note>Could not load the two-step status.</Note></Panel>
                             ) : (
-                                <div>
-                                    <div className={`flex items-center justify-between gap-3 py-3.5 ${divider}`}>
-                                        <div className="min-w-0">
-                                            <p className={`text-sm ${settingsOn}`}>Authenticator app</p>
-                                            <p className={`text-xs ${settingsMuted} mt-0.5`}>{twoFA.totp ? 'A TOTP secret is enrolled.' : 'Not set up.'}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => clearTwoFA(panel.user, 'totp', `Disable the authenticator app for "${panel.user.username}"? They will sign in with their password alone, and every active session is signed out.`)}
+                                <div className="flex flex-col gap-6">
+                                    <ListGroup>
+                                        <ListRow title="Authenticator app" value={twoFA.totp ? 'On' : 'Off'} />
+                                        <ListRow title="Passkeys" value={twoFA.passkeys === 0 ? 'None' : String(twoFA.passkeys)} />
+                                        <ListRow title="Unused backup codes" value={twoFA.backupCodes === 0 ? 'None' : String(twoFA.backupCodes)} />
+                                    </ListGroup>
+                                    {/* Every action here removes a factor, so they share one
+                                        bottom group rather than sitting beside the counts. */}
+                                    <ListGroup footer="Erasing a factor drops this account back to its password alone. Confirm who is asking first.">
+                                        <ListRow
+                                            title={<DangerTitle>Turn off the authenticator app</DangerTitle>}
                                             disabled={!twoFA.totp}
-                                            className={dangerTextBtn}
-                                        >
-                                            Disable
-                                        </button>
-                                    </div>
-
-                                    <div className={`flex items-center justify-between gap-3 py-3.5 ${divider}`}>
-                                        <div className="min-w-0">
-                                            <p className={`text-sm ${settingsOn}`}>Passkeys</p>
-                                            <p className={`text-xs ${settingsMuted} mt-0.5`}>{twoFA.passkeys === 0 ? 'None registered.' : `${twoFA.passkeys} registered.`}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => clearTwoFA(panel.user, 'passkeys', `Remove all ${twoFA.passkeys} passkey(s) for "${panel.user.username}"? Every active session is signed out.`)}
+                                            onClick={() => clearTwoFA(user, 'totp', `Turn off the authenticator app for "${user.username}"? They will sign in with their password alone, and every active session is signed out.`)}
+                                        />
+                                        <ListRow
+                                            title={<DangerTitle>Remove all passkeys</DangerTitle>}
                                             disabled={twoFA.passkeys === 0}
-                                            className={dangerTextBtn}
-                                        >
-                                            Remove All
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3 py-3.5">
-                                        <div className="min-w-0">
-                                            <p className={`text-sm ${settingsOn}`}>Backup codes</p>
-                                            <p className={`text-xs ${settingsMuted} mt-0.5`}>{twoFA.backupCodes === 0 ? 'None left.' : `${twoFA.backupCodes} unused.`}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => clearTwoFA(panel.user, 'backup_codes', `Erase the remaining backup codes for "${panel.user.username}"? Their sessions stay signed in.`)}
+                                            onClick={() => clearTwoFA(user, 'passkeys', `Remove all ${twoFA.passkeys} passkey(s) for "${user.username}"? Every active session is signed out.`)}
+                                        />
+                                        <ListRow
+                                            title={<DangerTitle>Erase backup codes</DangerTitle>}
                                             disabled={twoFA.backupCodes === 0}
-                                            className={dangerTextBtn}
-                                        >
-                                            Erase
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-end justify-between gap-4 pt-4 border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]">
-                                        <p className="text-xs text-red-500 dark:text-red-400 leading-relaxed">
-                                            Erasing a factor drops this account back to its password alone. Confirm who is asking before you do it.
-                                        </p>
-                                        <button
-                                            onClick={() => clearTwoFA(panel.user, 'all', `Erase ALL two-factor authentication for "${panel.user.username}"? This removes the authenticator secret, every passkey and every backup code, and signs out all of their sessions.`)}
+                                            onClick={() => clearTwoFA(user, 'backup_codes', `Erase the remaining backup codes for "${user.username}"? Their sessions stay signed in.`)}
+                                        />
+                                        <ListRow
+                                            title={<DangerTitle>Erase everything</DangerTitle>}
                                             disabled={!twoFA.enabled && twoFA.backupCodes === 0}
-                                            className="btn-secondary text-red-500 dark:text-red-400 shrink-0 disabled:opacity-40 disabled:pointer-events-none"
-                                        >
-                                            <ShieldOff size={15} strokeWidth={1.5} /> Erase All
-                                        </button>
-                                    </div>
+                                            onClick={() => clearTwoFA(user, 'all', `Erase all two-step sign-in for "${user.username}"? This removes the authenticator secret, every passkey and every backup code, and signs out all of their sessions.`)}
+                                        />
+                                    </ListGroup>
                                 </div>
                             )
                         )}
 
                         {panel.type === 'backups' && (
                             backupsLoading ? (
-                                <div className="flex justify-center py-12"><Loader2 className={`animate-spin ${settingsMuted}`} size={20} /></div>
+                                <Loading />
                             ) : backups.length === 0 ? (
-                                <p className={`text-sm ${settingsMuted} text-center py-8`}>No backups found.</p>
+                                <Panel><Note>No backups found.</Note></Panel>
                             ) : (
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className={`text-xs ${settingsMuted}`}>{backups.length} backup(s) · {formatBytes(backups.reduce((s, b) => s + b.data_size, 0))} total</span>
-                                        <button
-                                            onClick={handlePurgeBackups}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-lg hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)] transition-colors"
-                                        >
-                                            <Trash size={13} strokeWidth={1.5} /> Purge All
-                                        </button>
-                                    </div>
-                                    <div>
+                                <div className="flex flex-col gap-6">
+                                    <ListGroup
+                                        header={`${backups.length} backup${backups.length === 1 ? '' : 's'}, ${formatBytes(backups.reduce((sum, b) => sum + b.data_size, 0))} in total`}
+                                    >
                                         {backups.map(b => (
-                                            <div key={b.id} className={`flex items-center justify-between py-3 ${divider}`}>
-                                                <div>
-                                                    <p className={`text-sm ${settingsOn}`}>{new Date(b.created_at * 1000).toLocaleString()}</p>
-                                                    <p className={`text-xs ${settingsMuted} mt-0.5`}>{formatBytes(b.data_size)} · <span className="font-mono">{b.id.slice(0, 8)}</span></p>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleDeleteBackup(b.id)}
-                                                    className={dangerIconBtn}
-                                                    title="Delete backup"
-                                                >
-                                                    <Trash2 size={15} strokeWidth={1.5} />
-                                                </button>
-                                            </div>
+                                            <ListRow
+                                                key={b.id}
+                                                title={<span className="block truncate">{new Date(b.created_at * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>}
+                                                sub={<span className="block truncate">{formatBytes(b.data_size)}, <span className="font-mono">{b.id.slice(0, 8)}</span></span>}
+                                                trailing={
+                                                    <Button
+                                                        variant="icon"
+                                                        onClick={() => handleDeleteBackup(b.id)}
+                                                        aria-label="Delete backup"
+                                                        className="-me-2 text-[var(--c-danger)]"
+                                                    >
+                                                        <Delete size={22} />
+                                                    </Button>
+                                                }
+                                            />
                                         ))}
-                                    </div>
+                                    </ListGroup>
+                                    <ListGroup>
+                                        <ListRow title={<DangerTitle>Purge all backups</DangerTitle>} onClick={handlePurgeBackups} />
+                                    </ListGroup>
                                 </div>
                             )
                         )}
@@ -438,145 +453,112 @@ const Admin: React.FC = () => {
 
     // Rendered as plain elements (not a nested component) so typing in the search
     // field doesn't remount the subtree and drop focus on every keystroke.
+    const pageItems = Array.from({ length: totalPages }, (_, i) => i + 1)
+        .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+        .reduce<(number | 'gap')[]>((acc, p, i, arr) => {
+            if (i > 0 && p - arr[i - 1] > 1) acc.push('gap');
+            acc.push(p);
+            return acc;
+        }, []);
+
+    const userSub = (u: AdminUser) => {
+        const hasTwoStep = (u.has_totp ?? 0) > 0 || (u.passkey_count ?? 0) > 0;
+        return (
+            <span className="flex items-center gap-x-3 overflow-hidden whitespace-nowrap">
+                <span className="font-mono">{u.id.slice(0, 8)}</span>
+                {(u.backup_count ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                        <Cloud size={16} className="flex-none" />
+                        {u.backup_count}, {formatBytes(u.total_backup_size || 0)}, {timeAgo(u.last_backup_at)}
+                    </span>
+                )}
+                {hasTwoStep && (
+                    <span className="inline-flex items-center gap-1">
+                        <Verified size={16} className="flex-none" />
+                        {[
+                            (u.has_totp ?? 0) > 0 && 'App',
+                            (u.passkey_count ?? 0) > 0 && `${u.passkey_count} passkey${u.passkey_count === 1 ? '' : 's'}`,
+                        ].filter(Boolean).join(', ')}
+                    </span>
+                )}
+            </span>
+        );
+    };
+
+    // Rendered as plain elements (not a nested component) so typing in the search
+    // field doesn't remount the subtree and drop focus on every keystroke.
     const renderUsers = () => (
-        <div>
-            <div className="relative mb-5">
-                <Search size={15} strokeWidth={1.5} className={`absolute left-3 top-1/2 -translate-y-1/2 ${settingsMuted}`} />
+        <div className="flex flex-col gap-4">
+            <div className="relative">
+                <Search size={20} className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-[var(--c-muted)]" />
                 <input
-                    type="text"
+                    type="search"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search users..."
-                    className="w-full py-2.5 pr-3 pl-9 text-[0.9375rem] bg-[var(--color-m3-surface-container-lowest)] dark:bg-[var(--color-m3-dark-surface-container-low)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)] rounded-lg outline-none focus:border-[var(--color-m3-primary)] text-[var(--color-m3-on-surface)] dark:text-[var(--color-m3-dark-on-surface)] placeholder:text-[var(--color-m3-on-surface-variant)]"
+                    placeholder="Search users"
+                    aria-label="Search users"
+                    className="input-base ps-12"
                 />
             </div>
 
             {loading && users.length === 0 ? (
-                <div className="flex justify-center py-16">
-                    <Loader2 className={`animate-spin ${settingsMuted}`} size={20} />
-                </div>
+                <Loading />
             ) : error ? (
-                <p className="flex items-center gap-2 text-sm text-red-500 dark:text-red-400 py-4">
-                    <AlertCircle size={16} strokeWidth={1.5} /> {error}
-                </p>
+                <ErrorNote>{error}</ErrorNote>
             ) : users.length === 0 ? (
-                <p className={`text-sm ${settingsMuted} text-center py-14`}>No users found{searchDebounce ? ` for "${searchDebounce}"` : ''}.</p>
+                <Panel><Note>No users found{searchDebounce ? ` for "${searchDebounce}"` : ''}.</Note></Panel>
             ) : (
-                <div>
+                <ListGroup chevronIcon={LIST_CHEVRON} footer={`${totalUsers.toLocaleString()} registered account${totalUsers === 1 ? '' : 's'}`}>
                     {users.map(u => (
-                        <div
+                        <ListRow
                             key={u.id}
-                            className={`flex items-center justify-between gap-3 py-4 ${divider}`}
-                        >
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-9 h-9 rounded-full bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)] flex items-center justify-center overflow-hidden shrink-0">
-                                    <img
-                                        src={`/api/user/avatar/${u.username}`}
-                                        alt={u.username}
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                        }}
-                                    />
-                                    <div className={`hidden w-full h-full flex items-center justify-center ${settingsMuted} font-medium text-xs`}>
-                                        {u.username.substring(0, 2).toUpperCase()}
-                                    </div>
-                                </div>
-                                <div className="min-w-0">
-                                    <h3 className={`text-sm font-medium ${settingsOn} truncate`}>{u.username}</h3>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <p className={`text-xs ${settingsMuted} font-mono`}>{u.id.slice(0, 8)}</p>
-                                        {(u.backup_count ?? 0) > 0 && (
-                                            <span className={`inline-flex items-center gap-1 text-xs ${settingsMuted}`}>
-                                                <Cloud size={11} strokeWidth={1.5} />
-                                                {u.backup_count} · {formatBytes(u.total_backup_size || 0)} · {timeAgo(u.last_backup_at)}
-                                            </span>
-                                        )}
-                                        {((u.has_totp ?? 0) > 0 || (u.passkey_count ?? 0) > 0) && (
-                                            <span className={`inline-flex items-center gap-1 text-xs ${settingsMuted}`} title="Two-factor authentication enabled">
-                                                <ShieldCheck size={11} strokeWidth={1.5} />
-                                                {[
-                                                    (u.has_totp ?? 0) > 0 && 'TOTP',
-                                                    (u.passkey_count ?? 0) > 0 && `${u.passkey_count} passkey${u.passkey_count === 1 ? '' : 's'}`,
-                                                ].filter(Boolean).join(' · ')}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-0.5 shrink-0">
-                                <button onClick={() => openBackupsPanel(u)} className={iconBtn} title="Cloud Backups">
-                                    <Cloud size={15} strokeWidth={1.5} />
-                                </button>
-                                <button onClick={() => openTwoFAPanel(u)} className={iconBtn} title="Reset 2FA">
-                                    <ShieldOff size={15} strokeWidth={1.5} />
-                                </button>
-                                <button onClick={() => openPasswordPanel(u)} className={iconBtn} title="Change Password">
-                                    <KeyRound size={15} strokeWidth={1.5} />
-                                </button>
-                                <button onClick={() => openEditPanel(u)} className={iconBtn} title="Edit Profile">
-                                    <PenLine size={15} strokeWidth={1.5} />
-                                </button>
-                                <button onClick={() => handleDeleteUser(u)} className={dangerIconBtn} title="Delete User">
-                                    <Trash2 size={15} strokeWidth={1.5} />
-                                </button>
-                            </div>
-                        </div>
+                            leading={<Avatar username={u.username} size={40} />}
+                            title={u.username}
+                            sub={userSub(u)}
+                            drillIn
+                            onClick={() => setPanel({ type: 'actions', user: u })}
+                        />
                     ))}
-                </div>
+                </ListGroup>
             )}
 
-            {/* Pagination */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-1 pt-4">
-                    <button
+                <nav className="flex items-center justify-center gap-1" aria-label="Pages">
+                    <Button
+                        variant="icon"
                         onClick={() => setPage(p => Math.max(1, p - 1))}
                         disabled={page <= 1}
-                        className={`${iconBtn} disabled:opacity-40 disabled:pointer-events-none`}
                         aria-label="Previous page"
                     >
-                        <ChevronLeft size={15} strokeWidth={1.5} />
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
-                        .reduce<(number | '...')[]>((acc, p, i, arr) => {
-                            if (i > 0 && p - (arr[i - 1]) > 1) acc.push('...');
-                            acc.push(p);
-                            return acc;
-                        }, [])
-                        .map((item, i) =>
-                            item === '...' ? (
-                                <span key={`dot-${i}`} className={`px-1 text-sm ${settingsMuted}`}>...</span>
-                            ) : (
-                                <button
-                                    key={item}
-                                    onClick={() => setPage(item as number)}
-                                    className={`min-w-[32px] h-8 rounded-lg text-sm transition-colors ${
-                                        page === item
-                                            ? `font-medium ${settingsOn} bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)]`
-                                            : `${settingsMuted} hover:text-[var(--color-m3-on-surface)] dark:hover:text-[var(--color-m3-dark-on-surface)] hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)]`
-                                    }`}
-                                >
-                                    {item}
-                                </button>
-                            )
-                        )}
-                    <button
+                        <ChevronLeft size={22} />
+                    </Button>
+                    {pageItems.map((item, i) =>
+                        item === 'gap' ? (
+                            <span key={`gap-${i}`} className="px-1 text-sm text-[var(--c-muted)]" aria-hidden="true">…</span>
+                        ) : (
+                            <button
+                                key={item}
+                                type="button"
+                                onClick={() => setPage(item)}
+                                aria-current={page === item ? 'page' : undefined}
+                                className={`h-11 min-w-11 rounded-xl px-2 text-base tabular-nums ${page === item
+                                    ? 'bg-[var(--c-plate-strong)] font-semibold text-[var(--c-ink)]'
+                                    : 'text-[var(--c-muted)] hover:bg-[var(--c-plate)] hover:text-[var(--c-ink)]'}`}
+                            >
+                                {item}
+                            </button>
+                        ),
+                    )}
+                    <Button
+                        variant="icon"
                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                         disabled={page >= totalPages}
-                        className={`${iconBtn} disabled:opacity-40 disabled:pointer-events-none`}
                         aria-label="Next page"
                     >
-                        <ChevronRight size={15} strokeWidth={1.5} />
-                    </button>
-                </div>
+                        <ChevronRight size={22} />
+                    </Button>
+                </nav>
             )}
-
-            <p className={`mt-6 text-xs ${settingsMuted}`}>
-                {totalUsers.toLocaleString()} registered account{totalUsers === 1 ? '' : 's'}
-            </p>
         </div>
     );
 
@@ -618,9 +600,9 @@ const Admin: React.FC = () => {
     // Loaded on entering the tab rather than on mount: the users list is what
     // the page opens on, and this is one request nobody asked for until then.
     useEffect(() => {
-        if (cat === 'notice' || mobileView === 'notice') void fetchNotice();
+        if (cat === 'notice') void fetchNotice();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cat, mobileView]);
+    }, [cat]);
 
     const noticeLangs: { id: 'default' | Lang; label: string }[] = [
         { id: 'default', label: 'Default' },
@@ -691,164 +673,132 @@ const Admin: React.FC = () => {
         return 'Live now, until you clear it';
     };
 
+    const noticeLangLabel = noticeLangs.find(l => l.id === noticeLang)?.label;
+
     const renderNotice = () => (
         noticeLoading ? (
-            <div className="flex justify-center py-16"><Loader2 className={`animate-spin ${settingsMuted}`} size={20} /></div>
+            <Loading />
         ) : (
-            <div className="space-y-5">
-                <p className={`text-xs ${settingsMuted} leading-relaxed`}>
-                    One banner, shown at the top of the app to everyone including signed-out visitors.
-                    Editing it brings it back for people who had already dismissed the previous wording.
-                </p>
+            <div className="flex flex-col gap-6">
+                <Note className="px-4">One banner at the top of the app, for everyone, signed in or not.</Note>
 
-                {/* Language strip. A dot marks a locale that has its own wording. */}
-                <div className="flex flex-wrap gap-1">
+                <ListGroup
+                    header="Wording for"
+                    footer="Editing the text shows it again to people who dismissed it."
+                    selection="single"
+                    checkIcon={LIST_CHECK}
+                >
                     {noticeLangs.map(({ id, label }) => (
-                        <button
+                        <ListRow
                             key={id}
+                            title={label}
+                            value={id !== 'default' && noticeTextFor(id).trim() ? 'Own wording' : undefined}
+                            selected={noticeLang === id}
                             onClick={() => setNoticeLang(id)}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-                                noticeLang === id
-                                    ? `bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container-high)] ${settingsOn} font-medium`
-                                    : `${settingsMuted} hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)]`
-                            }`}
-                        >
-                            {label}
-                            {id !== 'default' && noticeTextFor(id).trim() && (
-                                <span className="w-1 h-1 rounded-full bg-[var(--color-m3-primary)]" />
-                            )}
-                        </button>
+                        />
                     ))}
-                </div>
+                </ListGroup>
 
-                <div className="space-y-2">
-                    <label className={`block text-xs font-medium ${settingsMuted}`}>
-                        {noticeLang === 'default' ? 'Default text (required)' : `Override for ${noticeLangs.find(l => l.id === noticeLang)?.label}`}
-                    </label>
+                <Field
+                    label={noticeLang === 'default' ? 'Default text (required)' : `Wording for ${noticeLangLabel}`}
+                    htmlFor="admin-notice-text"
+                    hint={`${noticeTextFor(noticeLang).length}/2000 characters. Bare https:// links become clickable.`}
+                >
                     <textarea
+                        id="admin-notice-text"
                         value={noticeTextFor(noticeLang)}
                         onChange={e => setNoticeTextFor(noticeLang, e.target.value)}
                         rows={4}
                         maxLength={2000}
-                        placeholder={noticeLang === 'default' ? 'What everyone should know…' : 'Leave empty to use the default text'}
+                        placeholder={noticeLang === 'default' ? 'What everyone should know' : 'Leave empty to use the default text'}
                         className="input-base resize-y"
                     />
-                    <p className={`text-xs ${settingsMuted}`}>
-                        {noticeTextFor(noticeLang).length}/2000 · bare https:// links become clickable
-                    </p>
+                </Field>
+
+                <div className="flex flex-col gap-2">
+                    <p className="m-0 px-4 text-sm font-semibold text-[var(--c-muted)]" id="admin-notice-tone">Tone</p>
+                    <SegmentedControl<NoticeLevel>
+                        aria-label="Tone"
+                        value={noticeLevel}
+                        onChange={setNoticeLevel}
+                        options={[{ value: 'info', label: 'Info' }, { value: 'warn', label: 'Warning' }]}
+                    />
                 </div>
 
-                <div className="space-y-2">
-                    <label className={`block text-xs font-medium ${settingsMuted}`}>Tone</label>
-                    <div className="flex gap-1">
-                        {(['info', 'warn'] as NoticeLevel[]).map(level => (
-                            <button
-                                key={level}
-                                onClick={() => setNoticeLevel(level)}
-                                className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
-                                    noticeLevel === level
-                                        ? `bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container-high)] ${settingsOn} font-medium`
-                                        : `${settingsMuted} hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)]`
-                                }`}
-                            >
-                                {level === 'info' ? 'Info' : 'Warning'}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                        <label className={`block text-xs font-medium ${settingsMuted}`}>Show from (optional)</label>
-                        <input type="datetime-local" value={noticeStart} onChange={e => setNoticeStart(e.target.value)} className="input-base" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className={`block text-xs font-medium ${settingsMuted}`}>Hide after (optional)</label>
-                        <input type="datetime-local" value={noticeEnd} onChange={e => setNoticeEnd(e.target.value)} className="input-base" />
-                    </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field label="Show from (optional)" htmlFor="admin-notice-start">
+                        <input id="admin-notice-start" type="datetime-local" value={noticeStart} onChange={e => setNoticeStart(e.target.value)} className="input-base" />
+                    </Field>
+                    <Field label="Hide after (optional)" htmlFor="admin-notice-end">
+                        <input id="admin-notice-end" type="datetime-local" value={noticeEnd} onChange={e => setNoticeEnd(e.target.value)} className="input-base" />
+                    </Field>
                 </div>
 
                 {noticePreview.trim() && (
-                    <div className="space-y-2">
-                        <label className={`block text-xs font-medium ${settingsMuted}`}>Preview</label>
-                        <p className={`flex items-start gap-1.5 text-[0.8125rem] leading-snug whitespace-pre-wrap break-words ${
-                            noticeLevel === 'warn'
-                                ? 'text-amber-700/90 dark:text-amber-400/85'
-                                : 'text-[var(--color-m3-primary)] dark:text-[var(--color-m3-primary-light)]'
-                        }`}>
-                            {noticeLevel === 'warn'
-                                ? <AlertCircle size={14} strokeWidth={1.75} className="mt-[3px] shrink-0" />
-                                : <Megaphone size={14} strokeWidth={1.75} className="mt-[3px] shrink-0" />}
-                            <span>{noticePreview}</span>
-                        </p>
+                    <div className="flex flex-col gap-2">
+                        <p className="m-0 px-4 text-sm font-semibold text-[var(--c-muted)]">Preview</p>
+                        <Panel>
+                            <p className={`m-0 flex items-start gap-2 whitespace-pre-wrap break-words text-sm ${noticeLevel === 'warn' ? 'text-[var(--c-attention)]' : 'text-[var(--c-ink)]'}`}>
+                                {noticeLevel === 'warn'
+                                    ? <Attention size={20} className="mt-px flex-none" />
+                                    : <Notice size={20} className="mt-px flex-none" />}
+                                <span>{noticePreview}</span>
+                            </p>
+                        </Panel>
                     </div>
                 )}
 
-                <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]">
-                    <span className={`text-xs ${settingsMuted}`}>
-                        {noticeWindowLabel()}{notice ? ` · rev ${notice.revision}` : ''}
-                    </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={clearNotice} disabled={!notice} className={dangerTextBtn}>Clear</button>
-                        <button onClick={saveNotice} disabled={noticeSaving || !noticeBody.trim()} className="btn-primary disabled:opacity-40 disabled:pointer-events-none">
-                            {noticeSaving ? <Loader2 size={15} className="animate-spin" /> : <Megaphone size={15} strokeWidth={1.5} />}
-                            {notice ? 'Update Notice' : 'Publish Notice'}
-                        </button>
-                    </div>
+                <div className="flex flex-col gap-2">
+                    <Button variant="primary" block onClick={saveNotice} disabled={noticeSaving || !noticeBody.trim()}>
+                        {noticeSaving ? <BusySpinner /> : <Notice size={20} />}
+                        {notice ? 'Update notice' : 'Publish notice'}
+                    </Button>
+                    <Note className="px-4">{noticeWindowLabel()}{notice ? `, revision ${notice.revision}` : ''}</Note>
                 </div>
+
+                <ListGroup>
+                    <ListRow title={<DangerTitle>Take down</DangerTitle>} onClick={clearNotice} disabled={!notice} />
+                </ListGroup>
             </div>
         )
     );
 
     const renderSystem = () => (
-        <div>
+        <div className="flex flex-col gap-6">
+            <ListGroup>
+                <ListRow title="Status" value="Operational" />
+                <ListRow title="Backend" value={window.location.hostname === 'localhost' ? 'Local' : 'Remote'} />
+            </ListGroup>
+
             {/* Storage. The one number nobody could see until the database hit
                 its plan's cap — the worker reads every backup body to produce
                 it, so it is fetched on demand rather than on every visit. */}
-            <div className={`${rowBase} cursor-default`}>
-                <div className="min-w-0">
-                    <p className={rowLabel}>Storage</p>
-                    <p className={`text-xs ${settingsMuted} mt-0.5 leading-relaxed`}>
-                        {storage
-                            ? `${formatBytes(storage.payload_bytes)} of payload across ${storage.tables.reduce((n, t) => n + t.rows, 0).toLocaleString()} rows · measured ${timeAgo(storage.measured_at)}`
-                            : 'How much of the database each table is. Compare against the D1 plan limit.'}
-                    </p>
-                    {storage && (
-                        <ul className={`text-xs ${settingsMuted} mt-2 space-y-0.5 font-mono`}>
-                            {storage.tables.map(t => (
-                                <li key={t.table} className="flex gap-3">
-                                    <span className="w-28 shrink-0">{t.table}</span>
-                                    <span className="w-16 text-right tabular-nums">{t.rows.toLocaleString()}</span>
-                                    <span className="tabular-nums">{t.payload_bytes > 0 ? formatBytes(t.payload_bytes) : ''}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    {storageError && <p className="text-xs text-red-500 mt-1">{storageError}</p>}
-                </div>
-                <button onClick={loadStorage} disabled={storageLoading} className={textBtn}>
-                    {storageLoading ? <Loader2 size={14} className="animate-spin" /> : storage ? 'Refresh' : 'Measure'}
-                </button>
-            </div>
-
-            <div className={`${rowBase} cursor-default`}>
-                <div>
-                    <p className={rowLabel}>Status</p>
-                    <p className={`text-xs ${settingsMuted} mt-0.5 leading-relaxed`}>All systems are running smoothly.</p>
-                </div>
-                <span className={rowValue}>Operational</span>
-            </div>
-
-            <div className={`${rowBase} border-b-0 cursor-default`}>
-                <div>
-                    <p className={rowLabel}>Environment</p>
-                    <p className={`text-xs ${settingsMuted} mt-0.5 leading-relaxed`}>Where the backend is connected.</p>
-                </div>
-                <span className={rowValue}>
-                    <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)]">
-                        {window.location.hostname === 'localhost' ? 'Local' : 'Remote'}
-                    </span>
-                </span>
+            <div className="flex flex-col gap-2">
+                <ListGroup
+                    header="Storage"
+                    footer={storage
+                        ? `${formatBytes(storage.payload_bytes)} of payload across ${storage.tables.reduce((n, tb) => n + tb.rows, 0).toLocaleString()} rows, measured ${timeAgo(storage.measured_at)}.`
+                        : 'How much of the database each table uses, to compare against the D1 plan limit.'}
+                >
+                    {(storage?.tables ?? []).map(tb => (
+                        <ListRow
+                            key={tb.table}
+                            title={<span className="block truncate font-mono text-sm">{tb.table}</span>}
+                            value={
+                                <span className="tabular-nums">
+                                    {tb.rows.toLocaleString()}{tb.payload_bytes > 0 ? `, ${formatBytes(tb.payload_bytes)}` : ''}
+                                </span>
+                            }
+                        />
+                    ))}
+                    <ListRow
+                        title={<ActionTitle>{storage ? 'Measure again' : 'Measure'}</ActionTitle>}
+                        trailing={storageLoading ? <BusySpinner /> : undefined}
+                        onClick={loadStorage}
+                        disabled={storageLoading}
+                    />
+                </ListGroup>
+                {storageError && <ErrorNote className="px-4">{storageError}</ErrorNote>}
             </div>
         </div>
     );
@@ -856,84 +806,23 @@ const Admin: React.FC = () => {
     const catContent = (id: AdminCat) => (id === 'users' ? renderUsers() : id === 'notice' ? renderNotice() : renderSystem());
 
     return (
-        <div className="flex pt-8 pb-32 min-h-full">
+        <YouPage>
+            {onBack
+                ? <BackHeader parentLabel={t('you.title')} onBack={onBack} title={t('nav.admin')} />
+                : <PageHeader title={t('nav.admin')} />}
 
-            {/* ── Left category nav (desktop) ─────────────────────────── */}
-            <nav className="hidden md:flex flex-col w-52 shrink-0 px-3 gap-0.5 border-r border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]">
-                <p className={`px-3 py-1.5 mb-3 text-xl font-semibold ${settingsOn}`}>
-                    Admin
-                </p>
-                {cats.map(({ id, label, Icon }) => (
-                    <button
-                        key={id}
-                        onClick={() => selectCat(id)}
-                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[0.9375rem] text-start
-                            ${cat === id
-                                ? `bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container-high)] ${settingsOn} font-medium`
-                                : `${settingsMuted} hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)]`
-                            }`}
-                    >
-                        <Icon size={16} strokeWidth={1.75} />
-                        {label}
-                    </button>
-                ))}
-            </nav>
-
-            {/* ── Desktop content ─────────────────────────────────────── */}
-            <div className="hidden md:block flex-1 px-10 max-w-2xl">
-                <h2 className={`text-xl font-semibold ${settingsOn} mb-6`}>
-                    {cats.find(c => c.id === cat)?.label}
-                </h2>
+            <div className="mt-2 flex flex-col gap-6">
+                <SegmentedControl<AdminCat>
+                    aria-label={t('nav.admin')}
+                    value={cat}
+                    onChange={selectCat}
+                    options={cats}
+                />
                 {catContent(cat)}
             </div>
 
-            {/* ── Mobile ──────────────────────────────────────────────── */}
-            {/* self-start + own bottom padding: the shell's `min-h-full` makes its
-                height definite, so a stretched `flex-1` child never reports its own
-                overflow to the scroller and the last rows hide under the nav island. */}
-            <div className="md:hidden flex-1 self-start px-6 pb-32">
-                {mobileView === 'list' ? (
-                    <>
-                        <h1 className={`sticky top-0 z-20 -mx-6 px-6 pt-2 pb-3 mb-3 bg-[var(--color-m3-surface-dim)] dark:bg-[var(--color-m3-dark-surface)] text-xl font-semibold ${settingsOn}`}>Admin</h1>
-                        {cats.map(({ id, label, Icon, hint }) => (
-                            <button
-                                key={id}
-                                onClick={() => enterMobileCat(id)}
-                                className={`${rowBase} items-center`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-[var(--color-m3-surface-container)] dark:bg-[var(--color-m3-dark-surface-container)]">
-                                        <Icon size={18} strokeWidth={1.75} className={settingsMuted} />
-                                    </div>
-                                    <div className="text-start">
-                                        <p className={`text-[0.9375rem] font-medium ${settingsOn}`}>{label}</p>
-                                        <p className={`text-xs ${settingsMuted} mt-0.5 leading-relaxed`}>{hint}</p>
-                                    </div>
-                                </div>
-                                <ChevronRight size={15} className={settingsMuted} />
-                            </button>
-                        ))}
-                    </>
-                ) : (
-                    <>
-                        <div className="sticky top-0 z-20 -mx-6 px-6 pt-2 pb-3 mb-3 bg-[var(--color-m3-surface-dim)] dark:bg-[var(--color-m3-dark-surface)]">
-                            <button
-                                onClick={exitMobileCat}
-                                className="flex items-center gap-2 -ml-2 px-2 py-1.5 rounded-lg hover:bg-[var(--color-m3-surface-container)] dark:hover:bg-[var(--color-m3-dark-surface-container)]"
-                            >
-                                <ArrowLeft size={18} className={`${settingsMuted} shrink-0`} />
-                                <h1 className={`text-xl font-semibold ${settingsOn}`}>
-                                    {cats.find(c => c.id === mobileView)?.label}
-                                </h1>
-                            </button>
-                        </div>
-                        {catContent(mobileView as AdminCat)}
-                    </>
-                )}
-            </div>
-
             {renderPanel()}
-        </div>
+        </YouPage>
     );
 };
 

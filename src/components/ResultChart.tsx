@@ -1,14 +1,17 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { joinList, joinSentences } from '../i18n/listSeparator';
 import { useTranslation } from '../contexts/LanguageContext';
-import { formatDate, formatTime } from '../utils/helpers';
+import { formatDate, formatTime, LOCALE_MAP } from '../utils/helpers';
 import {
     SimulationResult, DoseEvent, LabResult, HRTMode,
     interpolateConcentration_E2, interpolateConcentration_CPA, interpolateConcentration_T,
     convertToPgMl, convertToNgDl, isT_LabUnit, T_ESTERS,
 } from '../../logic';
-import { Activity } from 'lucide-react';
+import { Activity } from './icons';
+import { SegmentedControl } from './ui';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import { useElementSize } from '../hooks/useElementSize';
+import { isProjection } from '../hooks/useProjection';
 
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
@@ -93,7 +96,10 @@ const useEasedPair = (target: [number, number], instant: boolean): [number, numb
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [target[0], target[1], instant]);
 
-    useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+    // Zero the ref as well as cancelling: StrictMode (and any remount of a kept
+    // instance) runs this cleanup and then the effect above again, and a stale
+    // id there reads as "already easing", so the window would never move again.
+    useEffect(() => () => { if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0; } }, []);
 
     return shown;
 };
@@ -130,28 +136,64 @@ function useFadingSet<T>(items: T[], sig: string, instant = false): { prev: T[];
 
 const fmtAxis = (v: number) => (v >= 100 || v % 1 === 0 ? String(Math.round(v)) : v < 1 ? v.toFixed(2) : v.toFixed(1));
 
+/** A reading as the readout strip says it: "About 243". Cyproterone is small
+ *  enough that it keeps a decimal or two. */
+const fmtReading = (v: number, fine = false) =>
+    fine ? (v >= 10 ? v.toFixed(1) : v.toFixed(2)) : String(Math.round(v));
+
+/** Units as the design writes them. */
+const unitLabel = (u: string) => (u === 'pg/ml' ? 'pg/mL' : u === 'ng/dl' ? 'ng/dL' : u === 'ng/ml' ? 'ng/mL' : u);
+
+/** Fills {name} slots in a translated string. */
+const fillIn = (s: string, vars: Record<string, string | number>) =>
+    s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+
+/** Rough rendered width of a label, for sizing the "Now" tab and deciding
+ *  whether a direct label has room. CJK glyphs are about one em wide. */
+const textWidth = (s: string, px: number, bold = false) => {
+    let em = 0;
+    for (const ch of s) em += ch.charCodeAt(0) > 0x2e80 ? 1 : bold ? 0.6 : 0.56;
+    return em * px;
+};
+
 const ResultChart = ({
     sim,
     events,
     labResults = [],
     calibrationFn = (_t: number) => 1,
     onPointClick,
-    isDarkMode = false,
     isMono = false,
     mode,
     title,
     timeZone,
+    showTitle = true,
+    headerClassName = '',
+    showCalibrationNote = true,
+    projection = null,
 }: {
     sim: SimulationResult | null;
     events: DoseEvent[];
     labResults?: LabResult[];
     calibrationFn?: (timeH: number) => number;
     onPointClick?: (e: DoseEvent) => void;
+    /** Kept for callers. Colours come from the Cadence tokens, which flip with
+     *  the theme class on <html>, so the chart no longer needs to be told. */
     isDarkMode?: boolean;
     isMono?: boolean;
     mode?: HRTMode;
     title?: string;
     timeZone?: string;
+    /** False when the page already heads the chart (Today's "This week"). */
+    showTitle?: boolean;
+    /** Extra classes for the header row, e.g. to hide the range on a phone. */
+    headerClassName?: string;
+    /** False when the page shows its own calibration note (Timeline). */
+    showCalibrationNote?: boolean;
+    /** The estimate with the planned doses added (useProjection). When given,
+     *  the dashed part after now is drawn from it and reads "If you keep your
+     *  schedule", and its planned doses show as outlined triangles. Without it
+     *  the dashed part is the logged doses wearing off, and says so. */
+    projection?: SimulationResult | null;
 }) => {
     const { t, lang } = useTranslation();
     const { isTransmasc: contextIsTransmasc } = useHRTMode();
@@ -169,10 +211,21 @@ const ResultChart = ({
 
     const selectRange = (r: RangeKey) => { setRange(r); setPanOffset(0); };
 
-    // Warm, on-brand palette — terracotta primary against a muted neutral grid.
-    const c = isDarkMode
-        ? { primary: '#D8927C', second: '#7A776F', grid: '#2E2C28', axis: '#7A776F', faint: '#5C5953', dot: '#1C1B18', lab: '#E0A38C' }
-        : { primary: '#CC785C', second: '#C2BDB3', grid: '#E7E4DD', axis: '#A8A59E', faint: '#C2BDB3', dot: '#FAF9F7', lab: '#B5664C' };
+    // Cadence tokens (src/index.css). They are redefined under .dark, so the
+    // same values serve both themes, including on a shared page that passes no
+    // theme at all. Mono is a grayscale filter over the whole page.
+    const c = {
+        primary: 'var(--c-accent)',
+        second: 'var(--c-second)',
+        ink: 'var(--c-ink)',
+        muted: 'var(--c-muted)',
+        hairline: 'var(--c-hairline)',
+        rule: 'var(--c-rule)',
+        plate: 'var(--c-plate)',
+        paper: 'var(--c-paper)',
+        surface: 'var(--c-surface)',
+        target: 'var(--c-target)',
+    };
 
     // Which series are relevant for the current mode / logged doses.
     const hasE2 = isTransmasc ? false : events.some(e => e.ester !== 'CPA' && !T_ESTERS.has(e.ester));
@@ -183,30 +236,19 @@ const ResultChart = ({
     const primaryMeta = isTransmasc
         ? { label: t('label.total_t'), unit: 'ng/dl', decimals: 0 }
         : primaryIsCPA
-            ? { label: t('label.cpa_chart'), unit: 'ng/ml', decimals: 2 }
+            ? { label: t('chart.cpa'), unit: 'ng/ml', decimals: 2 }
             : { label: t('label.e2'), unit: 'pg/ml', decimals: 1 };
+    const unit = unitLabel(primaryMeta.unit);
 
     // Typical target band for the primary series, matching the reference ranges the
     // app uses for its status labels (see useAppData currentStatus): transmasc total-T
     // sits in the ~300–1000 ng/dL male range; transfem E2 in the ~100–200 pg/mL band.
-    // CPA has no target range, so it gets none. Shown as a quiet shaded region only.
+    // CPA has no target range, so it gets none.
     const primaryTarget = useMemo<{ low: number; high: number } | null>(() => {
         if (isTransmasc) return { low: 300, high: 1000 };
         if (primaryIsCPA) return null;
         return { low: 100, high: 200 };
     }, [isTransmasc, primaryIsCPA]);
-
-    // Resample the simulation into the (time, primary, secondary) shape we plot.
-    const data = useMemo(() => {
-        if (!sim || sim.timeH.length === 0) return [] as { t: number; p: number; s: number | null }[];
-        return sim.timeH.map((h, i) => {
-            const time = h * HOUR;
-            if (isTransmasc) return { t: time, p: sim.concNGdL_T?.[i] ?? 0, s: null };
-            const e2 = sim.concPGmL_E2[i] * calibrationFn(h);
-            const cpa = sim.concPGmL_CPA[i];
-            return { t: time, p: primaryIsCPA ? cpa : e2, s: hasSecondary ? cpa : null };
-        });
-    }, [sim, calibrationFn, isTransmasc, primaryIsCPA, hasSecondary]);
 
     // A clock that ticks, not one that is read on every render. `now` anchors the
     // visible window, the "now" marker and the calibration read-off; taking it
@@ -219,6 +261,44 @@ const ResultChart = ({
         const id = setInterval(() => setNow(Date.now()), 60000);
         return () => clearInterval(id);
     }, []);
+
+    // The projection counts only after now, and only as far as it plans doses.
+    const proj = projection && projection.timeH.length > 0 ? projection : null;
+    const projEndMs = proj
+        ? isProjection(proj) ? proj.horizonMs : proj.timeH[proj.timeH.length - 1] * HOUR
+        : 0;
+    /** The simulation that speaks for a moment: logged doses up to now, the
+     *  projection after it. */
+    const simAt = (ms: number): SimulationResult | null => (proj && ms > now ? proj : sim);
+
+    // Resample the simulation into the (time, primary, secondary) shape we plot:
+    // the logged estimate up to now, then the projection (when there is one).
+    const data = useMemo(() => {
+        type Pt = { t: number; p: number; s: number | null };
+        if (!sim || sim.timeH.length === 0) return [] as Pt[];
+        const sample = (src: SimulationResult, i: number): Pt => {
+            const h = src.timeH[i];
+            const time = h * HOUR;
+            if (isTransmasc) return { t: time, p: src.concNGdL_T?.[i] ?? 0, s: null };
+            const e2 = src.concPGmL_E2[i] * calibrationFn(h);
+            const cpa = src.concPGmL_CPA[i];
+            return { t: time, p: primaryIsCPA ? cpa : e2, s: hasSecondary ? cpa : null };
+        };
+        const out: Pt[] = [];
+        for (let i = 0; i < sim.timeH.length; i++) {
+            if (proj && sim.timeH[i] * HOUR > now) break;
+            out.push(sample(sim, i));
+        }
+        if (proj) {
+            for (let i = 0; i < proj.timeH.length; i++) {
+                const time = proj.timeH[i] * HOUR;
+                if (time <= now) continue;
+                if (time > projEndMs) break;
+                out.push(sample(proj, i));
+            }
+        }
+        return out;
+    }, [sim, proj, projEndMs, now, calibrationFn, isTransmasc, primaryIsCPA, hasSecondary]);
 
     const fullMin = data.length ? data[0].t : now;
     const fullMax = data.length ? data[data.length - 1].t : now;
@@ -276,24 +356,40 @@ const ResultChart = ({
                 v: isTransmasc ? convertToNgDl(l.concValue, l.unit) : convertToPgMl(l.concValue, l.unit),
                 raw: l.concValue, unit: l.unit, id: l.id,
             }))
-            .filter(l => l.t >= t0 && l.t <= t1);
+            .filter(l => l.t >= t0 && l.t <= t1)
+            .sort((a, b) => a.t - b.t);
     }, [labResults, isTransmasc, t0, t1]);
 
+    // Doses the projection adds. They are drawn outlined and cannot be opened:
+    // there is nothing logged to edit yet.
+    const planned = useMemo<DoseEvent[]>(
+        () => (proj && isProjection(proj) ? proj.planned.filter(e => e.timeH * HOUR > now && e.timeH * HOUR <= projEndMs) : []),
+        [proj, projEndMs, now],
+    );
+
     // Dose markers sit on whichever axis their compound belongs to.
+    type Marker = { t: number; v: number; axis: 'p' | 's'; event: DoseEvent; planned: boolean };
     const markers = useMemo(() => {
-        if (!sim) return [];
-        return events.map(e => {
+        if (!sim) return [] as Marker[];
+        const toMarker = (e: DoseEvent, isPlanned: boolean): Marker | null => {
             const isT = T_ESTERS.has(e.ester);
             const isCPA = e.ester === 'CPA';
             if (isTransmasc ? !isT : isT) return null;
+            const src = simAt(e.timeH * HOUR) ?? sim;
             let value: number | null, axis: 'p' | 's';
-            if (isTransmasc) { value = interpolateConcentration_T(sim, e.timeH); axis = 'p'; }
-            else if (isCPA) { value = interpolateConcentration_CPA(sim, e.timeH); axis = hasSecondary ? 's' : 'p'; }
-            else { const v = interpolateConcentration_E2(sim, e.timeH); value = v == null ? null : v * calibrationFn(e.timeH); axis = 'p'; }
+            if (isTransmasc) { value = interpolateConcentration_T(src, e.timeH); axis = 'p'; }
+            else if (isCPA) { value = interpolateConcentration_CPA(src, e.timeH); axis = hasSecondary ? 's' : 'p'; }
+            else { const v = interpolateConcentration_E2(src, e.timeH); value = v == null ? null : v * calibrationFn(e.timeH); axis = 'p'; }
             const v = value != null && Number.isFinite(value) ? value : 0;
-            return { t: e.timeH * HOUR, v, axis, event: e };
-        }).filter((m): m is { t: number; v: number; axis: 'p' | 's'; event: DoseEvent } => !!m && m.t >= t0 && m.t <= t1);
-    }, [sim, events, isTransmasc, hasSecondary, calibrationFn, t0, t1]);
+            // A dose logged ahead of time is still a plan until its moment comes.
+            return { t: e.timeH * HOUR, v, axis, event: e, planned: isPlanned || e.timeH * HOUR > now };
+        };
+        return [
+            ...events.map(e => toMarker(e, false)),
+            ...planned.map(e => toMarker(e, true)),
+        ].filter((m): m is Marker => !!m && m.t >= t0 && m.t <= t1);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sim, proj, events, planned, isTransmasc, hasSecondary, calibrationFn, t0, t1, now]);
 
     // Y domains scale to what's visible in the current window.
     const yPrimary = useMemo(() => {
@@ -315,6 +411,39 @@ const ResultChart = ({
         return buildYDomain(0, mx);
     }, [slice, markers, hasSecondary]);
 
+    // The primary series at an arbitrary hour, calibrated the same way the
+    // plotted curve is.
+    const primaryAt = (h: number): number | null => {
+        const src = simAt(h * HOUR);
+        if (!src) return null;
+        const v = isTransmasc
+            ? interpolateConcentration_T(src, h)
+            : primaryIsCPA
+                ? interpolateConcentration_CPA(src, h)
+                : (() => { const e = interpolateConcentration_E2(src, h); return e == null ? null : e * calibrationFn(h); })();
+        return v != null && Number.isFinite(v) ? v : null;
+    };
+
+    // How sure the forecast is, read from the person's own blood tests: the
+    // typical (root mean square) relative gap between each measurement and the
+    // estimate at that moment. Fewer than two tests say nothing about spread,
+    // so there is no band until then.
+    const spread = useMemo(() => {
+        if (!sim || primaryIsCPA) return null;
+        const rel: number[] = [];
+        for (const l of labResults) {
+            if (isTransmasc ? !isT_LabUnit(l.unit) : isT_LabUnit(l.unit)) continue;
+            const measured = isTransmasc ? convertToNgDl(l.concValue, l.unit) : convertToPgMl(l.concValue, l.unit);
+            const model = primaryAt(l.timeH);
+            if (!(model != null && model > 0) || !(measured > 0)) continue;
+            rel.push((measured - model) / model);
+        }
+        if (rel.length < 2) return null;
+        const rms = Math.sqrt(rel.reduce((a, r) => a + r * r, 0) / rel.length);
+        return Math.min(0.5, Math.max(0.05, rms));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sim, labResults, isTransmasc, primaryIsCPA, calibrationFn]);
+
     // Layout. The plot is drawn in raw SVG units, so unlike the rest of the UI
     // it does not follow the root font size. Reading that size back keeps the
     // axis type and the gutters it sits in proportional when the desktop scale
@@ -325,14 +454,30 @@ const ResultChart = ({
         const px = parseFloat(getComputedStyle(document.documentElement).fontSize);
         return Number.isFinite(px) && px > 0 ? px / 16 : 1;
     }, [width, height]);
-    const axisFont = 10 * ui;
+    const axisFont = 13 * ui;
 
-    const mL = 32 * ui;
-    const mR = (hasSecondary ? 32 : 10) * ui;
-    const mT = 14 * ui;
-    const mB = 26 * ui;
+    const mL = 40 * ui;
+    const mR = (hasSecondary ? 44 : 8) * ui;
+    const mB = 28 * ui;
     const plotW = Math.max(0, width - mL - mR);
+
+    // Unit captions and the "Now" tab share the row above the plot. With two
+    // series the captions are long ("Cyproterone (ng/mL)"), so when the tab
+    // would land on one, the tab and plot drop a row and the captions keep theirs.
+    const nowText = fillIn(t('chart.now_at'), { time: formatTime(new Date(now), timeZone) });
+    const leftCaption = hasSecondary ? `${primaryMeta.label} (${unit})` : unit;
+    const rightCaption = `${t('chart.cpa')} (ng/mL)`;
+    const tabW = textWidth(nowText, axisFont, true) + 16 * ui;
+    const tabX = (() => {
+        const nx = mL + (vt1 === vt0 ? 0 : ((now - vt0) / (vt1 - vt0)) * plotW);
+        return Math.max(0, Math.min(width - tabW, nx - tabW / 2));
+    })();
+    const tabHitsCaption = tabX < textWidth(leftCaption, axisFont, true) + 6 * ui
+        || (hasSecondary && tabX + tabW > width - textWidth(rightCaption, axisFont, true) - 6 * ui);
+    const captionRow = tabHitsCaption ? 20 * ui : 0;
+    const mT = 34 * ui + captionRow; // room for the "Now" tab above the plot
     const plotH = Math.max(0, height - mT - mB);
+    const bottom = mT + plotH;
 
     // Entrance timing. A marker at x is delayed by however long the sweep takes
     // to reach it, so it lands with the line rather than ahead of it.
@@ -417,6 +562,28 @@ const ResultChart = ({
         return d;
     };
 
+    // The likely range around the forecast: the curve scaled by ±spread,
+    // drawn from the last sample before now onward (the future clip trims it).
+    // It follows whatever the dashed line shows, so with a projection it rides
+    // the planned doses rather than the wear-off.
+    const bandPath = () => {
+        if (spread == null) return '';
+        let start = 0;
+        while (start < slice.length - 1 && slice[start + 1].t < now) start++;
+        const xs: number[] = [], up: number[] = [], lo: number[] = [];
+        for (let i = start; i < slice.length; i++) {
+            const v = slice[i].p;
+            if (!Number.isFinite(v)) continue;
+            xs.push(X(slice[i].t));
+            up.push(YP(v * (1 + spread)));
+            lo.push(YP(Math.max(0, v * (1 - spread))));
+        }
+        if (xs.length < 2) return '';
+        const top = monotonePath(xs, up);
+        const back = monotonePath([...xs].reverse(), [...lo].reverse());
+        return `${top}L${back.slice(1)}Z`;
+    };
+
     const xTicks = useMemo(() => {
         if (plotW <= 0) return [];
         const count = Math.max(2, Math.min(6, Math.floor(plotW / (90 * ui))));
@@ -440,43 +607,39 @@ const ResultChart = ({
     const ysFade = useFadingSet(ysTickVals, ysTickVals.join(','));
     const xFade = useFadingSet(xTicks, xTicks.map(t => t.label).join('|'), dragging);
 
-    // Mid-rescale an incoming set can be crushed together. Its rules still
-    // read; the numbers wait until there is room to hold them.
+    // Mid-rescale an incoming set can be crushed together. Its numbers wait
+    // until there is room to hold them.
     const roomFor = (vals: number[]) =>
         vals.length < 2 || Math.abs(YP(vals[0]) - YP(vals[1])) >= 26 * ui;
 
-    // "Now" position on the primary curve.
-    const nowVal = useMemo(() => {
-        if (!sim) return null;
-        const h = now / HOUR;
-        const v = isTransmasc
-            ? interpolateConcentration_T(sim, h)
-            : primaryIsCPA
-                ? interpolateConcentration_CPA(sim, h)
-                : (() => { const e = interpolateConcentration_E2(sim, h); return e == null ? null : e * calibrationFn(h); })();
-        return v != null && Number.isFinite(v) ? v : null;
-    }, [sim, now, isTransmasc, primaryIsCPA, calibrationFn]);
+    // The level now, on each curve.
+    const nowVal = useMemo(() => primaryAt(now / HOUR),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [sim, now, isTransmasc, primaryIsCPA, calibrationFn]);
 
-    // "Now" position on the secondary (CPA) curve.
     const nowValS = useMemo(() => {
         if (!sim || !hasSecondary) return null;
         const v = interpolateConcentration_CPA(sim, now / HOUR);
         return v != null && Number.isFinite(v) ? v : null;
     }, [sim, now, hasSecondary]);
 
-    // Hover lookup — nearest sample to the pointer.
+    // Nearest sample to a moment. `data` is in time order.
+    const nearestIndex = (time: number) => {
+        let lo = 0, hi = data.length - 1;
+        while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1;
+            if (data[mid].t < time) lo = mid; else hi = mid;
+        }
+        return Math.abs(data[lo].t - time) <= Math.abs(data[hi].t - time) ? lo : hi;
+    };
+
+    // Read-off lookup: nearest sample to the pointer.
     const updateHover = (clientX: number) => {
-        if (!plotEl || data.length === 0) return;
+        if (!plotEl || data.length === 0 || plotW <= 0) return;
         const rect = plotEl.getBoundingClientRect();
         const px = clientX - rect.left;
         if (px < mL || px > mL + plotW) { setHover(null); return; }
-        const time = t0 + ((px - mL) / plotW) * (t1 - t0);
-        let best = 0, bestDiff = Infinity;
-        for (let i = 0; i < data.length; i++) {
-            const diff = Math.abs(data[i].t - time);
-            if (diff < bestDiff) { bestDiff = diff; best = i; }
-        }
-        setHover(best);
+        setHover(nearestIndex(t0 + ((px - mL) / plotW) * (t1 - t0)));
     };
 
     const onPointerDown = (e: React.PointerEvent) => {
@@ -520,91 +683,183 @@ const ResultChart = ({
         if (dragging) setDragging(false);
     };
 
-    const onPointerLeave = (e: React.PointerEvent) => { endDrag(e); setHover(null); };
+    // A tap (a press that never became a pan) reads that moment and leaves the
+    // reading in the strip, since a finger has no hover to keep it there.
+    const onPointerUp = (e: React.PointerEvent) => {
+        if (!dragRef.current?.moved) updateHover(e.clientX);
+        endDrag(e);
+    };
+
+    const onPointerLeave = (e: React.PointerEvent) => {
+        endDrag(e);
+        if (e.pointerType === 'mouse') setHover(null);
+    };
+
+    // With the chart focused, the arrow keys walk the read-off through the
+    // window (Shift for bigger steps) and Escape returns it to now.
+    const onKeyDown = (e: React.KeyboardEvent) => {
+        if (data.length === 0) return;
+        if (e.key === 'Escape') { setHover(null); return; }
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const cur = hover != null ? data[hover] : null;
+        const from = cur && cur.t >= t0 && cur.t <= t1 ? cur.t : Math.min(Math.max(now, t0), t1);
+        const dir = e.key === 'ArrowLeft' ? -1 : 1;
+        const target = Math.min(t1, Math.max(t0, from + dir * (t1 - t0) / (e.shiftKey ? 8 : 48)));
+        let idx = nearestIndex(target);
+        if (idx === hover) idx = Math.max(0, Math.min(data.length - 1, idx + dir));
+        if (data[idx].t < t0 || data[idx].t > t1) return;
+        setHover(idx);
+    };
 
     const hoverPt = hover != null ? data[hover] : null;
     const showHover = !dragging && hoverPt != null && hoverPt.t >= t0 && hoverPt.t <= t1 && plotW > 0;
     const calFactor = calibrationFn(now / HOUR);
 
-    const rangeOpts: { key: RangeKey; label: string }[] = [
-        { key: '7d', label: t('chart.range_7d') },
-        { key: '30d', label: t('chart.range_30d') },
-        { key: 'all', label: t('chart.range_all') },
+    const rangeOpts: { value: RangeKey; label: string }[] = [
+        { value: '7d', label: t('chart.range_7d') },
+        { value: '30d', label: t('chart.range_30d') },
+        { value: 'all', label: t('chart.range_all') },
     ];
 
     if (!sim || sim.timeH.length === 0) {
         return (
-            <div className="h-72 md:h-96 flex flex-col items-center justify-center text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                <Activity className="w-10 h-10 mb-3 opacity-25" strokeWidth={1.25} />
-                <p className="text-sm">{t('timeline.empty')}</p>
+            <div className="h-56 md:h-64 flex flex-col items-center justify-center text-[var(--c-muted)]">
+                <Activity className="w-10 h-10 mb-3 opacity-40" />
+                <p className="m-0 text-sm">{t('timeline.empty')}</p>
             </div>
         );
     }
 
-    const chipBase = 'px-2 py-0.5 text-[0.6875rem] rounded-md transition-colors';
-    const chipOn = 'text-body font-medium border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]';
-    const chipOff = 'text-muted hover:text-body';
+    // ── Readout strip ──────────────────────────────────────────────────────
+    const locale = LOCALE_MAP[lang] || 'en-US';
+    const whenText = (ms: number) => {
+        const d = new Date(ms);
+        if (Number.isNaN(d.getTime())) return '';
+        const date = d.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric', timeZone });
+        return fillIn(t('chart.when'), { date, time: formatTime(d, timeZone) });
+    };
+    const readT = showHover ? hoverPt!.t : now;
+    const readP = showHover ? hoverPt!.p : nowVal;
+    const readS = showHover ? hoverPt!.s : nowValS;
+    const hoverX = showHover ? X(hoverPt!.t) : null;
+    // A blood test under the read-off takes over the strip.
+    const readLab = hoverX == null ? null
+        : labPoints.reduce<typeof labPoints[number] | null>((best, l) => {
+            const dx = Math.abs(X(l.t) - hoverX);
+            return dx <= 10 * ui && (!best || dx < Math.abs(X(best.t) - hoverX)) ? l : best;
+        }, null);
+    let readMain = '';
+    if (readLab) {
+        const expected = primaryAt(readLab.t / HOUR);
+        readMain = expected != null
+            ? fillIn(t('chart.readout_lab'), { value: fmtReading(readLab.v, primaryIsCPA), unit, expected: fmtReading(expected, primaryIsCPA) })
+            : '';
+    }
+    if (!readMain && readP != null && Number.isFinite(readP)) {
+        const key = readT <= now ? 'chart.readout_est' : proj ? 'chart.readout_forecast' : 'chart.readout_no_more';
+        readMain = fillIn(t(key), { value: fmtReading(readP, primaryIsCPA), unit });
+    }
+    const readSecond = hasSecondary && readS != null && Number.isFinite(readS)
+        ? fillIn(t('chart.readout_second'), { series: t('chart.cpa'), value: fmtReading(readS, true), unit: 'ng/mL' })
+        : '';
+
+    const calPct = Math.round(Math.abs(calFactor - 1) * 100);
+    const calNote = !isTransmasc && !primaryIsCPA && calPct >= 1
+        ? fillIn(t(calFactor > 1 ? 'chart.adjusted_up' : 'chart.adjusted_down'), { pct: calPct })
+        : '';
+
+    const ariaLabel = joinSentences(lang, [
+        fillIn(t('chart.aria_summary'), {
+            series: primaryMeta.label,
+            from: formatDate(new Date(t0), lang, timeZone),
+            to: formatDate(new Date(t1), lang, timeZone),
+        }),
+        nowVal != null ? fillIn(t('chart.aria_now'), { value: fmtReading(nowVal, primaryIsCPA), unit }) : '',
+    ].filter(Boolean) as string[]);
+
+    // ── Geometry shared by several layers ─────────────────────────────────
+    const nowIn = now >= vt0 && now <= vt1;
+    const nowX = X(now);
+    const splitX = Math.max(mL, Math.min(mL + plotW, nowX));
+    const tabH = 22 * ui;
+    const tabY = 4 * ui + captionRow;
+
+    const pPath = linePath('p');
+    const sPath = hasSecondary ? linePath('s') : '';
+    const likely = bandPath();
+
+    // Only a projection may promise "if you keep your schedule". Without one the
+    // dashed line is the logged doses wearing off, and it says that instead.
+    const forecastText = t(proj ? 'chart.if_schedule' : 'chart.if_no_more');
+    const forecastX = (now < vt0 ? mL : splitX) + 6 * ui;
+    // On a phone the future half of a week is narrow, so the label takes two
+    // lines (split at the space nearest the middle) before it gives up.
+    const forecastLines = (() => {
+        const room = mL + plotW - forecastX - 4 * ui;
+        if (now > vt1 || room <= 0) return [] as string[];
+        if (textWidth(forecastText, axisFont) <= room) return [forecastText];
+        const words = forecastText.split(' ');
+        if (words.length < 2) return [] as string[];
+        let best: string[] = [];
+        let bestW = Infinity;
+        for (let i = 1; i < words.length; i++) {
+            const a = words.slice(0, i).join(' ');
+            const b = words.slice(i).join(' ');
+            const w = Math.max(textWidth(a, axisFont), textWidth(b, axisFont));
+            if (w <= room && w < bestW) { best = [a, b]; bestW = w; }
+        }
+        return best;
+    })();
+
+
+    let lastLabelX = -Infinity;
 
     return (
         <div className="w-full">
-            {/* Header: title + range chips — flat, matching the page */}
-            <div className="flex items-center justify-between gap-3 mb-2">
-                <h2 className="text-sm text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] truncate">
-                    {title ?? t('chart.title')}
-                </h2>
-                <div className="flex items-center gap-2 shrink-0">
-                    {Math.abs(calFactor - 1) > 0.001 && (
-                        <span className="text-[0.625rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] opacity-70 tabular-nums">
-                            ×{calFactor.toFixed(2)}
-                        </span>
-                    )}
-                    <div className="flex items-center gap-0.5">
-                        {rangeOpts.map(o => (
-                            <button
-                                key={o.key}
-                                onClick={() => selectRange(o.key)}
-                                className={`${chipBase} ${range === o.key ? chipOn : chipOff}`}
-                            >
-                                {o.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+            {/* Header: title, then the range as a segmented control */}
+            <div className={`mb-3 flex flex-col gap-3 sm:flex-row sm:items-center ${showTitle ? 'sm:justify-between' : 'sm:justify-end'} ${headerClassName}`}>
+                {showTitle && (
+                    <h2 className="m-0 min-w-0 truncate text-xl font-semibold text-[var(--c-ink)]">
+                        {title ?? t('chart.title')}
+                    </h2>
+                )}
+                <SegmentedControl
+                    aria-label={t('chart.range_aria')}
+                    options={rangeOpts}
+                    value={range}
+                    onChange={selectRange}
+                    className="w-full shrink-0 sm:w-[300px]"
+                />
             </div>
 
-            {/* Legend — always visible so each line is labelled, on mobile too */}
-            <div className="flex items-center gap-4 mb-1 text-[0.6875rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">
-                <span className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-[2px] rounded-full" style={{ background: c.primary }} />
-                    {primaryMeta.label}
-                </span>
-                {hasSecondary && (
-                    <span className="flex items-center gap-1.5">
-                        <span
-                            className="w-3.5 h-[2px] rounded-full"
-                            style={{
-                                background: isMono
-                                    ? `repeating-linear-gradient(90deg, ${c.second} 0, ${c.second} 2px, transparent 2px, transparent 5px)`
-                                    : c.second,
-                            }}
-                        />
-                        {t('label.cpa_chart')}
-                    </span>
-                )}
+            {/* What the marks mean, for screen readers. Sighted readers get direct labels. */}
+            <div id={`legend-${clipId}`} className="sr-only">
+                <p>{hasSecondary ? joinList(lang, [primaryMeta.label, t('chart.cpa')]) : primaryMeta.label}</p>
+                {primaryTarget && <p>{fillIn(t('chart.target_range'), { low: primaryTarget.low, high: primaryTarget.high })}</p>}
+                <p>{t(proj ? 'chart.legend_marks' : 'chart.legend_marks_logged')}</p>
+                {spread != null && <p>{t('chart.likely_band')}</p>}
+                <p>{t('chart.keyboard_hint')}</p>
             </div>
 
             {/* Plot */}
-            <div ref={setPlotEl} className="relative h-72 md:h-96 -mx-4 md:-mx-6 select-none touch-pan-y">
-
-
+            <div
+                ref={setPlotEl}
+                tabIndex={0}
+                onKeyDown={onKeyDown}
+                aria-describedby={`legend-${clipId}`}
+                className="relative h-56 md:h-64 select-none touch-pan-y rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--c-accent)]"
+            >
                 {width > 0 && (
                     <svg
                         width={width}
                         height={height}
+                        role="img"
+                        aria-label={ariaLabel}
                         className="block"
                         onPointerDown={onPointerDown}
                         onPointerMove={onPointerMove}
-                        onPointerUp={endDrag}
+                        onPointerUp={onPointerUp}
                         onPointerCancel={endDrag}
                         onPointerLeave={onPointerLeave}
                         style={{ touchAction: 'pan-y', cursor: canPan ? (dragging ? 'grabbing' : 'grab') : 'default' }}
@@ -616,45 +871,65 @@ const ResultChart = ({
                             <clipPath id={`clip-${clipId}`}>
                                 <rect x={mL} y={mT - 4} width={plotW} height={plotH + 8} />
                             </clipPath>
+                            <clipPath id={`past-${clipId}`}>
+                                <rect x={mL - 2} y={0} width={Math.max(0, splitX - mL + 2)} height={height} />
+                            </clipPath>
+                            <clipPath id={`future-${clipId}`}>
+                                <rect x={splitX} y={0} width={Math.max(0, mL + plotW - splitX + 2)} height={height} />
+                            </clipPath>
                         </defs>
 
-                        {/* Target reference band — quiet wash marking the typical range */}
+                        {/* Units, labelled directly. With two series each caption
+                            takes its curve's colour and sits over its own axis. */}
+                        <text x={0} y={14 * ui} fontSize={axisFont} fontWeight={600} fill={hasSecondary ? c.primary : c.muted}>{leftCaption}</text>
+                        {hasSecondary && (
+                            <text x={width} y={14 * ui} textAnchor="end" fontSize={axisFont} fontWeight={600} fill={c.second}>
+                                {rightCaption}
+                            </text>
+                        )}
+
+                        {/* Past on a plate tint, future on paper */}
+                        {splitX > mL && (
+                            <rect x={mL} y={mT} width={splitX - mL} height={plotH} fill={c.plate} />
+                        )}
+
+                        {/* Target band */}
                         {primaryTarget && (() => {
-                            const yHi = Math.max(mT, Math.min(mT + plotH, YP(primaryTarget.high)));
-                            const yLo = Math.max(mT, Math.min(mT + plotH, YP(primaryTarget.low)));
+                            const yHi = Math.max(mT, Math.min(bottom, YP(primaryTarget.high)));
+                            const yLo = Math.max(mT, Math.min(bottom, YP(primaryTarget.low)));
                             if (yLo - yHi < 0.5) return null; // band entirely off-screen
                             const rawLo = YP(primaryTarget.low);
                             const rawHi = YP(primaryTarget.high);
-                            const inView = (y: number) => y >= mT - 0.5 && y <= mT + plotH + 0.5;
+                            const inView = (y: number) => y >= mT - 0.5 && y <= bottom + 0.5;
                             return (
                                 <g className="chart-appear" style={{ animationDelay: '120ms' }}>
-                                    <rect x={mL} y={yHi} width={plotW} height={yLo - yHi} fill={c.primary} opacity={0.06} />
-                                    {inView(rawLo) && <line x1={mL} y1={yLo} x2={mL + plotW} y2={yLo} stroke={c.faint} strokeWidth={1} strokeDasharray="2 4" opacity={0.6} />}
-                                    {inView(rawHi) && <line x1={mL} y1={yHi} x2={mL + plotW} y2={yHi} stroke={c.faint} strokeWidth={1} strokeDasharray="2 4" opacity={0.6} />}
-                                    <text x={mL + 4 * ui} y={Math.min(mT + plotH - 3 * ui, yHi + 11 * ui)} fontSize={9 * ui} fill={c.axis} opacity={0.75}>{t('chart.target')}</text>
+                                    <rect x={mL} y={yHi} width={plotW} height={yLo - yHi} fill={c.target} fillOpacity={0.12} />
+                                    {inView(rawLo) && <line x1={mL} y1={yLo} x2={mL + plotW} y2={yLo} stroke={c.target} strokeOpacity={0.6} strokeWidth={1} strokeDasharray="3 3" />}
+                                    {inView(rawHi) && <line x1={mL} y1={yHi} x2={mL + plotW} y2={yHi} stroke={c.target} strokeOpacity={0.6} strokeWidth={1} strokeDasharray="3 3" />}
                                 </g>
                             );
                         })()}
 
-                        {/* Horizontal grid + primary axis labels. The outgoing
-                            set is kept alongside the incoming one and both are
-                            positioned on the eased domain, so a rescale slides
-                            and dissolves rather than jumping. */}
+                        {/* Top gridline and baseline */}
+                        <line x1={mL} y1={mT} x2={mL + plotW} y2={mT} stroke={c.hairline} strokeWidth={1} />
+                        <line x1={mL} y1={bottom} x2={mL + plotW} y2={bottom} stroke={c.rule} strokeWidth={1} />
+
+                        {/* Primary axis labels. The outgoing set is kept alongside
+                            the incoming one and both are positioned on the eased
+                            domain, so a rescale slides and dissolves rather than
+                            jumping. */}
                         {([['out', yFade.prev, 1 - yFade.u], ['in', yFade.next, yFade.u]] as const).map(([tag, set, o]) =>
-                            o <= 0.002 ? null : (
+                            o <= 0.002 || !roomFor(set) ? null : (
                                 <g key={`yg-${tag}`} opacity={o}>
                                     {set.map((v, i) => {
                                         const y = YP(v);
-                                        if (y < mT - 0.5 || y > mT + plotH + 0.5) return null;
+                                        if (y < mT - 0.5 || y > bottom + 0.5) return null;
                                         return (
-                                            <g key={`yp-${i}`}
-                                               className={tag === 'in' ? 'chart-appear' : undefined}
-                                               style={tag === 'in' ? { animationDelay: `${i * 45}ms` } : undefined}>
-                                                <line x1={mL} y1={y} x2={mL + plotW} y2={y} stroke={c.grid} strokeWidth={1} />
-                                                {roomFor(set) && (
-                                                    <text x={mL - 8 * ui} y={y + 3 * ui} textAnchor="end" fontSize={axisFont} fill={c.axis}>{fmtAxis(v)}</text>
-                                                )}
-                                            </g>
+                                            <text key={`yp-${i}`}
+                                                  className={tag === 'in' ? 'chart-appear' : undefined}
+                                                  style={tag === 'in' ? { animationDelay: `${i * 45}ms` } : undefined}
+                                                  x={mL - 6 * ui} y={y + 4.5 * ui} textAnchor="end"
+                                                  fontSize={axisFont} fontWeight={500} fill={c.muted}>{fmtAxis(v)}</text>
                                         );
                                     })}
                                 </g>
@@ -667,13 +942,13 @@ const ResultChart = ({
                                 <g key={`ysg-${tag}`} opacity={o}>
                                     {set.map((v, i) => {
                                         const y = YS(v);
-                                        if (y < mT - 0.5 || y > mT + plotH + 0.5) return null;
+                                        if (y < mT - 0.5 || y > bottom + 0.5) return null;
                                         return (
                                             <text key={`ys-${i}`}
                                                   className={tag === 'in' ? 'chart-appear' : undefined}
                                                   style={tag === 'in' ? { animationDelay: `${i * 45}ms` } : undefined}
-                                                  x={mL + plotW + 8 * ui} y={y + 3 * ui} textAnchor="start"
-                                                  fontSize={axisFont} fill={c.faint}>{fmtAxis(v)}</text>
+                                                  x={mL + plotW + 6 * ui} y={y + 4.5 * ui} textAnchor="start"
+                                                  fontSize={axisFont} fontWeight={500} fill={c.muted}>{fmtAxis(v)}</text>
                                         );
                                     })}
                                 </g>
@@ -691,8 +966,8 @@ const ResultChart = ({
                                             <text key={`x-${i}`}
                                                   className={tag === 'in' ? 'chart-appear' : undefined}
                                                   style={tag === 'in' ? { animationDelay: sweepDelay(x) } : undefined}
-                                                  x={x} y={mT + plotH + 16 * ui} textAnchor="middle"
-                                                  fontSize={axisFont} fill={c.axis}>{tk.label}</text>
+                                                  x={x} y={bottom + 19 * ui} textAnchor="middle"
+                                                  fontSize={axisFont} fontWeight={500} fill={c.muted}>{tk.label}</text>
                                         );
                                     })}
                                 </g>
@@ -701,103 +976,145 @@ const ResultChart = ({
 
                         <g clipPath={`url(#clip-${clipId})`}>
                             <g clipPath={`url(#sweep-${clipId})`}>
-                                {/* Primary curve — dotted in mono when it's the CPA series */}
-                                <path d={linePath('p')} fill="none" stroke={c.primary} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={isMono && primaryIsCPA ? '2 5' : undefined} />
-
-                                {/* Secondary curve (CPA) — kept quiet so E2 stays the focus; dotted in mono so the curves stay distinguishable */}
-                                {hasSecondary && (
-                                    <path d={linePath('s')} fill="none" stroke={c.second} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={isMono ? '2 5' : undefined} />
-                                )}
+                                {/* What has happened: solid */}
+                                <g clipPath={`url(#past-${clipId})`}>
+                                    <path d={pPath} fill="none" stroke={c.primary} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"
+                                          strokeDasharray={isMono && primaryIsCPA ? '2 3' : undefined} />
+                                    {hasSecondary && (
+                                        <path d={sPath} fill="none" stroke={c.second} strokeWidth={isMono ? 1.5 : 2} strokeLinejoin="round" strokeLinecap="round"
+                                              strokeDasharray={isMono ? '2 3' : undefined} />
+                                    )}
+                                </g>
+                                {/* Where it is heading: dashed, over the likely range. From the
+                                    projection when there is one (the schedule holds), else the
+                                    logged doses wearing off. */}
+                                <g clipPath={`url(#future-${clipId})`}>
+                                    {likely && <path d={likely} fill={c.ink} fillOpacity={0.07} stroke="none" />}
+                                    <path d={pPath} fill="none" stroke={c.primary} strokeWidth={2} strokeLinejoin="round"
+                                          strokeDasharray={isMono && primaryIsCPA ? '2 3' : '6 4'} />
+                                    {hasSecondary && (
+                                        <path d={sPath} fill="none" stroke={c.second} strokeWidth={isMono ? 1.5 : 2} strokeLinejoin="round"
+                                              strokeDasharray={isMono ? '2 3' : '6 4'} />
+                                    )}
+                                </g>
                             </g>
 
-                            {/* "Now" line + dot */}
-                            {now >= t0 && now <= t1 && (
-                                <line className="chart-appear" style={{ animationDelay: sweepDelay(X(now)) }} x1={X(now)} y1={mT} x2={X(now)} y2={mT + plotH} stroke={c.primary} strokeWidth={1} strokeDasharray="3 4" opacity={0.5} />
-                            )}
-                            {nowValS != null && now >= t0 && now <= t1 && (
-                                <circle className="chart-mark" style={{ animationDelay: sweepDelay(X(now)) }} cx={X(now)} cy={YS(nowValS)} r={4} fill={c.second} stroke={c.dot} strokeWidth={2} />
-                            )}
-                            {nowVal != null && now >= t0 && now <= t1 && (
-                                <circle className="chart-mark" style={{ animationDelay: sweepDelay(X(now)) }} cx={X(now)} cy={YP(nowVal)} r={4} fill={c.primary} stroke={c.dot} strokeWidth={2} />
-                            )}
-
-                            {/* Dose markers (clickable) */}
+                            {/* Dose markers on the baseline: taken filled, planned outlined.
+                                Logged doses open for editing; projected ones have nothing to edit. */}
                             {markers.map((m, i) => {
                                 const cx = X(m.t);
-                                const cy = m.axis === 'p' ? YP(m.v) : YS(m.v);
                                 const col = m.axis === 's' ? c.second : c.primary;
+                                const { planned } = m;
+                                const h = 7 * ui, w = 4.5 * ui;
+                                const projected = m.event.id.startsWith('planned-');
+                                const clickable = !!onPointClick && !projected;
                                 return (
                                     <g
-                                        key={`m-${i}`}
-                                        className={`chart-mark${onPointClick ? ' cursor-pointer' : ''}`}
+                                        key={`m-${m.event.id}-${i}`}
+                                        className={`chart-mark${clickable ? ' cursor-pointer' : ''}`}
                                         style={{ animationDelay: sweepDelay(cx) }}
-                                        onClick={() => onPointClick?.(m.event)}
+                                        onClick={clickable ? () => onPointClick?.(m.event) : undefined}
                                     >
-                                        <circle cx={cx} cy={cy} r={9} fill="transparent" />
-                                        <circle cx={cx} cy={cy} r={3} fill={c.dot} stroke={col} strokeWidth={1.5} />
-                                    </g>
-                                );
-                            })}
-
-                            {/* Lab results (measured) — hollow diamonds */}
-                            {labPoints.map((l, i) => {
-                                const cx = X(l.t);
-                                const cy = YP(l.v);
-                                return (
-                                    <g key={`l-${i}`} className="chart-mark" style={{ animationDelay: sweepDelay(cx) }}>
-                                        <rect
-                                            x={cx - 4} y={cy - 4} width={8} height={8}
-                                            transform={`rotate(45 ${cx} ${cy})`}
-                                            fill={c.dot} stroke={c.lab} strokeWidth={1.75}
+                                        <rect x={cx - 9 * ui} y={bottom - 20 * ui} width={18 * ui} height={22 * ui} fill="transparent" />
+                                        <path
+                                            d={`M${cx.toFixed(1)} ${(bottom - h).toFixed(1)}L${(cx + w).toFixed(1)} ${bottom.toFixed(1)}L${(cx - w).toFixed(1)} ${bottom.toFixed(1)}Z`}
+                                            fill={planned ? c.paper : col}
+                                            stroke={planned ? col : 'none'}
+                                            strokeWidth={1.5}
+                                            strokeLinejoin="round"
                                         />
                                     </g>
                                 );
                             })}
 
-                            {/* Hover crosshair + dot */}
-                            {showHover && (
-                                <>
-                                    <line x1={X(hoverPt!.t)} y1={mT} x2={X(hoverPt!.t)} y2={mT + plotH} stroke={c.faint} strokeWidth={1} />
-                                    <circle cx={X(hoverPt!.t)} cy={YP(hoverPt!.p)} r={4} fill={c.primary} stroke={c.dot} strokeWidth={2} />
+                            {/* Blood tests: ink diamonds with the measured value */}
+                            {labPoints.map((l, i) => {
+                                const cx = X(l.t);
+                                const cy = YP(l.v);
+                                const d = 4.5 * ui;
+                                const labelY = cy - 10 * ui;
+                                const showLabel = cx - lastLabelX >= 36 * ui && labelY - axisFont >= mT - 4;
+                                if (showLabel) lastLabelX = cx;
+                                const selected = readLab?.id === l.id;
+                                return (
+                                    <g key={`l-${i}`} className="chart-mark" style={{ animationDelay: sweepDelay(cx) }}>
+                                        {selected && (
+                                            <rect x={cx - 8 * ui} y={cy - 8 * ui} width={16 * ui} height={16 * ui}
+                                                  transform={`rotate(45 ${cx} ${cy})`} fill="none" stroke={c.primary} strokeWidth={2} />
+                                        )}
+                                        <rect x={cx - d} y={cy - d} width={2 * d} height={2 * d}
+                                              transform={`rotate(45 ${cx} ${cy})`} fill={c.ink} />
+                                        {showLabel && (
+                                            <text x={cx} y={labelY} textAnchor="middle" fontSize={axisFont} fontWeight={600} fill={c.ink}>
+                                                {fmtReading(l.v, primaryIsCPA)}
+                                            </text>
+                                        )}
+                                    </g>
+                                );
+                            })}
+
+                            {/* Read-off cursor */}
+                            {showHover && hoverX != null && (
+                                <g pointerEvents="none">
+                                    <line x1={hoverX} y1={mT} x2={hoverX} y2={bottom} stroke={c.ink} strokeWidth={1} />
                                     {hasSecondary && hoverPt!.s != null && (
-                                        <circle cx={X(hoverPt!.t)} cy={YS(hoverPt!.s)} r={3} fill={c.second} stroke={c.dot} strokeWidth={1.5} />
+                                        <circle cx={hoverX} cy={YS(hoverPt!.s)} r={4} fill={c.surface} stroke={c.second} strokeWidth={2} />
                                     )}
-                                </>
+                                    {!readLab && (
+                                        <circle cx={hoverX} cy={YP(hoverPt!.p)} r={5} fill={c.surface} stroke={c.ink} strokeWidth={2} />
+                                    )}
+                                </g>
                             )}
                         </g>
+
+                        {/* Direct labels */}
+                        {primaryTarget && (() => {
+                            const yHi = Math.max(mT, Math.min(bottom, YP(primaryTarget.high)));
+                            const yLo = Math.max(mT, Math.min(bottom, YP(primaryTarget.low)));
+                            if (yLo - yHi < 0.5) return null;
+                            const y = yLo - yHi >= axisFont + 8 * ui ? yLo - 6 * ui : yHi - 6 * ui;
+                            return (
+                                <text className="chart-appear" style={{ animationDelay: '120ms' }} pointerEvents="none"
+                                      x={mL + 4 * ui} y={y} fontSize={axisFont} fontWeight={600} fill={c.target}>
+                                    {fillIn(t('chart.target_range'), { low: primaryTarget.low, high: primaryTarget.high })}
+                                </text>
+                            );
+                        })()}
+                        {forecastLines.length > 0 && (
+                            <text className="chart-appear" style={{ animationDelay: sweepDelay(forecastX) }} pointerEvents="none"
+                                  x={forecastX} y={bottom - 12 * ui - (forecastLines.length - 1) * 16 * ui}
+                                  fontSize={axisFont} fontWeight={500} fill={c.muted}
+                                  stroke={c.paper} strokeWidth={4} strokeLinejoin="round" paintOrder="stroke">
+                                {forecastLines.map((line, i) => (
+                                    <tspan key={i} x={forecastX} dy={i === 0 ? 0 : 16 * ui}>{line}</tspan>
+                                ))}
+                            </text>
+                        )}
+
+                        {/* Now: a 2px ink rule with its tab above the plot */}
+                        {nowIn && (
+                            <g className="chart-appear" style={{ animationDelay: sweepDelay(nowX) }} pointerEvents="none">
+                                <line x1={nowX} y1={tabY + tabH} x2={nowX} y2={bottom} stroke={c.ink} strokeWidth={2} />
+                                <rect x={tabX} y={tabY} width={tabW} height={tabH} rx={6 * ui} fill={c.ink} />
+                                <text x={tabX + tabW / 2} y={tabY + 15.5 * ui} textAnchor="middle" fontSize={axisFont} fontWeight={600} fill={c.paper}>
+                                    {nowText}
+                                </text>
+                            </g>
+                        )}
                     </svg>
                 )}
+            </div>
 
-                {/* Hover tooltip */}
-                {showHover && (
-                    <div
-                        className="absolute z-20 pointer-events-none px-2.5 py-1.5 rounded-md bg-[var(--color-m3-surface-bright)] dark:bg-[var(--color-m3-dark-surface-container)] border border-[var(--color-m3-outline-variant)] dark:border-[var(--color-m3-dark-outline-variant)]"
-                        style={{
-                            left: Math.min(Math.max(X(hoverPt!.t), mL + 4), mL + plotW - 4),
-                            top: Math.max(YP(hoverPt!.p) - 12, 8),
-                            transform: `translate(${X(hoverPt!.t) > mL + plotW * 0.6 ? '-100%' : '0'}, -100%)`,
-                        }}
-                    >
-                        <div className="text-[0.625rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)] mb-0.5 whitespace-nowrap">
-                            {formatDate(new Date(hoverPt!.t), lang, timeZone)} · {formatTime(new Date(hoverPt!.t), timeZone)}
-                        </div>
-                        <div className="flex items-baseline gap-1 whitespace-nowrap">
-                            <span className="text-sm font-medium tabular-nums" style={{ color: c.primary }}>
-                                {hoverPt!.p.toFixed(primaryMeta.decimals)}
-                            </span>
-                            <span className="text-[0.625rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">{primaryMeta.unit}</span>
-                        </div>
-                        {hasSecondary && hoverPt!.s != null && (
-                            <div className="flex items-baseline gap-1 whitespace-nowrap">
-                                <span className="text-xs font-medium tabular-nums" style={{ color: c.second }}>
-                                    {hoverPt!.s.toFixed(2)}
-                                </span>
-                                <span className="text-[0.625rem] text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]">ng/ml</span>
-                            </div>
-                        )}
-                    </div>
+            {/* Readout: what the chart says at the read-off, or now */}
+            <div className="mt-2 rounded-xl bg-[var(--c-plate)] px-4 py-3" aria-live="polite">
+                <p className="m-0 text-sm font-semibold text-[var(--c-ink)] tabular-nums">{whenText(readT)}</p>
+                {(readMain || readSecond) && (
+                    <p className="m-0 text-sm text-[var(--c-ink)] tabular-nums">
+                        {joinSentences(lang, [readMain, readSecond].filter(Boolean) as string[])}
+                    </p>
                 )}
             </div>
+            {showCalibrationNote && calNote && <p className="m-0 mt-2 text-sm text-[var(--c-muted)]">{calNote}</p>}
         </div>
     );
 };
