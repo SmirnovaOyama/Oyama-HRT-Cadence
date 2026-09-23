@@ -58,18 +58,13 @@ This project is built with **React** and **TypeScript**, bundled with [Vite](htt
 2. **Install dependencies 安装依赖**
 
    ```bash
-   # using npm
-   npm install
-
-   # or using pnpm
-   pnpm install
+   bun install
    ```
 
 3. **Start the dev server 运行项目**
 
    ```bash
-   npm run dev
-   # or: pnpm dev
+   bun run dev
    ```
 
    Then open <http://localhost:3000> in your browser.
@@ -114,8 +109,8 @@ build that includes migration `0000`:
 在 Cloudflare 上部署时，第一次部署包含 `0000` 迁移的版本之前，先执行一次这两步：
 
 ```bash
-npm run wrangler:migrate:reconcile
-npm run wrangler:migrate:remote
+bun run wrangler:migrate:reconcile
+bun run wrangler:migrate:remote
 ```
 
 Web and Docker builds use same-origin `/api` requests by default. Desktop and
