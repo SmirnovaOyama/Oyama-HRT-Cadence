@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>You and settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#FBF8F3;color:#1F1B16;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-size:17px;line-height:26px;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font-family:inherit;font-size:inherit;line-height:inherit;color:inherit}
+a{color:#A34A28}a:hover{color:#8F3F20}
+:focus-visible{outline:3px solid #1F1B16;outline-offset:2px}
+</style>
+</helmet>
+<div style="position:relative;width:390px;height:2863px;box-sizing:border-box;overflow:hidden;background:#FBF8F3;color:#1F1B16;">
+
+  <main style="position:absolute;top:0;left:16px;right:16px;bottom:104px;display:flex;flex-direction:column;justify-content:space-between;gap:32px;">
+
+    <!-- 1 to 3: header, profile, sync -->
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <header style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:12px 0;box-sizing:border-box;">
+        <h1 style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:700;font-size:32px;line-height:38px;color:#1F1B16;">You</h1>
+      </header>
+
+      <button type="button" style="display:flex;align-items:center;gap:12px;width:100%;min-height:72px;padding:0;border:0;background:transparent;color:#1F1B16;text-align:left;cursor:pointer;box-sizing:border-box;">
+        <span aria-hidden="true" style="display:grid;place-items:center;width:56px;height:56px;flex:none;border-radius:28px;background:#F6DFD2;color:#6E2A12;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:24px;line-height:24px;">M</span>
+        <span style="flex:1;display:flex;flex-direction:column;min-width:0;">
+          <span style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">mika_e2</span>
+          <span style="font-size:15px;line-height:22px;color:#5F574C;">Two-step sign-in on, 3&nbsp;devices&nbsp;signed&nbsp;in</span>
+        </span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+      </button>
+
+      <section aria-label="Backup and sync" style="background:#F3EEE6;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#2F6B45;"><path d="M7 19A4 4 0 0 1 7 11A5.5 5.5 0 1 1 17.77 12.09A3.5 3.5 0 0 1 17 19Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M7 19A4 4 0 0 1 7 11A5.5 5.5 0 1 1 17.77 12.09A3.5 3.5 0 0 1 17 19Z"/><path stroke-linejoin="miter" stroke-miterlimit="10" d="M8.5 13L11 15.5L15.5 10"/></svg>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+            <p style="margin:0;font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Backed up 4 minutes ago.</p>
+            <p style="margin:0;font-size:15px;line-height:22px;color:#5F574C;">Encrypted, so only your password can&nbsp;open&nbsp;it.</p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:4px 0 0 34px;min-height:48px;box-sizing:border-box;">
+          <span id="sync-label" style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Keep this device and the&nbsp;cloud&nbsp;in&nbsp;step</span>
+          <button type="button" role="switch" aria-checked="true" aria-labelledby="sync-label" style="position:relative;width:52px;height:44px;flex:none;padding:0;border:0;background:transparent;cursor:pointer;box-sizing:border-box;">
+            <span style="position:absolute;left:0;top:6px;width:52px;height:32px;border-radius:16px;box-sizing:border-box;background:#A34A28;border:1px solid #A34A28;">
+              <span style="position:absolute;top:3px;left:23px;width:24px;height:24px;border-radius:12px;box-sizing:border-box;background:#FFFFFF;border:1px solid #A34A28;"></span>
+            </span>
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- 4: your routine -->
+    <section aria-labelledby="routine-title" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;">
+        <h2 id="routine-title" style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:22px;line-height:28px;color:#1F1B16;">Your routine</h2>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;overflow:hidden;padding:0;display:flex;flex-direction:column;">
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="display:flex;align-items:flex-start;gap:8px;">
+              <span style="flex:1;min-width:0;font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">What you’re tracking</span>
+              <span style="display:flex;align-items:center;gap:4px;flex:none;height:24px;font-size:17px;line-height:24px;color:#5F574C;white-space:nowrap;">Feminizing HRT<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+            </span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">Each kind keeps its own&nbsp;records</span>
+          </span>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:16px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="display:flex;align-items:flex-start;gap:8px;">
+              <span style="flex:1;min-width:0;font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Body weight</span>
+              <span style="display:flex;align-items:center;gap:4px;flex:none;height:24px;font-size:17px;line-height:24px;color:#5F574C;white-space:nowrap;">62.5&nbsp;kg<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+            </span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">Heavier means lower estimates for the same&nbsp;dose</span>
+          </span>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:16px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="display:flex;align-items:flex-start;gap:8px;">
+              <span style="flex:1;min-width:0;font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Your target range</span>
+              <span style="display:flex;align-items:center;gap:4px;flex:none;height:24px;font-size:17px;line-height:24px;color:#5F574C;white-space:nowrap;">100–200&nbsp;pg/mL<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+            </span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">Used for the words and the band on your chart</span>
+          </span>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:16px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="display:flex;align-items:flex-start;gap:8px;">
+              <span style="flex:1;min-width:0;font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Reminders</span>
+              <span style="display:flex;align-items:center;gap:4px;flex:none;height:24px;font-size:17px;line-height:24px;color:#5F574C;white-space:nowrap;">4 on<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+            </span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">Next: cyproterone tonight at&nbsp;21:00</span>
+          </span>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:16px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="display:flex;align-items:flex-start;gap:8px;">
+              <span style="flex:1;min-width:0;font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Supplies</span>
+              <span style="display:flex;align-items:center;gap:4px;flex:none;height:24px;font-size:17px;line-height:24px;color:#5F574C;white-space:nowrap;">3 tracked<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+            </span>
+            <span style="display:flex;align-items:flex-start;gap:4px;font-size:15px;line-height:22px;color:#8A5A00;">
+              <span style="display:grid;place-items:center;width:16px;height:22px;flex:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M14.19 5.46L20.45 16.79A2.5 2.5 0 0 1 18.26 20.5L5.74 20.5A2.5 2.5 0 0 1 3.55 16.79L9.81 5.46A2.5 2.5 0 0 1 14.19 5.46Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M14.19 5.46L20.45 16.79A2.5 2.5 0 0 1 18.26 20.5L5.74 20.5A2.5 2.5 0 0 1 3.55 16.79L9.81 5.46A2.5 2.5 0 0 1 14.19 5.46Z"/><path d="M12 9V15"/></svg></span>
+              <span style="flex:1;min-width:0;">Cyproterone needs reordering</span>
+            </span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 5: connections -->
+    <section aria-labelledby="connections-title" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;">
+        <h2 id="connections-title" style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:22px;line-height:28px;color:#1F1B16;">Connections</h2>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;overflow:hidden;padding:0;display:flex;flex-direction:column;">
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:#F3EEE6;color:#5F574C;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M13.5 6.5V17.5H11A5.5 5.5 0 0 1 11 6.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M13.5 6.5V17.5H11A5.5 5.5 0 0 1 11 6.5ZM13.5 9.5H17M13.5 14.5H17M20.5 5V19M5.5 12H5A1.5 1.5 0 0 0 3.5 13.5V20.5"/></svg>
+          </span>
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Assistant</span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">Claude Desktop, until Dec 21</span>
+          </span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:68px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:#F3EEE6;color:#5F574C;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><circle cx="6.5" cy="12" r="3.5" fill="currentColor" fill-opacity="0.18" stroke="none"/><circle cx="6.5" cy="12" r="3.5"/><circle cx="17.5" cy="5.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="M10 12A7.5 4 0 0 0 17.5 8M10 12A7.5 4 0 0 1 17.5 16"/></svg>
+          </span>
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Share with someone</span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">1 active link</span>
+          </span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <!-- 6: display -->
+    <section aria-labelledby="display-title" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;">
+        <h2 id="display-title" style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:22px;line-height:28px;color:#1F1B16;">Display</h2>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:24px;">
+        <div style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;overflow:hidden;padding:0;display:flex;flex-direction:column;">
+          <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+            <span style="flex:1;font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Language</span>
+            <span style="display:flex;align-items:center;gap:4px;flex:none;height:24px;font-size:17px;line-height:24px;color:#5F574C;white-space:nowrap;">English<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+          </a>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <p id="appearance-label" style="margin:0;padding:0 16px;font-weight:600;font-size:15px;line-height:20px;color:#5F574C;">Appearance</p>
+          <div role="radiogroup" aria-labelledby="appearance-label" style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;overflow:hidden;padding:0;display:flex;flex-direction:column;">
+            <button type="button" role="radio" aria-checked="false" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:12px 16px;box-sizing:border-box;border:0;background:transparent;color:#1F1B16;text-align:left;cursor:pointer;">
+              <span style="flex:1;min-width:0;font-weight:400;font-size:17px;line-height:24px;color:#1F1B16;">Light</span>
+            </button>
+            <div aria-hidden="true" style="height:1px;margin-left:16px;background:#E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:12px 16px;box-sizing:border-box;border:0;background:transparent;color:#1F1B16;text-align:left;cursor:pointer;">
+              <span style="flex:1;min-width:0;font-weight:400;font-size:17px;line-height:24px;color:#1F1B16;">Dark</span>
+            </button>
+            <div aria-hidden="true" style="height:1px;margin-left:16px;background:#E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="true" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:12px 16px;box-sizing:border-box;border:0;background:transparent;color:#1F1B16;text-align:left;cursor:pointer;">
+              <span style="flex:1;min-width:0;font-weight:400;font-size:17px;line-height:24px;color:#1F1B16;">System</span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#A34A28;"><path stroke-linejoin="miter" stroke-miterlimit="10" d="M4.5 12.5L9.5 17.5L19.5 6"/></svg>
+            </button>
+            <div aria-hidden="true" style="height:1px;margin-left:16px;background:#E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:12px 16px;box-sizing:border-box;border:0;background:transparent;color:#1F1B16;text-align:left;cursor:pointer;">
+              <span style="flex:1;min-width:0;font-weight:400;font-size:17px;line-height:24px;color:#1F1B16;">Black and white</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:68px;padding:12px 16px;box-sizing:border-box;background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;">
+          <div style="display:flex;flex-direction:column;min-width:0;">
+            <span id="cats-label" style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Pixel cats</span>
+            <span id="cats-sub" style="font-size:15px;line-height:22px;color:#5F574C;">A cat sits in your dial. Its pose follows the time of day.</span>
+          </div>
+          <button type="button" role="switch" aria-checked="true" aria-labelledby="cats-label" aria-describedby="cats-sub" style="position:relative;width:52px;height:44px;flex:none;padding:0;border:0;background:transparent;cursor:pointer;box-sizing:border-box;">
+            <span style="position:absolute;left:0;top:6px;width:52px;height:32px;border-radius:16px;box-sizing:border-box;background:#A34A28;border:1px solid #A34A28;">
+              <span style="position:absolute;top:3px;left:23px;width:24px;height:24px;border-radius:12px;box-sizing:border-box;background:#FFFFFF;border:1px solid #A34A28;"></span>
+            </span>
+          </button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <p id="cat-colours-label" style="margin:0;padding:0 16px;font-weight:600;font-size:15px;line-height:20px;color:#5F574C;">Cat colours</p>
+          <div role="radiogroup" aria-labelledby="cat-colours-label" style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;overflow:hidden;padding:0;display:flex;flex-direction:column;">
+            <button type="button" role="radio" aria-checked="true" style="display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:12px 16px;box-sizing:border-box;border:0;background:transparent;color:#1F1B16;text-align:left;cursor:pointer;">
+              <span aria-hidden="true" style="display:grid;place-items:center;width:40px;height:32px;flex:none;">
+                <span style="display:flex;flex-direction:column;width:30px;height:30px;border-radius:8px;border:1px solid #E2DACB;overflow:hidden;">
+                  <span style="display:block;width:30px;height:6px;flex:none;background:#9FD4EE;"></span>
+                  <span style="display:block;width:30px;height:6px;flex:none;background:#F6BFCE;"></span>
+                  <span style="display:block;width:30px;height:6px;flex:none;background:#FFFFFF;"></span>
+                  <span style="display:block;width:30px;height:6px;flex:none;background:#F6BFCE;"></span>
+                  <span style="display:block;width:30px;height:6px;flex:none;background:#9FD4EE;"></span>
+                </span>
+              </span>
+              <span style="flex:1;min-width:0;font-weight:400;font-size:17px;line-height:24px;color:#1F1B16;">Flag</span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#A34A28;"><path stroke-linejoin="miter" stroke-miterlimit="10" d="M4.5 12.5L9.5 17.5L19.5 6"/></svg>
+            </button>
+            <div aria-hidden="true" style="height:1px;margin-left:68px;background:#E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:12px 16px;box-sizing:border-box;border:0;background:transparent;color:#1F1B16;text-align:left;cursor:pointer;">
+              <span aria-hidden="true" style="display:grid;place-items:center;width:40px;height:32px;flex:none;">
+                <span style="display:block;width:30px;height:30px;border-radius:8px;border:1px solid #E2DACB;background:#9FD4EE;"></span>
+              </span>
+              <span style="flex:1;min-width:0;font-weight:400;font-size:17px;line-height:24px;color:#1F1B16;">Blue</span>
+            </button>
+            <div aria-hidden="true" style="height:1px;margin-left:68px;background:#E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:12px 16px;box-sizing:border-box;border:0;background:transparent;color:#1F1B16;text-align:left;cursor:pointer;">
+              <span aria-hidden="true" style="display:grid;place-items:center;width:40px;height:32px;flex:none;">
+                <span style="display:block;width:30px;height:30px;border-radius:8px;border:1px solid #E2DACB;background:#F6BFCE;"></span>
+              </span>
+              <span style="flex:1;min-width:0;font-weight:400;font-size:17px;line-height:24px;color:#1F1B16;">Pink</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7: your data -->
+    <section aria-labelledby="data-title" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;">
+        <h2 id="data-title" style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:22px;line-height:28px;color:#1F1B16;">Your data</h2>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;overflow:hidden;padding:0;display:flex;flex-direction:column;">
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:#F3EEE6;color:#5F574C;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M12 12.5V7.5A5 5 0 0 0 7.76 15.15Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M14.5 5A7.91 7.91 0 1 1 9.5 5"/><path d="M16 7.5L14.5 5L17 3.5"/><path d="M12 12.5V7.5M12 12.5L8 15"/></svg>
+          </span>
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Restore points</span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">About an hour ago, yesterday, last&nbsp;week, last&nbsp;month</span>
+          </span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:68px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:#F3EEE6;color:#5F574C;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M5 8.5V5.5A2.5 2.5 0 0 1 7.5 3H16.5A2.5 2.5 0 0 1 19 5.5V8.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M5 8.5H19M8.5 12.5H15.5M8.5 16.5H13"/></svg>
+          </span>
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Letter for your clinician</span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">A printable summary in any of 7&nbsp;languages</span>
+          </span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:68px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:#F3EEE6;color:#5F574C;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><rect x="3.5" y="16" width="17" height="4.5" rx="1.5" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="3.5" y="16" width="17" height="4.5" rx="1.5"/><path d="M12 3.5V12.5M8.5 9L12 12.5L15.5 9"/></svg>
+          </span>
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Save a backup file</span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">Encrypted by default. Spreadsheet&nbsp;(CSV) is inside too</span>
+          </span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:68px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:12px;background:#F3EEE6;color:#5F574C;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><rect x="3.5" y="16" width="17" height="4.5" rx="1.5" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="3.5" y="16" width="17" height="4.5" rx="1.5"/><path d="M12 12.5V3.5M8.5 7L12 3.5L15.5 7"/></svg>
+          </span>
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Bring in a backup file</span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">Shows what’s inside before anything&nbsp;changes</span>
+          </span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <!-- 8 and 9: advanced, about -->
+    <section aria-labelledby="advanced-title" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;">
+        <h2 id="advanced-title" style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:22px;line-height:28px;color:#1F1B16;">Advanced</h2>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;overflow:hidden;padding:0;display:flex;flex-direction:column;">
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">Model details</span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">Standard values. Blood tests usually personalise better.</span>
+          </span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+        </a>
+        <div aria-hidden="true" style="height:1px;margin-left:16px;background:#E2DACB;"></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:68px;padding:12px 16px;box-sizing:border-box;text-decoration:none;color:#1F1B16;text-align:left;">
+          <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;">
+            <span style="display:flex;align-items:flex-start;gap:8px;">
+              <span style="flex:1;min-width:0;font-weight:600;font-size:17px;line-height:24px;color:#1F1B16;">About Oyama Tracker</span>
+              <span style="display:flex;align-items:center;gap:4px;flex:none;height:24px;font-size:17px;line-height:24px;color:#5F574C;white-space:nowrap;">1.4.0<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+            </span>
+            <span style="font-size:15px;line-height:22px;color:#5F574C;">How the estimate works, transparency, disclaimer, source&nbsp;code</span>
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <!-- 10: danger area (16px padding + 32px gap = 48 above the hairline) -->
+    <div style="padding-top:16px;display:flex;flex-direction:column;">
+      <div style="border-top:1px solid #E2DACB;padding-top:16px;display:flex;flex-direction:column;gap:8px;">
+        <button type="button" style="display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;height:44px;padding:0 20px;border:0;border-radius:12px;background:#EFE8DD;color:#1F1B16;font-weight:600;font-size:17px;line-height:22px;white-space:nowrap;cursor:pointer;box-sizing:border-box;">Sign out</button>
+        <div style="display:flex;flex-direction:column;">
+          <button type="button" aria-describedby="clear-note" style="display:inline-flex;align-items:center;align-self:flex-start;height:44px;padding:0;border:0;background:transparent;color:#A3261B;font-weight:600;font-size:17px;line-height:22px;cursor:pointer;box-sizing:border-box;">Clear all records on this device</button>
+          <p id="clear-note" style="margin:0;padding:0;font-size:15px;line-height:22px;color:#5F574C;">Your cloud backup is kept.</p>
+        </div>
+        <button type="button" style="display:inline-flex;align-items:center;align-self:flex-start;height:44px;padding:0;border:0;background:transparent;color:#A3261B;font-weight:600;font-size:17px;line-height:22px;cursor:pointer;box-sizing:border-box;">Delete account</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 11: bottom bar, You active -->
+  <nav aria-label="Main" style="position:absolute;left:0;right:0;bottom:0;height:76px;box-sizing:border-box;padding:6px 8px 10px;background:#FFFFFF;border-top:1px solid #E2DACB;display:grid;grid-template-columns:1fr 1fr 76px 1fr 1fr;align-items:start;">
+    <a href="#" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:58px;text-decoration:none;color:#5F574C;">
+      <span style="width:56px;height:36px;border-radius:18px;display:grid;place-items:center;background:transparent;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M12 12V5.5A6.5 6.5 0 0 1 17 16Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M13.25 3.09A9 9 0 0 1 18.19 5.46M19.75 7.42A9 9 0 0 1 20.97 12.76M20.41 15.2A9 9 0 0 1 17 19.49M14.74 20.57A9 9 0 0 1 9.26 20.57M7 19.49A9 9 0 0 1 3.59 15.2M3.03 12.76A9 9 0 0 1 4.25 7.42M5.81 5.46A9 9 0 0 1 10.75 3.09"/><path d="M12 12L17 16"/></svg>
+      </span>
+      <span style="font-weight:600;font-size:13px;line-height:18px;">Today</span>
+    </a>
+    <a href="#" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:58px;text-decoration:none;color:#5F574C;">
+      <span style="width:56px;height:36px;border-radius:18px;display:grid;place-items:center;background:transparent;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M3 20V17C4.5 17 5 9 7 9C9 9 10 14.5 12 14.5V20Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M3 17C4.5 17 5 9 7 9C9 9 10 14.5 12 14.5C14 14.5 14 7 16 7C18 7 19 12.5 21 12.5"/><path d="M3 20H21M12 5V20"/></svg>
+      </span>
+      <span style="font-weight:600;font-size:13px;line-height:18px;">Timeline</span>
+    </a>
+    <button type="button" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:58px;padding:0;border:0;background:transparent;color:#1F1B16;cursor:pointer;box-sizing:border-box;">
+      <span style="width:56px;height:36px;border-radius:18px;display:grid;place-items:center;background:#A34A28;color:#FFFFFF;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M12 5.5V18.5M5.5 12H18.5"/></svg>
+      </span>
+      <span style="font-weight:600;font-size:13px;line-height:18px;color:#1F1B16;">Log</span>
+    </button>
+    <a href="#" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:58px;text-decoration:none;color:#5F574C;">
+      <span style="width:56px;height:36px;border-radius:18px;display:grid;place-items:center;background:transparent;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M9.5 13.5V18A2.5 2.5 0 0 0 14.5 18V13.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8" y="3" width="8" height="3.5" rx="1.5"/><path d="M9.5 6.5V18A2.5 2.5 0 0 0 14.5 18V6.5M9.5 13.5H14.5"/></svg>
+      </span>
+      <span style="font-weight:600;font-size:13px;line-height:18px;">Tests</span>
+    </a>
+    <a href="#" aria-current="page" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:58px;text-decoration:none;color:#6E2A12;">
+      <span style="width:56px;height:36px;border-radius:18px;display:grid;place-items:center;background:#F6DFD2;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;"><path d="M4.5 20.5A7.5 7.5 0 0 1 19.5 20.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><circle cx="12" cy="7.5" r="3.5"/><path d="M4.5 20.5A7.5 7.5 0 0 1 19.5 20.5Z"/></svg>
+      </span>
+      <span style="font-weight:600;font-size:13px;line-height:18px;">You</span>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":2863}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

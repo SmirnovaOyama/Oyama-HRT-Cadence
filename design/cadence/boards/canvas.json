@@ -1,0 +1,143 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-09-23T05:24:51Z"
+ },
+ "title": "HRT Tracker UI polish",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 390,
+   "h": 2171,
+   "title": "Today"
+  },
+  "LogDose.dc.html": {
+   "x": 470,
+   "y": 0,
+   "w": 390,
+   "h": 2098,
+   "title": "Log a dose"
+  },
+  "Timeline.dc.html": {
+   "x": 940,
+   "y": 0,
+   "w": 390,
+   "h": 2242,
+   "title": "Timeline"
+  },
+  "BloodTests.dc.html": {
+   "x": 1410,
+   "y": 0,
+   "w": 390,
+   "h": 3186,
+   "title": "Blood tests"
+  },
+  "You.dc.html": {
+   "x": 1880,
+   "y": 0,
+   "w": 390,
+   "h": 2863,
+   "title": "You and settings"
+  },
+  "Reminders.dc.html": {
+   "x": 0,
+   "y": 3606,
+   "w": 390,
+   "h": 2686,
+   "title": "Reminders"
+  },
+  "Supplies.dc.html": {
+   "x": 470,
+   "y": 3606,
+   "w": 390,
+   "h": 1512,
+   "title": "Supplies"
+  },
+  "Assistant.dc.html": {
+   "x": 940,
+   "y": 3606,
+   "w": 390,
+   "h": 2508,
+   "title": "AI assistant (MCP)"
+  },
+  "TodayDark.dc.html": {
+   "x": 0,
+   "y": 6712,
+   "w": 390,
+   "h": 858,
+   "title": "Today, dark, dose due"
+  },
+  "DesktopToday.dc.html": {
+   "x": 470,
+   "y": 6712,
+   "w": 1440,
+   "h": 1224,
+   "title": "Today, desktop"
+  },
+  "DesktopAssistant.dc.html": {
+   "x": 1990,
+   "y": 6712,
+   "w": 1440,
+   "h": 1782,
+   "title": "AI assistant setup, desktop"
+  },
+  "Icons.dc.html": {
+   "x": 0,
+   "y": 8914,
+   "w": 1440,
+   "h": 1678,
+   "title": "Cadence icons"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "LogDose.dc.html",
+  "Timeline.dc.html",
+  "BloodTests.dc.html",
+  "You.dc.html",
+  "Reminders.dc.html",
+  "Supplies.dc.html",
+  "Assistant.dc.html",
+  "TodayDark.dc.html",
+  "DesktopToday.dc.html",
+  "DesktopAssistant.dc.html",
+  "Icons.dc.html"
+ ],
+ "notes": {
+  "row-core": {
+   "x": 0,
+   "y": -280,
+   "text": "Core screens",
+   "kind": "title1",
+   "maxW": 2270
+  },
+  "row-new": {
+   "x": 0,
+   "y": 3326,
+   "text": "New features: reminders, supplies, AI assistant (MCP)",
+   "kind": "title1",
+   "maxW": 1600
+  },
+  "row-dd": {
+   "x": 0,
+   "y": 6432,
+   "text": "Dark theme and desktop",
+   "kind": "title1",
+   "maxW": 3430
+  },
+  "row-icons": {
+   "x": 0,
+   "y": 8634,
+   "text": "Icons drawn for this app",
+   "kind": "title1",
+   "maxW": 1600
+  }
+ },
+ "designSystems": []
+}

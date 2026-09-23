@@ -1,0 +1,339 @@
+import { ApiError, apiFetch, apiErrorFrom } from './apiClient';
+
+export interface User {
+    id: string;
+    username: string;
+    isAdmin?: boolean;
+}
+
+export interface AuthResponse {
+    token: string;
+    user: User;
+    needsSetup2FA?: boolean;
+}
+
+export interface Session {
+    id: string;
+    user_id: string;
+    created_at: number;
+    last_used_at: number;
+    device_info: string;
+    ip: string;
+    is_current: boolean;
+}
+
+export interface TwoFAStatus {
+    enabled: boolean;
+    totp?: boolean;
+    passkey?: boolean;
+}
+
+export interface TwoFASetup {
+    secret: string;
+    uri: string;
+}
+
+export interface Passkey {
+    id: string;
+    credential_id: string;
+    device_name: string | null;
+    created_at: number;
+}
+
+// Serialise an ArrayBuffer (or BufferSource) to base64url without padding
+function ab2b64url(buf: ArrayBuffer): string {
+    return btoa(String.fromCharCode(...new Uint8Array(buf)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+// Decode a base64url string to an ArrayBuffer
+function b64url2ab(s: string): ArrayBuffer {
+    const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = (4 - b64.length % 4) % 4;
+    const binary = atob(b64 + '='.repeat(pad));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+/**
+ * Read the `sid` claim out of a session token. Signing out has to name the
+ * session row it wants destroyed, and reading it from the token rather than
+ * from the login response means tokens minted before this shipped can be
+ * revoked too. Nothing here trusts the value — the worker still scopes the
+ * delete to the authenticated user.
+ */
+export function sessionIdFromToken(token: string | null): string | null {
+    if (!token) return null;
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return null;
+        const b64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const claims = JSON.parse(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)));
+        return typeof claims?.sid === 'string' ? claims.sid : null;
+    } catch {
+        return null;
+    }
+}
+
+export function serializeAttestationCredential(credential: PublicKeyCredential): object {
+    const r = credential.response as AuthenticatorAttestationResponse;
+    return {
+        id: credential.id,
+        rawId: ab2b64url(credential.rawId),
+        response: {
+            clientDataJSON: ab2b64url(r.clientDataJSON),
+            attestationObject: ab2b64url(r.attestationObject),
+        },
+        type: credential.type,
+    };
+}
+
+export function serializeAssertionCredential(credential: PublicKeyCredential): object {
+    const r = credential.response as AuthenticatorAssertionResponse;
+    return {
+        id: credential.id,
+        rawId: ab2b64url(credential.rawId),
+        response: {
+            clientDataJSON: ab2b64url(r.clientDataJSON),
+            authenticatorData: ab2b64url(r.authenticatorData),
+            signature: ab2b64url(r.signature),
+            userHandle: r.userHandle ? ab2b64url(r.userHandle) : null,
+        },
+        type: credential.type,
+    };
+}
+
+export { b64url2ab };
+
+export const authService = {
+    async login(username: string, password: string, totpCode?: string, backupCode?: string): Promise<AuthResponse> {
+        const body: { username: string; password: string; totp_code?: string; backup_code?: string } = { username, password };
+        if (totpCode) body.totp_code = totpCode;
+        if (backupCode) body.backup_code = backupCode;
+        const res = await apiFetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            let data: any;
+            try { data = JSON.parse(text); } catch { /* ignore */ }
+            if (data?.needs2FA) {
+                const err = new Error('2FA_REQUIRED') as any;
+                err.needs2FA = true;
+                err.method = data.method ?? 'totp';
+                throw err;
+            }
+            throw new ApiError(res.status, typeof data?.code === 'string' ? data.code : `HTTP_${res.status}`,
+                typeof data?.message === 'string' ? data.message : text);
+        }
+        return await res.json() as AuthResponse;
+    },
+
+    async register(username: string, password: string): Promise<AuthResponse> {
+        const res = await apiFetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as AuthResponse;
+    },
+
+    async updateProfile(token: string, username: string): Promise<{ username: string }> {
+        const res = await apiFetch('/api/user/profile', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ username })
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json();
+    },
+
+    async changePassword(token: string, current: string, newPass: string): Promise<void> {
+        const res = await apiFetch('/api/user/password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ currentPassword: current, newPassword: newPass })
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+    },
+
+    async deleteAccount(token: string, password: string, code?: string, backupCode?: string): Promise<void> {
+        const body: { password: string; code?: string; backup_code?: string } = { password };
+        if (code) body.code = code;
+        if (backupCode) body.backup_code = backupCode;
+        const res = await apiFetch('/api/user/me', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+    },
+
+    async listSessions(token: string): Promise<Session[]> {
+        const res = await apiFetch('/api/user/sessions', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as Session[];
+    },
+
+    async terminateSession(token: string, sessionId: string): Promise<void> {
+        const res = await apiFetch(`/api/user/sessions/${sessionId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+    },
+
+    async terminateOtherSessions(token: string): Promise<void> {
+        const res = await apiFetch('/api/user/sessions', {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+    },
+
+    async get2FAStatus(token: string): Promise<TwoFAStatus> {
+        const res = await apiFetch('/api/user/2fa/status', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as TwoFAStatus;
+    },
+
+    async setup2FA(token: string): Promise<TwoFASetup> {
+        const res = await apiFetch('/api/user/2fa/setup', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as TwoFASetup;
+    },
+
+    /**
+     * Writes the secret that gates login and replaces every backup code, so the
+     * worker requires the password — a bearer token on its own is not proof
+     * enough to hand someone a new second factor.
+     */
+    async enable2FA(token: string, secret: string, code: string, password: string, currentCode?: string): Promise<{ backupCodes: string[] }> {
+        const body: { secret: string; code: string; password: string; currentCode?: string } = { secret, code, password };
+        if (currentCode) body.currentCode = currentCode;
+        const res = await apiFetch('/api/user/2fa/enable', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as { backupCodes: string[] };
+    },
+
+    /** Replaces every existing code, so the worker requires the password. */
+    async generateBackupCodes(token: string, password: string): Promise<string[]> {
+        const res = await apiFetch('/api/user/2fa/backup-codes/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ password }),
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        const data = await res.json() as { codes: string[] };
+        return data.codes;
+    },
+
+    async getBackupCodesStatus(token: string): Promise<{ remaining: number }> {
+        const res = await apiFetch('/api/user/2fa/backup-codes', {
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as { remaining: number };
+    },
+
+    async disable2FA(token: string, password: string, code: string): Promise<void> {
+        const res = await apiFetch('/api/user/2fa', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ password, code })
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+    },
+
+    async listPasskeys(token: string): Promise<Passkey[]> {
+        const res = await apiFetch('/api/user/passkeys', {
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as Passkey[];
+    },
+
+    async registerPasskeyOptions(token: string): Promise<any> {
+        const res = await apiFetch('/api/user/passkey/register-options', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json();
+    },
+
+    /**
+     * A passkey is a standing passwordless credential, so enrolling one is at
+     * least as sensitive as deleting one — the worker requires the password for
+     * both.
+     */
+    async registerPasskey(token: string, challengeToken: string, credential: object, deviceName: string | undefined, password: string): Promise<{ backupCodes?: string[] }> {
+        const res = await apiFetch('/api/user/passkey/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ challengeToken, credential, deviceName, password }),
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as { backupCodes?: string[] };
+    },
+
+    /** Removing a passkey weakens the account, so the worker requires the password. */
+    async deletePasskey(token: string, id: string, password: string): Promise<void> {
+        const res = await apiFetch(`/api/user/passkeys/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ password }),
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+    },
+
+    async passkeyAuthOptions(username?: string): Promise<{ challengeToken: string; challenge: string; credentialIds: string[] }> {
+        const res = await apiFetch('/api/auth/passkey-options', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(username ? { username } : {}),
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json();
+    },
+
+    async passkeyAuthVerify(challengeToken: string, credential: object): Promise<AuthResponse> {
+        const res = await apiFetch('/api/auth/passkey-verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ challengeToken, credential }),
+        });
+        if (!res.ok) throw await apiErrorFrom(res);
+        return await res.json() as AuthResponse;
+    },
+};

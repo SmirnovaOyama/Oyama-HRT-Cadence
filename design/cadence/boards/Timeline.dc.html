@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Timeline</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#FBF8F3;color:#1F1B16;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-size:17px;line-height:26px;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font-family:inherit;font-size:inherit;line-height:inherit;color:inherit}
+a{color:#A34A28}a:hover{color:#8F3F20}
+:focus-visible{outline:3px solid #1F1B16;outline-offset:2px}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 2242px; box-sizing: border-box; overflow: hidden; background: #FBF8F3;">
+
+  <!-- Content column -->
+  <main style="position: absolute; top: 0; left: 16px; right: 16px; display: flex; flex-direction: column; gap: 32px;">
+
+    <!-- Header, range, chart, readout, adjustment note -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+
+      <div style="display: flex; flex-direction: column;">
+        <!-- 1. Header (C3) -->
+        <header style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 12px 0; box-sizing: border-box;">
+          <h1 style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif; font-weight: 700; font-size: 32px; line-height: 38px; color: #1F1B16;">Timeline</h1>
+          <button type="button" style="display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px; border: 0; border-radius: 12px; background: #EFE8DD; color: #1F1B16; font-weight: 600; font-size: 17px; line-height: 22px; cursor: pointer; box-sizing: border-box; flex: none;">Share</button>
+        </header>
+
+        <!-- 2. Range control (C8) -->
+        <div role="radiogroup" aria-label="Time range" style="display: flex; gap: 4px; padding: 4px; background: #F3EEE6; border-radius: 12px; box-sizing: border-box; height: 48px;">
+          <button type="button" role="radio" aria-checked="false" style="flex: 1; height: 40px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #5F574C; font-weight: 600; font-size: 15px; line-height: 20px; cursor: pointer; box-sizing: border-box;">Week</button>
+          <button type="button" role="radio" aria-checked="true" style="flex: 1; height: 40px; padding: 0; border: 1px solid #CBBFAE; border-radius: 8px; background: #FFFFFF; color: #1F1B16; font-weight: 600; font-size: 15px; line-height: 20px; cursor: pointer; box-sizing: border-box;">Month</button>
+          <button type="button" role="radio" aria-checked="false" style="flex: 1; height: 40px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #5F574C; font-weight: 600; font-size: 15px; line-height: 20px; cursor: pointer; box-sizing: border-box;">3 months</button>
+          <button type="button" role="radio" aria-checked="false" style="flex: 1; height: 40px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #5F574C; font-weight: 600; font-size: 15px; line-height: 20px; cursor: pointer; box-sizing: border-box;">All</button>
+        </div>
+      </div>
+
+      <!-- 3. Chart and 4. readout -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <svg width="358" height="236" viewBox="0 0 358 236" role="img" aria-label="Estimated estradiol from Aug 29 to Oct 3. Weekly peaks around 274 and lows around 151. Blood test on Sep 15 measured 212." style="display: block;">
+          <text x="0" y="12" font-size="13" font-weight="600" fill="#5F574C">pg/mL</text>
+          <rect x="40" y="24" width="220.3" height="140" fill="#F3EEE6"></rect>
+          <rect x="40" y="80" width="310" height="56" fill="#2F6B45" fill-opacity="0.12"></rect>
+          <path d="M40 80H350M40 136H350" stroke="#2F6B45" stroke-opacity="0.6" stroke-dasharray="3 3" fill="none"></path>
+          <path d="M40 24H350" stroke="#E2DACB" fill="none"></path>
+          <path d="M40 164H350" stroke="#CBBFAE" fill="none"></path>
+          <g font-size="13" font-weight="500" fill="#5F574C" text-anchor="end">
+            <text x="34" y="28">300</text>
+            <text x="34" y="84">200</text>
+            <text x="34" y="140">100</text>
+          </g>
+          <path d="M260.3 84.7 L261.7 86.3 L263.9 88.7 L266 90.8 L268.2 92.8 L270.3 94.6 L272.5 96.2 L274.7 97.7 L276.8 99 L279 100.3 L281.1 101.4 L283.3 102.4 L284.3 102.8 L285.4 90.1 L287.6 68.5 L289.7 51.8 L291.9 39.9 L294 32.4 L296.2 28.9 L298.3 31.9 L300.5 38.5 L302.6 44.5 L304.8 50 L306.9 55 L309.1 59.6 L311.2 63.9 L313.4 67.7 L315.6 71.3 L317.7 74.5 L319.9 77.5 L322 80.2 L324.2 82.7 L326.3 85 L328.5 87.1 L330.6 89 L332.8 90.7 L334.9 92.3 L337.1 93.7 L339.2 95 L341.4 96.2 L343.5 97.3 L344.6 97.8 L345.7 84.3 L347.8 61.5 L350 43.9 L350 75.6 L347.8 89 L345.7 106.6 L344.6 117.1 L343.5 116.6 L341.4 115.4 L339.2 114.1 L337.1 112.7 L334.9 111.2 L332.8 109.6 L330.6 107.8 L328.5 105.9 L326.3 103.8 L324.2 101.5 L322 99.1 L319.9 96.4 L317.7 93.5 L315.6 90.3 L313.4 86.8 L311.2 83.1 L309.1 79 L306.9 74.6 L304.8 69.7 L302.6 64.4 L300.5 58.6 L298.3 52.4 L296.2 49.1 L294 51.6 L291.9 57.6 L289.7 67.6 L287.6 81.9 L285.4 100.8 L284.3 112 L283.3 111.4 L281.1 110.1 L279 108.8 L276.8 107.3 L274.7 105.7 L272.5 104 L270.3 102.1 L268.2 100 L266 97.8 L263.9 95.4 L261.7 92.8 L260.3 90.9 Z" fill="#1F1B16" fill-opacity="0.07"></path>
+          <path d="M40 105.8 L42.2 106.9 L44.3 108 L46.5 85.4 L48.6 67.3 L50.8 54 L52.9 45 L55.1 40.1 L57.2 38.7 L59.4 45.3 L61.5 51.5 L63.7 57.1 L65.8 62.3 L68 67 L70.1 71.4 L72.3 75.4 L74.4 79 L76.6 82.4 L78.8 85.5 L80.9 88.3 L83.1 90.9 L85.2 93.2 L87.4 95.4 L89.5 97.4 L91.7 99.2 L93.8 100.9 L96 102.5 L98.1 103.9 L100.3 105.2 L102.4 106.4 L103.6 106.9 L104.6 95.7 L106.7 75.4 L108.9 59.9 L111 48.9 L113.2 42.1 L115.3 39.1 L117.5 42 L119.7 48.4 L121.8 54.3 L124 59.7 L126.1 64.7 L128.3 69.2 L130.4 73.4 L132.6 77.2 L134.7 80.7 L136.9 83.9 L139 86.9 L141.2 89.6 L143.3 92.1 L145.5 94.3 L147.6 96.4 L149.8 98.3 L151.9 100.1 L154.1 101.7 L156.2 103.2 L158.4 104.5 L160.6 105.8 L162.7 106.9 L163.8 107.4 L164.9 95.8 L167 75.5 L169.2 59.9 L171.3 48.9 L173.5 42 L175.6 39 L177.8 42.1 L179.9 48.5 L182.1 54.4 L184.2 59.8 L186.4 64.7 L188.5 69.3 L190.7 73.4 L192.8 77.2 L195 80.7 L197.2 84 L199.3 86.9 L201.5 89.6 L203.6 92.1 L205.8 94.4 L207.9 96.4 L210.1 98.4 L212.2 100.1 L214.4 101.7 L216.5 103.2 L218.7 104.5 L220.8 105.8 L223 106.9 L224.1 107.5 L225.1 96.3 L227.3 75.8 L229.4 60.2 L231.6 49 L233.8 42.1 L235.9 39.1 L238.1 41.9 L240.2 48.4 L242.4 54.3 L244.5 59.7 L246.7 64.6 L248.8 69.2 L251 73.3 L253.1 77.2 L255.3 80.7 L257.4 83.9 L259.6 86.9 L260.3 87.8" fill="none" stroke="#A34A28" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+          <path d="M260.3 87.8 L261.7 89.6 L263.9 92 L266 94.3 L268.2 96.4 L270.3 98.3 L272.5 100.1 L274.7 101.7 L276.8 103.2 L279 104.5 L281.1 105.8 L283.3 106.9 L284.3 107.4 L285.4 95.5 L287.6 75.2 L289.7 59.7 L291.9 48.7 L294 42 L296.2 39 L298.3 42.1 L300.5 48.6 L302.6 54.4 L304.8 59.8 L306.9 64.8 L309.1 69.3 L311.2 73.5 L313.4 77.3 L315.6 80.8 L317.7 84 L319.9 86.9 L322 89.6 L324.2 92.1 L326.3 94.4 L328.5 96.5 L330.6 98.4 L332.8 100.1 L334.9 101.7 L337.1 103.2 L339.2 104.6 L341.4 105.8 L343.5 106.9 L344.6 107.5 L345.7 95.5 L347.8 75.2 L350 59.7" fill="none" stroke="#A34A28" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"></path>
+          <path d="M260.3 24V164" stroke="#1F1B16" stroke-width="2" fill="none"></path>
+          <rect x="238.3" y="2" width="44" height="20" rx="6" fill="#1F1B16"></rect>
+          <text x="260.3" y="16.5" text-anchor="middle" font-size="13" font-weight="600" fill="#FBF8F3">Now</text>
+          <g fill="#A34A28">
+            <path d="M44.3 157 L48.3 164 L40.3 164 Z"></path>
+            <path d="M103.6 157 L107.6 164 L99.6 164 Z"></path>
+            <path d="M163.8 157 L167.8 164 L159.8 164 Z"></path>
+            <path d="M224.1 157 L228.1 164 L220.1 164 Z"></path>
+          </g>
+          <g fill="#FBF8F3" stroke="#A34A28" stroke-width="1.5" stroke-linejoin="round">
+            <path d="M284.3 157 L288.3 164 L280.3 164 Z"></path>
+            <path d="M344.6 157 L348.6 164 L340.6 164 Z"></path>
+          </g>
+          <rect x="-5" y="-5" width="10" height="10" transform="translate(189.4 73.3) rotate(45)" fill="#1F1B16"></rect>
+          <text x="201" y="63" font-size="13" font-weight="600" fill="#1F1B16">212</text>
+          <rect x="-8" y="-8" width="16" height="16" transform="translate(189.4 73.3) rotate(45)" fill="none" stroke="#A34A28" stroke-width="2"></rect>
+          <rect x="-5" y="-5" width="10" height="10" transform="translate(344.3 107.3) rotate(45)" fill="#FBF8F3" stroke="#1F1B16" stroke-width="2"></rect>
+          <text x="350" y="130" text-anchor="end" font-size="13" font-weight="600" fill="#5F574C">Next test</text>
+          <text x="44" y="132" font-size="13" font-weight="600" fill="#2F6B45">Target 100–200</text>
+          <text x="264" y="152" font-size="13" font-weight="500" fill="#5F574C">Forecast</text>
+          <g font-size="13" font-weight="500" fill="#5F574C" text-anchor="middle">
+            <text x="57.2" y="182">Aug 31</text>
+            <text x="117.5" y="182">Sep 7</text>
+            <text x="177.8" y="182">Sep 14</text>
+            <text x="238.1" y="182">Sep 21</text>
+            <text x="298.3" y="182">Sep 28</text>
+          </g>
+          <text x="40" y="202" font-size="13" font-weight="600" fill="#5F574C">Cyproterone, daily</text>
+          <path d="M47.5 208v12 M56.1 208v12 M64.8 208v12 M73.4 208v12 M82 208v12 M90.6 208v12 M99.2 208v12 M107.8 208v12 M116.4 208v12 M125 208v12 M133.6 208v12 M142.3 208v12 M150.9 208v12 M159.5 208v12 M168.1 208v12 M185.3 208v12 M193.9 208v12 M202.5 208v12 M211.1 208v12 M219.8 208v12 M228.4 208v12 M237 208v12 M245.6 208v12" stroke="#7A4A8C" stroke-width="3" fill="none"></path>
+          <path d="M176.7 208v12 M254.2 208v12" stroke="#8F8578" stroke-width="1.5" stroke-dasharray="2 2" fill="none"></path>
+          <path d="M262.8 208v12 M271.4 208v12 M280 208v12 M288.6 208v12 M297.3 208v12 M305.9 208v12 M314.5 208v12 M323.1 208v12 M331.7 208v12 M340.3 208v12 M348.9 208v12" stroke="#7A4A8C" stroke-width="1.5" stroke-dasharray="2 2" fill="none"></path>
+        </svg>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <p style="margin: 0; font-size: 15px; line-height: 22px; color: #5F574C;">Tap anywhere on the chart to read that moment.</p>
+          <div aria-live="polite" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #F3EEE6; border-radius: 12px;">
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+              <p style="margin: 0; font-weight: 600; font-size: 15px; line-height: 22px; color: #1F1B16;">Tue Sep 15, 08:30</p>
+              <p style="margin: 0; font-size: 15px; line-height: 22px; color: #1F1B16;">Blood test: measured 212&nbsp;pg/mL. The&nbsp;model&nbsp;expected&nbsp;196.</p>
+            </div>
+            <a href="#" aria-label="Open the blood test from Tue Sep 15" style="display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 4px; border: 0; background: transparent; color: #A34A28; font-weight: 600; font-size: 17px; line-height: 22px; text-decoration: none; flex: none; box-sizing: border-box;">Open</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Adjustment note -->
+      <div style="display: flex; flex-direction: column; align-items: flex-start;">
+        <p style="margin: 0; font-size: 15px; line-height: 22px; color: #1F1B16;">Adjusted up 10% to match your 4 blood tests.</p>
+        <a href="#" style="display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 4px; margin-left: -4px; border: 0; background: transparent; color: #A34A28; font-weight: 600; font-size: 17px; line-height: 22px; text-decoration: none; box-sizing: border-box;">What does this mean?</a>
+      </div>
+    </div>
+
+    <!-- 6. Your rhythm -->
+    <section aria-labelledby="rhythm-heading" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 12px;">
+        <h2 id="rhythm-heading" style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif; font-weight: 600; font-size: 22px; line-height: 28px; color: #1F1B16;">Your rhythm</h2>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+
+        <!-- 6a. Injections -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <p style="margin: 0; font-weight: 600; font-size: 15px; line-height: 22px; color: #1F1B16;">Injections, last 13 weeks</p>
+          <div style="display: flex; flex-direction: column; gap: 4px; width: 332px;">
+            <div role="img" aria-label="Injections from Jun 27 to Sep 19: 12 on time, Sat Aug 29 late." style="display: flex; gap: 6px;">
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="position: relative; width: 20px; height: 20px; flex: none; box-sizing: border-box; border: 1.5px solid #A34A28; border-radius: 4px; background: #FFFFFF;">
+                <span style="position: absolute; left: -1.5px; top: -1.5px; width: 10px; height: 20px; border-radius: 4px 0 0 4px; background: #A34A28;"></span>
+              </span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+              <span style="width: 20px; height: 20px; flex: none; border-radius: 4px; background: #A34A28;"></span>
+            </div>
+            <div aria-hidden="true" style="display: flex; justify-content: space-between; gap: 12px; font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C;">
+              <span style="display: inline-block;">Jun 27</span>
+              <span style="display: inline-block;">Sep 19</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 15px; line-height: 22px; color: #1F1B16;">On time 12 of 13 weeks. Sat&nbsp;Aug&nbsp;29&nbsp;was&nbsp;3&nbsp;hours&nbsp;late.</p>
+        </div>
+
+        <!-- 6b. Cyproterone -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <p style="margin: 0; font-weight: 600; font-size: 15px; line-height: 22px; color: #1F1B16;">Cyproterone, last 4 weeks</p>
+          <div role="img" aria-label="Cyproterone from Sat Aug 29 to Fri Sep 25: logged every evening except Sun Sep 13 and Tue Sep 22. Tonight, Wed Sep 23, is coming up." style="display: grid; grid-template-columns: 48px repeat(7, 36px); gap: 6px; align-items: center;">
+            <span aria-hidden="true" style="display: block; width: 48px;"></span>
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C; text-align: center;">Sat</span>
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C; text-align: center;">Sun</span>
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C; text-align: center;">Mon</span>
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C; text-align: center;">Tue</span>
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C; text-align: center;">Wed</span>
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C; text-align: center;">Thu</span>
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C; text-align: center;">Fri</span>
+
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C;">Aug 29</span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C;">Sep 5</span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C;">Sep 12</span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; box-sizing: border-box; border: 1.5px dashed #8F8578; border-radius: 4px; background: transparent;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+
+            <span style="font-size: 13px; line-height: 18px; font-weight: 500; color: #5F574C;">Sep 19</span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; border-radius: 4px; background: #7A4A8C;"></span>
+            <span style="height: 24px; box-sizing: border-box; border: 1.5px dashed #8F8578; border-radius: 4px; background: transparent;"></span>
+            <span style="height: 24px; box-sizing: border-box; border: 1.5px dashed #7A4A8C; border-radius: 4px; background: transparent;"></span>
+            <span style="height: 24px; box-sizing: border-box; border: 1px solid #E2DACB; border-radius: 4px; background: #FFFFFF;"></span>
+            <span style="height: 24px; box-sizing: border-box; border: 1px solid #E2DACB; border-radius: 4px; background: #FFFFFF;"></span>
+          </div>
+          <p style="margin: 0; font-size: 15px; line-height: 22px; color: #1F1B16;">Logged 23 of the last 25 evenings. Not logged: Sun&nbsp;Sep&nbsp;13 and Tue&nbsp;Sep&nbsp;22.</p>
+        </div>
+
+        <!-- 6c. Legend -->
+        <p style="margin: 0; font-size: 15px; line-height: 22px; color: #5F574C;">Filled: taken. Half filled: late. Dashed: not logged or coming up. Outline: not due yet.</p>
+      </div>
+    </section>
+
+    <!-- 7. History -->
+    <section aria-labelledby="history-heading" style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 12px;">
+        <h2 id="history-heading" style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif; font-weight: 600; font-size: 22px; line-height: 28px; color: #1F1B16;">History</h2>
+      </div>
+
+      <!-- Filter: one drill-in row (opens a list of All, Injections, Tablets, Blood tests, Suggestions) -->
+      <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+        <button type="button" aria-haspopup="listbox" aria-label="Show in history: All" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+          <span style="flex: 1; min-width: 0; font-size: 17px; line-height: 24px;">Show</span>
+          <span style="font-size: 17px; line-height: 24px; color: #5F574C; white-space: nowrap;">All</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: #5F574C;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+
+        <!-- Today -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <h3 style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">Today, Wed Sep 23</h3>
+          <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+            <div style="display: flex; flex-direction: column; justify-content: center; min-height: 64px; padding: 12px 16px; box-sizing: border-box;">
+              <p style="margin: 0; font-size: 17px; line-height: 24px; color: #1F1B16;">Nothing logged yet today.</p>
+              <p style="margin: 0; font-size: 15px; line-height: 22px; color: #5F574C;">Cyproterone&nbsp;is&nbsp;due&nbsp;at&nbsp;21:00.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Yesterday: a missed dose, dashed like the rhythm grid -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <h3 style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">Yesterday, Tue Sep 22</h3>
+          <div style="background: #FFFFFF; border: 1.5px dashed #8F8578; border-radius: 14px; overflow: hidden; padding: 0;">
+            <div style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 8px 12px 16px; box-sizing: border-box;">
+              <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #EFE4F2; color: #7A4A8C;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5A8.5 5 0 0 0 12 15.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><ellipse cx="12" cy="10.5" rx="8.5" ry="5"/><path d="M3.5 10.5V13.5A8.5 5 0 0 0 20.5 13.5V10.5M12 5.5V15.5"/></svg>
+              </span>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <div style="display: flex; align-items: flex-start; gap: 8px;">
+                  <p style="margin: 0; flex: 1; min-width: 0; font-weight: 600; font-size: 17px; line-height: 24px; color: #1F1B16;">Cyproterone acetate 12.5&nbsp;mg,&nbsp;tablet</p>
+                  <button type="button" aria-label="Review Claude's suggestion for Tue Sep 22" style="display: inline-flex; align-items: center; height: 44px; margin: -10px 0; padding: 0 8px; border: 0; background: transparent; color: #A34A28; font-weight: 600; font-size: 17px; line-height: 22px; cursor: pointer; box-sizing: border-box; flex: none;">Review</button>
+                </div>
+                <p style="margin: 0; padding-right: 8px; font-size: 15px; line-height: 22px; color: #5F574C;">Not logged. Claude suggested adding&nbsp;it&nbsp;at&nbsp;21:10.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mon Sep 21 -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <h3 style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">Mon Sep 21</h3>
+          <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+            <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; text-decoration: none; color: #1F1B16; text-align: left;">
+              <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #EFE4F2; color: #7A4A8C;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5A8.5 5 0 0 0 12 15.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><ellipse cx="12" cy="10.5" rx="8.5" ry="5"/><path d="M3.5 10.5V13.5A8.5 5 0 0 0 20.5 13.5V10.5M12 5.5V15.5"/></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="flex: 1; min-width: 0; font-weight: 600; font-size: 17px; line-height: 24px;">Cyproterone acetate 12.5&nbsp;mg,&nbsp;tablet</span>
+                  <span style="font-size: 17px; line-height: 24px; color: #5F574C; white-space: nowrap;">21:02</span>
+                  <span aria-hidden="true" style="height: 24px; flex: none; display: flex; align-items: center; color: #5F574C;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+                </span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">A quarter of a 50&nbsp;mg tablet</span>
+              </span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Sun Sep 20 -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <h3 style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">Sun Sep 20</h3>
+          <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+            <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; text-decoration: none; color: #1F1B16; text-align: left;">
+              <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #EFE4F2; color: #7A4A8C;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5A8.5 5 0 0 0 12 15.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><ellipse cx="12" cy="10.5" rx="8.5" ry="5"/><path d="M3.5 10.5V13.5A8.5 5 0 0 0 20.5 13.5V10.5M12 5.5V15.5"/></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="flex: 1; min-width: 0; font-weight: 600; font-size: 17px; line-height: 24px;">Cyproterone acetate 12.5&nbsp;mg,&nbsp;tablet</span>
+                  <span style="font-size: 17px; line-height: 24px; color: #5F574C; white-space: nowrap;">20:58</span>
+                  <span aria-hidden="true" style="height: 24px; flex: none; display: flex; align-items: center; color: #5F574C;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+                </span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">A quarter of a 50&nbsp;mg tablet</span>
+              </span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Sat Sep 19 -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <h3 style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">Sat Sep 19</h3>
+          <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+            <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; text-decoration: none; color: #1F1B16; text-align: left;">
+              <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #F6DFD2; color: #A34A28;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.75 10.5H15.25V16.5A1.5 1.5 0 0 1 13.75 18H10.25A1.5 1.5 0 0 1 8.75 16.5Z" transform="rotate(45 12 12)" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8.75" y="6.5" width="6.5" height="11.5" rx="1.5" transform="rotate(45 12 12)"/><path d="M8.75 10.5H15.25M12 2V10.5M9.5 2H14.5M7 6.5H17M12 18V22.5" transform="rotate(45 12 12)"/></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="flex: 1; min-width: 0; font-weight: 600; font-size: 17px; line-height: 24px;">Estradiol valerate 4&nbsp;mg,&nbsp;injection</span>
+                  <span style="font-size: 17px; line-height: 24px; color: #5F574C; white-space: nowrap;">09:12</span>
+                  <span aria-hidden="true" style="height: 24px; flex: none; display: flex; align-items: center; color: #5F574C;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+                </span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Left thigh, 0.10&nbsp;mL, on time</span>
+              </span>
+            </a>
+            <div aria-hidden="true" style="height: 1px; margin-left: 68px; background: #E2DACB;"></div>
+            <a href="#" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; text-decoration: none; color: #1F1B16; text-align: left;">
+              <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #EFE4F2; color: #7A4A8C;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5A8.5 5 0 0 0 12 15.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><ellipse cx="12" cy="10.5" rx="8.5" ry="5"/><path d="M3.5 10.5V13.5A8.5 5 0 0 0 20.5 13.5V10.5M12 5.5V15.5"/></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="flex: 1; min-width: 0; font-weight: 600; font-size: 17px; line-height: 24px;">Cyproterone acetate 12.5&nbsp;mg,&nbsp;tablet</span>
+                  <span style="font-size: 17px; line-height: 24px; color: #5F574C; white-space: nowrap;">21:05</span>
+                  <span aria-hidden="true" style="height: 24px; flex: none; display: flex; align-items: center; color: #5F574C;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6.5L14.5 12L10 17.5"/></svg></span>
+                </span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">A quarter of a 50&nbsp;mg tablet</span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" style="align-self: center; display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px; border: 0; border-radius: 12px; background: #EFE8DD; color: #1F1B16; font-weight: 600; font-size: 17px; line-height: 22px; cursor: pointer; box-sizing: border-box;">Show earlier days</button>
+    </section>
+  </main>
+
+  <!-- 8. Bottom bar (C16) -->
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 76px; box-sizing: border-box; padding: 6px 8px 10px; background: #FFFFFF; border-top: 1px solid #E2DACB; display: grid; grid-template-columns: 1fr 1fr 76px 1fr 1fr; align-items: start;">
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 58px; text-decoration: none; color: #5F574C;">
+      <span style="width: 56px; height: 36px; border-radius: 18px; display: grid; place-items: center; background: transparent;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12V5.5A6.5 6.5 0 0 1 17 16Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M13.25 3.09A9 9 0 0 1 18.19 5.46M19.75 7.42A9 9 0 0 1 20.97 12.76M20.41 15.2A9 9 0 0 1 17 19.49M14.74 20.57A9 9 0 0 1 9.26 20.57M7 19.49A9 9 0 0 1 3.59 15.2M3.03 12.76A9 9 0 0 1 4.25 7.42M5.81 5.46A9 9 0 0 1 10.75 3.09"/><path d="M12 12L17 16"/></svg>
+      </span>
+      <span style="font-weight: 600; font-size: 13px; line-height: 18px;">Today</span>
+    </a>
+    <a href="#" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 58px; text-decoration: none; color: #6E2A12;">
+      <span style="width: 56px; height: 36px; border-radius: 18px; display: grid; place-items: center; background: #F6DFD2;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20V17C4.5 17 5 9 7 9C9 9 10 14.5 12 14.5V20Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M3 17C4.5 17 5 9 7 9C9 9 10 14.5 12 14.5C14 14.5 14 7 16 7C18 7 19 12.5 21 12.5"/><path d="M3 20H21M12 5V20"/></svg>
+      </span>
+      <span style="font-weight: 600; font-size: 13px; line-height: 18px;">Timeline</span>
+    </a>
+    <button type="button" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 58px; padding: 0; border: 0; background: transparent; color: #1F1B16; cursor: pointer; box-sizing: border-box;">
+      <span style="width: 56px; height: 36px; border-radius: 18px; display: grid; place-items: center; background: #A34A28; color: #FFFFFF;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5V18.5M5.5 12H18.5"/></svg>
+      </span>
+      <span style="font-weight: 600; font-size: 13px; line-height: 18px; color: #1F1B16;">Log</span>
+    </button>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 58px; text-decoration: none; color: #5F574C;">
+      <span style="width: 56px; height: 36px; border-radius: 18px; display: grid; place-items: center; background: transparent;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 13.5V18A2.5 2.5 0 0 0 14.5 18V13.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8" y="3" width="8" height="3.5" rx="1.5"/><path d="M9.5 6.5V18A2.5 2.5 0 0 0 14.5 18V6.5M9.5 13.5H14.5"/></svg>
+      </span>
+      <span style="font-weight: 600; font-size: 13px; line-height: 18px;">Tests</span>
+    </a>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 58px; text-decoration: none; color: #5F574C;">
+      <span style="width: 56px; height: 36px; border-radius: 18px; display: grid; place-items: center; background: transparent;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 20.5A7.5 7.5 0 0 1 19.5 20.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><circle cx="12" cy="7.5" r="3.5"/><path d="M4.5 20.5A7.5 7.5 0 0 1 19.5 20.5Z"/></svg>
+      </span>
+      <span style="font-weight: 600; font-size: 13px; line-height: 18px;">You</span>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":2242}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

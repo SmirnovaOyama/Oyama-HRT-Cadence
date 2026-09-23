@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Log a dose</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#FBF8F3;color:#1F1B16;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-size:17px;line-height:26px;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font-family:inherit;font-size:inherit;line-height:inherit;color:inherit}
+a{color:#A34A28}a:hover{color:#8F3F20}
+:focus-visible{outline:3px solid #1F1B16;outline-offset:2px}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 2098px; box-sizing: border-box; overflow: hidden; background: #FBF8F3;">
+
+  <!-- Background: the Today header, covered by the scrim -->
+  <div aria-hidden="true" style="position: absolute; top: 0; left: 16px; right: 16px; display: flex; flex-direction: column;">
+    <header style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 6px 0 12px; box-sizing: border-box;">
+      <div style="display: flex; flex-direction: column;">
+        <h1 style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif; font-weight: 700; font-size: 26px; line-height: 32px; color: #1F1B16;">Sat, Sep 26</h1>
+        <p style="margin: 0; font-size: 15px; line-height: 22px; color: #5F574C;">Feminizing HRT</p>
+      </div>
+    </header>
+  </div>
+
+  <!-- Scrim -->
+  <div style="position: absolute; inset: 0; background: rgba(31,27,22,0.32);"></div>
+
+  <!-- Sheet -->
+  <section role="dialog" aria-modal="true" aria-labelledby="log-title" style="position: absolute; left: 0; right: 0; bottom: 0; top: 40px; background: #FBF8F3; border-top-left-radius: 28px; border-top-right-radius: 28px; border-top: 1px solid #E2DACB; display: flex; flex-direction: column;">
+
+    <!-- Grab bar row -->
+    <div style="height: 20px; flex: none; display: flex; align-items: center; justify-content: center;">
+      <div style="width: 36px; height: 4px; border-radius: 2px; background: #CBBFAE;"></div>
+    </div>
+
+    <!-- Sheet body -->
+    <div style="padding: 0 16px 181px; display: flex; flex-direction: column; gap: 28px;">
+
+      <!-- 1. Header -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <h2 id="log-title" style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif; font-weight: 600; font-size: 26px; line-height: 32px; color: #1F1B16;">Log a dose</h2>
+          <button type="button" aria-label="Close" style="width: 44px; height: 44px; flex: none; padding: 0; border: 0; border-radius: 12px; background: transparent; display: grid; place-items: center; color: #1F1B16; cursor: pointer; box-sizing: border-box;">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5L17.5 17.5M17.5 6.5L6.5 17.5"/></svg>
+          </button>
+        </div>
+        <div role="radiogroup" aria-label="What to log" style="display: flex; gap: 4px; padding: 4px; background: #F3EEE6; border-radius: 12px; box-sizing: border-box; height: 48px;">
+          <button type="button" role="radio" aria-checked="true" style="flex: 1; height: 40px; padding: 0; border: 1px solid #CBBFAE; border-radius: 8px; background: #FFFFFF; color: #1F1B16; font-weight: 600; font-size: 15px; line-height: 20px; cursor: pointer; box-sizing: border-box;">Dose</button>
+          <button type="button" role="radio" aria-checked="false" style="flex: 1; height: 40px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #5F574C; font-weight: 600; font-size: 15px; line-height: 20px; cursor: pointer; box-sizing: border-box;">Blood test</button>
+        </div>
+      </div>
+
+      <!-- 2. What (grouped list, single choice, plus a drill-in row) -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <p id="what-label" style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">What</p>
+        <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+          <div role="radiogroup" aria-labelledby="what-label" style="display: flex; flex-direction: column;">
+            <button type="button" role="radio" aria-checked="true" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #F6DFD2; color: #A34A28;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.75 10.5H15.25V16.5A1.5 1.5 0 0 1 13.75 18H10.25A1.5 1.5 0 0 1 8.75 16.5Z" transform="rotate(45 12 12)" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8.75" y="6.5" width="6.5" height="11.5" rx="1.5" transform="rotate(45 12 12)"/><path d="M8.75 10.5H15.25M12 2V10.5M9.5 2H14.5M7 6.5H17M12 18V22.5" transform="rotate(45 12 12)"/></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="font-size: 17px; line-height: 24px;">Estradiol valerate 4&nbsp;mg,&nbsp;injection</span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Your weekly shot, due now</span>
+              </span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: #A34A28;"><path stroke-linejoin="miter" stroke-miterlimit="10" d="M4.5 12.5L9.5 17.5L19.5 6"/></svg>
+            </button>
+            <div aria-hidden="true" style="height: 1px; margin-left: 68px; background: #E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #EFE4F2; color: #7A4A8C;">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.5A8.5 5 0 0 0 12 15.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><ellipse cx="12" cy="10.5" rx="8.5" ry="5"/><path d="M3.5 10.5V13.5A8.5 5 0 0 0 20.5 13.5V10.5M12 5.5V15.5"/></svg>
+              </span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="font-size: 17px; line-height: 24px;">Cyproterone acetate 12.5&nbsp;mg,&nbsp;tablet</span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Daily, next tonight at 21:00</span>
+              </span>
+              <span aria-hidden="true" style="width: 22px; flex: none;"></span>
+            </button>
+          </div>
+          <div aria-hidden="true" style="height: 1px; margin-left: 68px; background: #E2DACB;"></div>
+          <button type="button" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+            <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: #F3EEE6; color: #5F574C;">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5V17.5M6.5 12H17.5"/></svg>
+            </span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+              <span style="font-size: 17px; line-height: 24px;">Something else</span>
+              <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Pill, under the tongue, gel, patch or another injection</span>
+            </span>
+            <span aria-hidden="true" style="width: 22px; flex: none; display: flex; justify-content: flex-end; color: #5F574C;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. When (grouped list, single choice, plus a drill-in row) -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <p id="when-label" style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">When</p>
+        <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+          <div role="radiogroup" aria-labelledby="when-label" style="display: flex; flex-direction: column;">
+            <button type="button" role="radio" aria-checked="true" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="flex: 1; min-width: 0; font-size: 17px; line-height: 24px;">Now</span>
+              <span style="font-size: 17px; line-height: 24px; color: #5F574C; white-space: nowrap;">09:04</span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: #A34A28;"><path stroke-linejoin="miter" stroke-miterlimit="10" d="M4.5 12.5L9.5 17.5L19.5 6"/></svg>
+            </button>
+            <div aria-hidden="true" style="height: 1px; margin-left: 16px; background: #E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="flex: 1; min-width: 0; font-size: 17px; line-height: 24px;">Due time</span>
+              <span style="font-size: 17px; line-height: 24px; color: #5F574C; white-space: nowrap;">09:00</span>
+              <span aria-hidden="true" style="width: 22px; flex: none;"></span>
+            </button>
+          </div>
+          <div aria-hidden="true" style="height: 1px; margin-left: 16px; background: #E2DACB;"></div>
+          <button type="button" aria-haspopup="dialog" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+            <span style="flex: 1; min-width: 0; font-size: 17px; line-height: 24px;">Earlier</span>
+            <span aria-hidden="true" style="width: 22px; flex: none; display: flex; justify-content: flex-end; color: #5F574C;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+            </span>
+          </button>
+        </div>
+        <p style="margin: 0; padding: 0 16px; font-size: 15px; line-height: 22px; color: #5F574C;">Saturday, September 26</p>
+      </div>
+
+      <!-- 4. How much (unit segments, then the stepper and vial maths in one group) -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-left: 16px;">
+          <p id="amount-label" style="margin: 0; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">How much</p>
+          <div role="radiogroup" aria-label="Amount unit" style="display: flex; gap: 4px; padding: 4px; width: 140px; flex: none; background: #F3EEE6; border-radius: 12px; box-sizing: border-box; height: 48px;">
+            <button type="button" role="radio" aria-checked="true" style="flex: 1; height: 40px; padding: 0; border: 1px solid #CBBFAE; border-radius: 8px; background: #FFFFFF; color: #1F1B16; font-weight: 600; font-size: 15px; line-height: 20px; cursor: pointer; box-sizing: border-box;">mL</button>
+            <button type="button" role="radio" aria-checked="false" style="flex: 1; height: 40px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #5F574C; font-weight: 600; font-size: 15px; line-height: 20px; cursor: pointer; box-sizing: border-box;">mg</button>
+          </div>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+          <div role="group" aria-labelledby="amount-label" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; box-sizing: border-box;">
+            <button type="button" aria-label="Less" style="display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; flex: none; padding: 0; border: 0; border-radius: 14px; background: #EFE8DD; color: #1F1B16; cursor: pointer; box-sizing: border-box;">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 12H17.5"/></svg>
+            </button>
+            <p aria-live="polite" style="margin: 0; flex: 1; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif; font-weight: 600; font-size: 30px; line-height: 36px; font-variant-numeric: lining-nums tabular-nums; color: #1F1B16;">0.10&nbsp;mL</p>
+            <button type="button" aria-label="More" style="display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; flex: none; padding: 0; border: 0; border-radius: 14px; background: #EFE8DD; color: #1F1B16; cursor: pointer; box-sizing: border-box;">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5V17.5M6.5 12H17.5"/></svg>
+            </button>
+          </div>
+          <div aria-hidden="true" style="height: 1px; margin-left: 16px; background: #E2DACB;"></div>
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 4px 8px 4px 16px; box-sizing: border-box;">
+            <p style="margin: 0; flex: 1; min-width: 0; font-size: 17px; line-height: 24px; color: #1F1B16;">= 4&nbsp;mg from your 40&nbsp;mg/mL&nbsp;vial.</p>
+            <a href="#" style="display: inline-flex; align-items: center; height: 44px; padding: 0 8px; border: 0; background: transparent; color: #A34A28; font-weight: 600; font-size: 17px; line-height: 22px; text-decoration: none; cursor: pointer; box-sizing: border-box; flex: none;">Change vial</a>
+          </div>
+        </div>
+        <p style="margin: 0; padding: 0 16px; font-size: 15px; line-height: 22px; color: #5F574C;">About 3.1&nbsp;mg of that is estradiol itself. The&nbsp;model&nbsp;uses&nbsp;this.</p>
+      </div>
+
+      <!-- 5. Where (grouped list, single choice, plus a drill-in row) -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <p id="where-label" style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 15px; line-height: 20px; color: #5F574C;">Where</p>
+        <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+          <div role="radiogroup" aria-labelledby="where-label" style="display: flex; flex-direction: column;">
+            <button type="button" role="radio" aria-checked="true" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="font-size: 17px; line-height: 24px;">Right thigh</span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;"><span style="font-weight: 600; color: #A34A28;">Suggested.</span> Last used 28&nbsp;days&nbsp;ago</span>
+              </span>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: #A34A28;"><path stroke-linejoin="miter" stroke-miterlimit="10" d="M4.5 12.5L9.5 17.5L19.5 6"/></svg>
+            </button>
+            <div aria-hidden="true" style="height: 1px; margin-left: 16px; background: #E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="font-size: 17px; line-height: 24px;">Left thigh</span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Last used 7&nbsp;days&nbsp;ago</span>
+              </span>
+              <span aria-hidden="true" style="width: 22px; flex: none;"></span>
+            </button>
+            <div aria-hidden="true" style="height: 1px; margin-left: 16px; background: #E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="font-size: 17px; line-height: 24px;">Right glute</span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Last used 14&nbsp;days&nbsp;ago</span>
+              </span>
+              <span aria-hidden="true" style="width: 22px; flex: none;"></span>
+            </button>
+            <div aria-hidden="true" style="height: 1px; margin-left: 16px; background: #E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="font-size: 17px; line-height: 24px;">Left glute</span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Last used 21&nbsp;days&nbsp;ago</span>
+              </span>
+              <span aria-hidden="true" style="width: 22px; flex: none;"></span>
+            </button>
+            <div aria-hidden="true" style="height: 1px; margin-left: 16px; background: #E2DACB;"></div>
+            <button type="button" role="radio" aria-checked="false" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <span style="font-size: 17px; line-height: 24px;">Belly, under the skin</span>
+                <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Not used yet</span>
+              </span>
+              <span aria-hidden="true" style="width: 22px; flex: none;"></span>
+            </button>
+          </div>
+          <div aria-hidden="true" style="height: 1px; margin-left: 16px; background: #E2DACB;"></div>
+          <button type="button" aria-haspopup="dialog" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+              <span style="font-size: 17px; line-height: 24px;">Other site</span>
+              <span style="font-size: 15px; line-height: 22px; color: #5F574C;">Pick on a body map</span>
+            </span>
+            <span aria-hidden="true" style="width: 22px; flex: none; display: flex; justify-content: flex-end; color: #5F574C;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="M10 6.5L14.5 12L10 17.5"/></svg>
+            </span>
+          </button>
+        </div>
+        <p style="margin: 0; padding: 0 16px; font-size: 15px; line-height: 22px; color: #5F574C;">Rotating sites helps avoid soreness and lumps.</p>
+      </div>
+
+      <!-- 6. What this dose does -->
+      <div style="background: #F3EEE6; border-radius: 14px; padding: 16px 0; display: flex; flex-direction: column; gap: 12px;">
+        <p style="margin: 0; padding: 0 16px; font-weight: 600; font-size: 17px; line-height: 24px; color: #1F1B16;">What this dose does</p>
+        <svg width="358" height="128" viewBox="0 0 358 128" role="img" aria-label="Estimated estradiol for the next 8 days with this dose." style="display: block;">
+          <rect x="8" y="56" width="342" height="44" fill="#2F6B45" fill-opacity="0.12"></rect>
+          <path d="M8 56H350" stroke="#2F6B45" stroke-opacity="0.6" stroke-dasharray="3 3" fill="none"></path>
+          <path d="M8 100H350" stroke="#CBBFAE" fill="none"></path>
+          <path d="M8 76.2 L13.3 76.7 L18.7 77.1 L24 77.5 L24.1 77.6" fill="none" stroke="#A34A28" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+          <path d="M24.1 77.6 L29.4 68.4 L34.7 59.9 L40.1 52.4 L45.4 45.8 L50.8 40.2 L56.1 35.4 L61.4 31.5 L66.8 28.4 L72.1 26.2 L77.5 24.6 L82.8 23.8 L88.2 23.6 L93.5 26.2 L98.8 28.8 L104.2 31.2 L109.5 33.6 L114.9 35.9 L120.2 38 L125.6 40.1 L130.9 42.1 L136.2 44 L141.6 45.8 L146.9 47.6 L152.3 49.2 L157.6 50.8 L163 52.4 L168.3 53.8 L173.7 55.2 L179 56.6 L184.3 57.9 L189.7 59.1 L195 60.3 L200.4 61.4 L205.7 62.5 L211.1 63.6 L216.4 64.5 L221.8 65.5 L227.1 66.4 L232.4 67.3 L237.8 68.1 L243.1 68.9 L248.5 69.7 L253.8 70.4 L259.2 71.1 L264.5 71.8 L269.8 72.4 L275.2 73.1 L280.5 73.7 L285.9 74.2 L291.2 74.8 L296.6 75.3 L301.9 75.8 L307.2 76.3 L312.6 76.7 L317.9 77.1 L323.3 77.6 L328.6 68.2 L334 59.7 L339.3 52.2 L344.7 45.7 L350 40.1" fill="none" stroke="#A34A28" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"></path>
+          <path d="M24.1 8V100" stroke="#1F1B16" stroke-width="2" fill="none"></path>
+          <rect x="24" y="0" width="40" height="18" rx="6" fill="#1F1B16"></rect>
+          <text x="44" y="13.5" text-anchor="middle" font-size="13" font-weight="600" fill="#FBF8F3">Now</text>
+          <path d="M24.1 102 L28.1 110 L20.1 110 Z" fill="#A34A28" fill-opacity="0.4" stroke="#A34A28" stroke-width="1.5" stroke-linejoin="round"></path>
+          <path d="M323.3 102 L327.3 110 L319.3 110 Z" fill="#F3EEE6" stroke="#A34A28" stroke-width="1.5" stroke-linejoin="round"></path>
+          <text x="96" y="20" font-size="13" font-weight="600" fill="#5F574C">About 274, Sun night</text>
+          <text x="316" y="92" text-anchor="end" font-size="13" font-weight="600" fill="#5F574C">About 151</text>
+          <text x="34" y="94" font-size="13" font-weight="600" fill="#2F6B45">Target 100–200</text>
+          <g font-size="13" font-weight="500" fill="#5F574C" text-anchor="middle">
+            <text x="29.4" y="125">Sat</text>
+            <text x="72.1" y="125">Sun</text>
+            <text x="114.9" y="125">Mon</text>
+            <text x="157.6" y="125">Tue</text>
+            <text x="200.4" y="125">Wed</text>
+            <text x="243.1" y="125">Thu</text>
+            <text x="285.9" y="125">Fri</text>
+            <text x="328.6" y="125">Sat</text>
+          </g>
+        </svg>
+        <p style="margin: 0; padding: 0 16px; font-size: 15px; line-height: 22px; color: #1F1B16;">Should rise to about 274&nbsp;pg/mL by Sunday night, then ease to about 151 by next Saturday. An estimate, not a measurement.</p>
+      </div>
+
+      <!-- 7. Safety guide disclosure (one-row group) -->
+      <div style="background: #FFFFFF; border: 1px solid #E2DACB; border-radius: 14px; overflow: hidden; padding: 0;">
+        <button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 12px 16px; box-sizing: border-box; background: transparent; border: 0; color: #1F1B16; text-align: left; cursor: pointer;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: #5F574C;"><path d="M12 7.5A10 10 0 0 0 3.5 5.5V18A10 10 0 0 1 12 20Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M12 7.5A10 10 0 0 0 3.5 5.5V18A10 10 0 0 1 12 20A10 10 0 0 1 20.5 18V5.5A10 10 0 0 0 12 7.5V20"/></svg>
+          <span style="flex: 1; min-width: 0; font-size: 17px; line-height: 24px;">Injection safety guide</span>
+          <span aria-hidden="true" style="width: 22px; flex: none; display: flex; justify-content: flex-end; color: #5F574C;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="M6.5 10L12 14.5L17.5 10"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sticky footer -->
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FBF8F3; border-top: 1px solid #E2DACB; padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px;">
+      <p style="margin: 0; font-size: 15px; line-height: 22px; color: #1F1B16;">Will be logged as: estradiol valerate 4&nbsp;mg (0.10&nbsp;mL), injection, right thigh, Sat&nbsp;Sep&nbsp;26&nbsp;at&nbsp;09:04.</p>
+      <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 50px; padding: 0 20px; border: 0; border-radius: 14px; background: #A34A28; color: #FFFFFF; font-weight: 600; font-size: 17px; line-height: 22px; cursor: pointer; box-sizing: border-box;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke-linejoin="miter" stroke-miterlimit="10" d="M4.5 12.5L9.5 17.5L19.5 6"/></svg>
+        <span style="display: inline-block;">Log it</span>
+      </button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":2098}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

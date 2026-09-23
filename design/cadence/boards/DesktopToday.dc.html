@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Today (desktop)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#FBF8F3;color:#1F1B16;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-size:18px;line-height:28px;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font-family:inherit;font-size:inherit;line-height:inherit;color:inherit}
+a{color:#A34A28}a:hover{color:#8F3F20}
+:focus-visible{outline:3px solid #1F1B16;outline-offset:2px}
+
+@keyframes px-blink {
+    0%, 92%      { opacity: 0; }
+    92.01%, 96%  { opacity: 1; }
+    96.01%, 100% { opacity: 0; }
+}
+@keyframes px-tail-rest {
+    0%, 68%      { opacity: 1; }
+    68.01%, 74%  { opacity: 0; }
+    74.01%, 80%  { opacity: 1; }
+    80.01%, 86%  { opacity: 0; }
+    86.01%, 100% { opacity: 1; }
+}
+@keyframes px-tail-flick {
+    0%, 68%      { opacity: 0; }
+    68.01%, 74%  { opacity: 1; }
+    74.01%, 80%  { opacity: 0; }
+    80.01%, 86%  { opacity: 1; }
+    86.01%, 100% { opacity: 0; }
+}
+@keyframes px-paw-rest {
+    0%, 58%      { opacity: 1; }
+    58.01%, 90%  { opacity: 0; }
+    90.01%, 100% { opacity: 1; }
+}
+@keyframes px-paw-left {
+    0%, 58%      { opacity: 0; }
+    58.01%, 66%  { opacity: 1; }
+    66.01%, 74%  { opacity: 0; }
+    74.01%, 82%  { opacity: 1; }
+    82.01%, 100% { opacity: 0; }
+}
+@keyframes px-paw-right {
+    0%, 66%      { opacity: 0; }
+    66.01%, 74%  { opacity: 1; }
+    74.01%, 82%  { opacity: 0; }
+    82.01%, 90%  { opacity: 1; }
+    90.01%, 100% { opacity: 0; }
+}
+@keyframes px-paw-still {
+    0%, 62%      { opacity: 1; }
+    62.01%, 78%  { opacity: 0; }
+    78.01%, 100% { opacity: 1; }
+}
+@keyframes px-paw-stretch {
+    0%, 62%      { opacity: 0; }
+    62.01%, 78%  { opacity: 1; }
+    78.01%, 100% { opacity: 0; }
+}
+@keyframes px-ear-rest {
+    0%, 88%      { opacity: 1; }
+    88.01%, 94%  { opacity: 0; }
+    94.01%, 100% { opacity: 1; }
+}
+@keyframes px-ear-twitch {
+    0%, 88%      { opacity: 0; }
+    88.01%, 94%  { opacity: 1; }
+    94.01%, 100% { opacity: 0; }
+}
+@keyframes px-lick-a { 0%, 49.99% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes px-lick-b { 0%, 49.99% { opacity: 0; } 50%, 100% { opacity: 1; } }
+@keyframes px-chew {
+    0%, 44%      { opacity: 0; }
+    44.01%, 100% { opacity: 1; }
+}
+@keyframes px-float-a { 0%, 53.99% { opacity: 1; } 54%, 100% { opacity: 0; } }
+@keyframes px-float-b { 0%, 53.99% { opacity: 0; } 54%, 100% { opacity: 1; } }
+@keyframes px-zzz {
+    0%, 6%       { opacity: 0; }
+    22%, 62%     { opacity: 1; }
+    82%, 100%    { opacity: 0; }
+}
+.px-ear-rest    { animation: px-ear-rest 3.4s steps(1) infinite; }
+.px-ear-twitch  { animation: px-ear-twitch 3.4s steps(1) infinite; }
+.px-blink       { animation: px-blink 4.8s steps(1) infinite; }
+.px-tail-rest   { animation: px-tail-rest 5.6s steps(1) infinite; }
+.px-tail-flick  { animation: px-tail-flick 5.6s steps(1) infinite; }
+.px-paw-rest    { animation: px-paw-rest 6.4s steps(1) infinite; }
+.px-paw-left    { animation: px-paw-left 6.4s steps(1) infinite; }
+.px-paw-right   { animation: px-paw-right 6.4s steps(1) infinite; }
+.px-paw-still   { animation: px-paw-still 7.1s steps(1) infinite; }
+.px-paw-stretch { animation: px-paw-stretch 7.1s steps(1) infinite; }
+.px-lick-a      { animation: px-lick-a .5s steps(1) infinite; }
+.px-lick-b      { animation: px-lick-b .5s steps(1) infinite; }
+.px-chew        { animation: px-chew .62s steps(1) infinite; }
+.px-float-a     { animation: px-float-a 2.9s steps(1) infinite; }
+.px-float-b     { animation: px-float-b 2.9s steps(1) infinite; }
+.px-zzz         { animation: px-zzz 4.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce){.px-ear-rest,.px-ear-twitch,.px-blink,.px-tail-rest,.px-tail-flick,.px-paw-rest,.px-paw-left,.px-paw-right,.px-paw-still,.px-paw-stretch,.px-lick-a,.px-lick-b,.px-chew,.px-float-a,.px-float-b,.px-zzz{animation:none}}
+</style>
+</helmet>
+<div style="position:relative;width:1440px;height:1224px;box-sizing:border-box;overflow:hidden;background:#FBF8F3;color:#1F1B16">
+<aside aria-label="Sidebar" style="position:absolute;left:0;top:0;bottom:0;width:264px;box-sizing:border-box;padding:24px 16px;background:#F3EEE6;border-right:1px solid #E2DACB;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px"><svg width="52" height="30" viewBox="0 0 26 15" shape-rendering="crispEdges" aria-hidden="true" style="display:block;flex:none;width:52px;height:30px"><rect x="3" y="4" width="2" height="1" fill="#D191A5"></rect><rect x="5" y="4" width="4" height="1" fill="#F6BFCE"></rect><rect x="9" y="4" width="3" height="1" fill="#D191A5"></rect><rect x="12" y="4" width="4" height="1" fill="#F6BFCE"></rect><rect x="16" y="4" width="3" height="1" fill="#D191A5"></rect><rect x="2" y="5" width="1" height="1" fill="#D191A5"></rect><rect x="3" y="5" width="16" height="1" fill="#F6BFCE"></rect><rect x="19" y="5" width="1" height="1" fill="#D191A5"></rect><rect x="2" y="6" width="1" height="1" fill="#CFBFC4"></rect><rect x="3" y="6" width="1" height="1" fill="#FFFFFF"></rect><rect x="4" y="6" width="1" height="1" fill="#3F3238"></rect><rect x="5" y="6" width="7" height="1" fill="#FFFFFF"></rect><rect x="12" y="6" width="1" height="1" fill="#3F3238"></rect><rect x="13" y="6" width="6" height="1" fill="#FFFFFF"></rect><rect x="19" y="6" width="1" height="1" fill="#CFBFC4"></rect><rect x="2" y="7" width="1" height="1" fill="#CFBFC4"></rect><rect x="3" y="7" width="4" height="1" fill="#FFFFFF"></rect><rect x="7" y="7" width="2" height="1" fill="#E58BA4"></rect><rect x="9" y="7" width="10" height="1" fill="#FFFFFF"></rect><rect x="19" y="7" width="1" height="1" fill="#CFBFC4"></rect><rect x="1" y="8" width="1" height="1" fill="#CFBFC4"></rect><rect x="2" y="8" width="18" height="1" fill="#FFFFFF"></rect><rect x="20" y="8" width="1" height="1" fill="#CFBFC4"></rect><rect x="1" y="9" width="1" height="1" fill="#D191A5"></rect><rect x="2" y="9" width="18" height="1" fill="#F6BFCE"></rect><rect x="20" y="9" width="1" height="1" fill="#D191A5"></rect><rect x="2" y="10" width="1" height="1" fill="#D191A5"></rect><rect x="3" y="10" width="16" height="1" fill="#F6BFCE"></rect><rect x="19" y="10" width="1" height="1" fill="#D191A5"></rect><rect x="2" y="11" width="1" height="1" fill="#D191A5"></rect><rect x="3" y="11" width="17" height="1" fill="#F6BFCE"></rect><rect x="3" y="12" width="2" height="1" fill="#6FA8C9"></rect><rect x="5" y="12" width="14" height="1" fill="#9FD4EE"></rect><rect x="5" y="13" width="14" height="1" fill="#6FA8C9"></rect><g><rect x="23" y="8" width="2" height="1" fill="#CFBFC4"></rect><rect x="22" y="9" width="1" height="1" fill="#D191A5"></rect><rect x="23" y="9" width="2" height="1" fill="#DFA1B3"></rect><rect x="25" y="9" width="1" height="1" fill="#D191A5"></rect><rect x="22" y="10" width="1" height="1" fill="#D191A5"></rect><rect x="23" y="10" width="2" height="1" fill="#DFA1B3"></rect><rect x="25" y="10" width="1" height="1" fill="#D191A5"></rect><rect x="19" y="11" width="6" height="1" fill="#DFA1B3"></rect><rect x="19" y="12" width="6" height="1" fill="#6FA8C9"></rect></g><g><rect x="6" y="11" width="3" height="1" fill="#D191A5"></rect><rect x="12" y="11" width="3" height="1" fill="#D191A5"></rect><rect x="6" y="12" width="3" height="1" fill="#7FB8D6"></rect><rect x="12" y="12" width="3" height="1" fill="#7FB8D6"></rect></g><g class="px-ear-rest"><rect x="6" y="1" width="1" height="1" fill="#6FA8C9"></rect><rect x="14" y="1" width="1" height="1" fill="#6FA8C9"></rect><rect x="5" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="6" y="2" width="1" height="1" fill="#9FD4EE"></rect><rect x="7" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="13" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="14" y="2" width="1" height="1" fill="#9FD4EE"></rect><rect x="15" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="5" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="6" y="3" width="1" height="1" fill="#7FB8D6"></rect><rect x="7" y="3" width="1" height="1" fill="#9FD4EE"></rect><rect x="8" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="12" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="13" y="3" width="1" height="1" fill="#9FD4EE"></rect><rect x="14" y="3" width="1" height="1" fill="#7FB8D6"></rect><rect x="15" y="3" width="1" height="1" fill="#6FA8C9"></rect></g><g class="px-ear-twitch" style="opacity: 0"><rect x="5" y="1" width="1" height="1" fill="#6FA8C9"></rect><rect x="14" y="1" width="1" height="1" fill="#6FA8C9"></rect><rect x="4" y="2" width="2" height="1" fill="#6FA8C9"></rect><rect x="6" y="2" width="1" height="1" fill="#9FD4EE"></rect><rect x="13" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="14" y="2" width="1" height="1" fill="#9FD4EE"></rect><rect x="15" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="5" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="6" y="3" width="1" height="1" fill="#7FB8D6"></rect><rect x="7" y="3" width="1" height="1" fill="#9FD4EE"></rect><rect x="8" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="12" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="13" y="3" width="1" height="1" fill="#9FD4EE"></rect><rect x="14" y="3" width="1" height="1" fill="#7FB8D6"></rect><rect x="15" y="3" width="1" height="1" fill="#6FA8C9"></rect></g><g><rect x="3" y="6" width="3" height="1" fill="#3F3238"></rect><rect x="11" y="6" width="3" height="1" fill="#3F3238"></rect></g></svg><span style="font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:22px;line-height:28px;color:#1F1B16">Oyama Tracker</span></div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<button type="button" style="display:flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border:0;border-radius:12px;background:#A34A28;color:#FFFFFF;font-weight:600;font-size:18px;line-height:24px;cursor:pointer;box-sizing:border-box;width:100%"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M12 5.5V18.5M5.5 12H18.5"/></svg><span>Log a dose</span></button>
+<button type="button" style="display:flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border:0;border-radius:12px;background:#FFFFFF;color:#1F1B16;font-weight:600;font-size:18px;line-height:24px;cursor:pointer;box-sizing:border-box;width:100%">Add a blood test</button>
+</div>
+<nav aria-label="Main" style="display:flex;flex-direction:column;gap:4px">
+<a href="#" aria-current="page" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;text-decoration:none;color:#1F1B16;font-weight:600;font-size:18px;line-height:24px;border:1px solid #E2DACB;background:#FFFFFF"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M12 12V5.5A6.5 6.5 0 0 1 17 16Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M13.25 3.09A9 9 0 0 1 18.19 5.46M19.75 7.42A9 9 0 0 1 20.97 12.76M20.41 15.2A9 9 0 0 1 17 19.49M14.74 20.57A9 9 0 0 1 9.26 20.57M7 19.49A9 9 0 0 1 3.59 15.2M3.03 12.76A9 9 0 0 1 4.25 7.42M5.81 5.46A9 9 0 0 1 10.75 3.09"/><path d="M12 12L17 16"/></svg><span style="flex:1;min-width:0">Today</span></a>
+<a href="#" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;text-decoration:none;color:#5F574C;font-weight:500;font-size:18px;line-height:24px;border:1px solid transparent"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M3 20V17C4.5 17 5 9 7 9C9 9 10 14.5 12 14.5V20Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M3 17C4.5 17 5 9 7 9C9 9 10 14.5 12 14.5C14 14.5 14 7 16 7C18 7 19 12.5 21 12.5"/><path d="M3 20H21M12 5V20"/></svg><span style="flex:1;min-width:0">Timeline</span></a>
+<a href="#" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;text-decoration:none;color:#5F574C;font-weight:500;font-size:18px;line-height:24px;border:1px solid transparent"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M9.5 13.5V18A2.5 2.5 0 0 0 14.5 18V13.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8" y="3" width="8" height="3.5" rx="1.5"/><path d="M9.5 6.5V18A2.5 2.5 0 0 0 14.5 18V6.5M9.5 13.5H14.5"/></svg><span style="flex:1;min-width:0">Blood tests</span></a>
+<a href="#" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;text-decoration:none;color:#5F574C;font-weight:500;font-size:18px;line-height:24px;border:1px solid transparent"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M7 13.5H17C17 15 17.5 15.5 19 16.5H5C6.5 15.5 7 15 7 13.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M5 16.5C6.5 15 7 13 7 10.5A5 5 0 0 1 17 10.5C17 13 17.5 15 19 16.5ZM7 13.5H17M10 19A2 2 0 0 0 14 19M12 3.5V5.5"/></svg><span style="flex:1;min-width:0">Reminders</span></a>
+<a href="#" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;text-decoration:none;color:#5F574C;font-weight:500;font-size:18px;line-height:24px;border:1px solid transparent"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M7.5 15.5H16.5V18.5A2.5 2.5 0 0 1 14 21H10A2.5 2.5 0 0 1 7.5 18.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8.5" y="3" width="7" height="3.5" rx="1.5"/><path d="M10 6.5V8.5H9A1.5 1.5 0 0 0 7.5 10V18.5A2.5 2.5 0 0 0 10 21H14A2.5 2.5 0 0 0 16.5 18.5V10A1.5 1.5 0 0 0 15 8.5H14V6.5M7.5 15.5H16.5"/></svg><span style="flex:1;min-width:0">Supplies</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="1 item to reorder" style="display:block;flex:none;width:16px;height:16px;color:#8A5A00;margin-left:auto"><path d="M14.19 5.46L20.45 16.79A2.5 2.5 0 0 1 18.26 20.5L5.74 20.5A2.5 2.5 0 0 1 3.55 16.79L9.81 5.46A2.5 2.5 0 0 1 14.19 5.46Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M14.19 5.46L20.45 16.79A2.5 2.5 0 0 1 18.26 20.5L5.74 20.5A2.5 2.5 0 0 1 3.55 16.79L9.81 5.46A2.5 2.5 0 0 1 14.19 5.46Z"/><path d="M12 9V15"/></svg></a>
+<a href="#" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;text-decoration:none;color:#5F574C;font-weight:500;font-size:18px;line-height:24px;border:1px solid transparent"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M13.5 6.5V17.5H11A5.5 5.5 0 0 1 11 6.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M13.5 6.5V17.5H11A5.5 5.5 0 0 1 11 6.5ZM13.5 9.5H17M13.5 14.5H17M20.5 5V19M5.5 12H5A1.5 1.5 0 0 0 3.5 13.5V20.5"/></svg><span style="flex:1;min-width:0">Assistant</span></a>
+<a href="#" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;text-decoration:none;color:#5F574C;font-weight:500;font-size:18px;line-height:24px;border:1px solid transparent"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M4.5 20.5A7.5 7.5 0 0 1 19.5 20.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><circle cx="12" cy="7.5" r="3.5"/><path d="M4.5 20.5A7.5 7.5 0 0 1 19.5 20.5Z"/></svg><span style="flex:1;min-width:0">You</span></a>
+</nav>
+<div style="flex:1"></div>
+<div style="border-top:1px solid #E2DACB;padding-top:16px;display:flex;flex-direction:column;gap:4px">
+<p style="margin:0;font-size:16px;line-height:24px;color:#5F574C">Feminizing HRT</p>
+<p style="margin:0;font-size:16px;line-height:24px;color:#5F574C">Next: cyproterone tonight&nbsp;at&nbsp;21:00</p>
+<p style="margin:0;font-size:16px;line-height:24px;color:#5F574C">Backed up 4 minutes ago</p>
+<p style="margin:0;font-size:16px;line-height:24px;color:#5F574C">Claude Desktop can read until&nbsp;Dec&nbsp;21</p>
+</div>
+</aside>
+<main style="position:absolute;left:264px;right:0;top:0;bottom:0;padding:32px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:24px">
+<header style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+<div style="display:flex;flex-direction:column;gap:4px">
+<h1 style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:700;font-size:36px;line-height:44px;color:#1F1B16">Wed, Sep 23</h1>
+<p style="margin:0;font-size:16px;line-height:24px;color:#5F574C">Feminizing HRT. Updated 14:05.</p>
+</div>
+<div style="display:flex;align-items:center;gap:12px">
+<button type="button" style="display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border:0;border-radius:12px;background:#EFE8DD;color:#1F1B16;font-weight:600;font-size:18px;line-height:24px;cursor:pointer;box-sizing:border-box">Share</button>
+<button type="button" style="display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border:0;border-radius:12px;background:#EFE8DD;color:#1F1B16;font-weight:600;font-size:18px;line-height:24px;cursor:pointer;box-sizing:border-box">Letter for your clinician</button>
+</div>
+</header>
+<div style="display:grid;grid-template-columns:520px 1fr;gap:32px;align-items:start">
+<section aria-label="Your estimate today" style="background:#F3EEE6;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+<div style="display:flex;flex-direction:column;gap:2px">
+<p style="margin:0;font-weight:600;font-size:18px;line-height:26px;color:#1F1B16">Day 5 of 7 in your weekly cycle</p>
+<p style="margin:0;font-size:16px;line-height:24px;color:#5F574C">Shot taken Sat 09:12. Next shot Sat 09:00.</p>
+</div>
+<div style="position:relative;width:400px;height:400px;flex:none;align-self:center">
+<svg width="400" height="400" viewBox="0 0 400 400" role="img" aria-label="Day 5 of 7 in your weekly cycle. Estradiol valerate taken Saturday at 09:12, next shot Saturday at 09:00. Cyproterone taken Saturday to Monday, Tuesday not logged, next tonight at 21:00." font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif" style="display:block;width:400px;height:400px"><g transform="scale(1.333333)"><path d="M153.4 22 A128 128 0 0 1 248 67.6 L231.1 81.8 A106 106 0 0 0 152.8 44 Z" fill="#A34A28"></path><path d="M252.1 72.8 A128 128 0 0 1 275.5 175.2 L253.9 170.9 A106 106 0 0 0 234.6 86.1 Z" fill="#E9E2D6"></path><path d="M274 181.7 A128 128 0 0 1 208.5 263.8 L198.5 244.3 A106 106 0 0 0 252.7 176.3 Z" fill="#E9E2D6"></path><path d="M202.5 266.7 A128 128 0 0 1 97.5 266.7 L106.5 246.7 A106 106 0 0 0 193.5 246.7 Z" fill="#E9E2D6"></path><path d="M91.5 263.8 A128 128 0 0 1 26 181.7 L47.3 176.3 A106 106 0 0 0 101.5 244.3 Z" fill="#F6DFD2" stroke="#1F1B16" stroke-width="2"></path><path d="M24.5 175.2 A128 128 0 0 1 47.9 72.8 L65.4 86.1 A106 106 0 0 0 46.1 170.9 Z" fill="#FFFFFF" stroke="#E2DACB" stroke-width="1"></path><path d="M52 67.6 A128 128 0 0 1 146.6 22 L147.2 44 A106 106 0 0 0 68.9 81.8 Z" fill="#FFFFFF" stroke="#E2DACB" stroke-width="1"></path><g transform="translate(193.8 37.6) scale(0.5833)" fill="none" color="#FFFFFF" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.75 10.5H15.25V16.5A1.5 1.5 0 0 1 13.75 18H10.25A1.5 1.5 0 0 1 8.75 16.5Z" transform="rotate(45 12 12)" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8.75" y="6.5" width="6.5" height="11.5" rx="1.5" transform="rotate(45 12 12)"/><path d="M8.75 10.5H15.25M12 2V10.5M9.5 2H14.5M7 6.5H17M12 18V22.5" transform="rotate(45 12 12)"/></g><path d="M210.3 72.8 A98 98 0 0 1 227.2 89.7 L220.9 94.6 A90 90 0 0 0 205.4 79.1 Z" fill="#7A4A8C"></path><path d="M248 149 A98 98 0 0 1 245.3 172.8 L237.5 170.9 A90 90 0 0 0 240 149.1 Z" fill="#7A4A8C"></path><path d="M211.9 226 A98 98 0 0 1 191.6 238.7 L188.2 231.5 A90 90 0 0 0 206.8 219.8 Z" fill="#7A4A8C"></path><path d="M129.1 245.8 A98 98 0 0 1 106.6 237.9 L110.1 230.7 A90 90 0 0 0 130.8 237.9 Z" fill="none" stroke="#8F8578" stroke-width="1.5" stroke-dasharray="3 2"></path><path d="M62.1 193.4 A98 98 0 0 1 54.2 170.9 L62.1 169.2 A90 90 0 0 0 69.3 189.9 Z" fill="none" stroke="#7A4A8C" stroke-width="1.5" stroke-dasharray="3 2"></path><path d="M61.3 108.4 A98 98 0 0 1 74 88.1 L80.2 93.2 A90 90 0 0 0 68.5 111.8 Z" fill="#FFFFFF" stroke="#E2DACB" stroke-width="1"></path><path d="M127.2 54.7 A98 98 0 0 1 151 52 L150.9 60 A90 90 0 0 0 129.1 62.5 Z" fill="#FFFFFF" stroke="#E2DACB" stroke-width="1"></path><path d="M150 50 L150 14" stroke="#A34A28" stroke-width="2.5" stroke-linecap="round" fill="none"></path><circle cx="150" cy="150" r="72" fill="#FFFFFF" stroke="#E2DACB" stroke-width="1"></circle><path d="M87.1 192.6 L39 225.1" stroke="#1F1B16" stroke-width="2.5" stroke-linecap="round" fill="none"></path></g><text x="281.6" y="36" text-anchor="middle" font-size="16" font-weight="500" fill="#5F574C">Sat</text><text x="383.3" y="163.5" text-anchor="middle" font-size="16" font-weight="500" fill="#5F574C">Sun</text><text x="351.2" y="325.9" text-anchor="middle" font-size="16" font-weight="500" fill="#5F574C">Mon</text><text x="200" y="393.3" text-anchor="middle" font-size="16" font-weight="500" fill="#5F574C">Tue</text><text x="48.8" y="325.9" text-anchor="middle" font-size="16" font-weight="700" fill="#1F1B16">Wed</text><text x="16.7" y="163.5" text-anchor="middle" font-size="16" font-weight="500" fill="#5F574C">Thu</text><text x="118.4" y="36" text-anchor="middle" font-size="16" font-weight="500" fill="#5F574C">Fri</text></svg>
+<button type="button" aria-label="Estradiol about 186 pg/mL, estimated. How this is worked out" style="position:absolute;left:104px;top:104px;width:192px;height:192px;padding:0;border:0;border-radius:50%;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;box-sizing:border-box;color:#1F1B16">
+<svg width="78" height="45" viewBox="0 0 26 15" shape-rendering="crispEdges" aria-hidden="true" style="display:block;flex:none;width:78px;height:45px"><rect x="3" y="4" width="2" height="1" fill="#D191A5"></rect><rect x="5" y="4" width="4" height="1" fill="#F6BFCE"></rect><rect x="9" y="4" width="3" height="1" fill="#D191A5"></rect><rect x="12" y="4" width="4" height="1" fill="#F6BFCE"></rect><rect x="16" y="4" width="3" height="1" fill="#D191A5"></rect><rect x="2" y="5" width="1" height="1" fill="#D191A5"></rect><rect x="3" y="5" width="16" height="1" fill="#F6BFCE"></rect><rect x="19" y="5" width="1" height="1" fill="#D191A5"></rect><rect x="2" y="6" width="1" height="1" fill="#CFBFC4"></rect><rect x="3" y="6" width="1" height="1" fill="#FFFFFF"></rect><rect x="4" y="6" width="1" height="1" fill="#3F3238"></rect><rect x="5" y="6" width="7" height="1" fill="#FFFFFF"></rect><rect x="12" y="6" width="1" height="1" fill="#3F3238"></rect><rect x="13" y="6" width="6" height="1" fill="#FFFFFF"></rect><rect x="19" y="6" width="1" height="1" fill="#CFBFC4"></rect><rect x="2" y="7" width="1" height="1" fill="#CFBFC4"></rect><rect x="3" y="7" width="4" height="1" fill="#FFFFFF"></rect><rect x="7" y="7" width="2" height="1" fill="#E58BA4"></rect><rect x="9" y="7" width="10" height="1" fill="#FFFFFF"></rect><rect x="19" y="7" width="1" height="1" fill="#CFBFC4"></rect><rect x="1" y="8" width="1" height="1" fill="#CFBFC4"></rect><rect x="2" y="8" width="18" height="1" fill="#FFFFFF"></rect><rect x="20" y="8" width="1" height="1" fill="#CFBFC4"></rect><rect x="1" y="9" width="1" height="1" fill="#D191A5"></rect><rect x="2" y="9" width="18" height="1" fill="#F6BFCE"></rect><rect x="20" y="9" width="1" height="1" fill="#D191A5"></rect><rect x="2" y="10" width="1" height="1" fill="#D191A5"></rect><rect x="3" y="10" width="16" height="1" fill="#F6BFCE"></rect><rect x="19" y="10" width="1" height="1" fill="#D191A5"></rect><rect x="2" y="11" width="1" height="1" fill="#D191A5"></rect><rect x="3" y="11" width="17" height="1" fill="#F6BFCE"></rect><rect x="3" y="12" width="2" height="1" fill="#6FA8C9"></rect><rect x="5" y="12" width="14" height="1" fill="#9FD4EE"></rect><rect x="5" y="13" width="14" height="1" fill="#6FA8C9"></rect><g><rect x="23" y="8" width="2" height="1" fill="#CFBFC4"></rect><rect x="22" y="9" width="1" height="1" fill="#D191A5"></rect><rect x="23" y="9" width="2" height="1" fill="#DFA1B3"></rect><rect x="25" y="9" width="1" height="1" fill="#D191A5"></rect><rect x="22" y="10" width="1" height="1" fill="#D191A5"></rect><rect x="23" y="10" width="2" height="1" fill="#DFA1B3"></rect><rect x="25" y="10" width="1" height="1" fill="#D191A5"></rect><rect x="19" y="11" width="6" height="1" fill="#DFA1B3"></rect><rect x="19" y="12" width="6" height="1" fill="#6FA8C9"></rect></g><g><rect x="6" y="11" width="3" height="1" fill="#D191A5"></rect><rect x="12" y="11" width="3" height="1" fill="#D191A5"></rect><rect x="6" y="12" width="3" height="1" fill="#7FB8D6"></rect><rect x="12" y="12" width="3" height="1" fill="#7FB8D6"></rect></g><g class="px-ear-rest"><rect x="6" y="1" width="1" height="1" fill="#6FA8C9"></rect><rect x="14" y="1" width="1" height="1" fill="#6FA8C9"></rect><rect x="5" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="6" y="2" width="1" height="1" fill="#9FD4EE"></rect><rect x="7" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="13" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="14" y="2" width="1" height="1" fill="#9FD4EE"></rect><rect x="15" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="5" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="6" y="3" width="1" height="1" fill="#7FB8D6"></rect><rect x="7" y="3" width="1" height="1" fill="#9FD4EE"></rect><rect x="8" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="12" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="13" y="3" width="1" height="1" fill="#9FD4EE"></rect><rect x="14" y="3" width="1" height="1" fill="#7FB8D6"></rect><rect x="15" y="3" width="1" height="1" fill="#6FA8C9"></rect></g><g class="px-ear-twitch" style="opacity: 0"><rect x="5" y="1" width="1" height="1" fill="#6FA8C9"></rect><rect x="14" y="1" width="1" height="1" fill="#6FA8C9"></rect><rect x="4" y="2" width="2" height="1" fill="#6FA8C9"></rect><rect x="6" y="2" width="1" height="1" fill="#9FD4EE"></rect><rect x="13" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="14" y="2" width="1" height="1" fill="#9FD4EE"></rect><rect x="15" y="2" width="1" height="1" fill="#6FA8C9"></rect><rect x="5" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="6" y="3" width="1" height="1" fill="#7FB8D6"></rect><rect x="7" y="3" width="1" height="1" fill="#9FD4EE"></rect><rect x="8" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="12" y="3" width="1" height="1" fill="#6FA8C9"></rect><rect x="13" y="3" width="1" height="1" fill="#9FD4EE"></rect><rect x="14" y="3" width="1" height="1" fill="#7FB8D6"></rect><rect x="15" y="3" width="1" height="1" fill="#6FA8C9"></rect></g><g><rect x="3" y="6" width="3" height="1" fill="#3F3238"></rect><rect x="11" y="6" width="3" height="1" fill="#3F3238"></rect></g></svg>
+<span style="font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:64px;line-height:64px;color:#1F1B16;font-variant-numeric:lining-nums tabular-nums">186</span>
+<span style="font-weight:600;font-size:18px;line-height:24px;color:#5F574C">pg/mL</span>
+</button>
+</div>
+<div style="display:flex;align-items:center;gap:8px;color:#2F6B45"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><circle cx="12" cy="12" r="9" fill="currentColor" fill-opacity="0.18" stroke="none"/><circle cx="12" cy="12" r="9"/><path stroke-linejoin="miter" stroke-miterlimit="10" d="M8 12.5L11 15.5L16.5 8.5"/></svg><span style="font-weight:600;font-size:18px;line-height:26px;color:#2F6B45">In your target range (100–200)</span></div>
+<svg width="472" height="48" viewBox="0 0 472 48" role="img" aria-label="About 186 on a scale from 50 to 300 pg/mL. Your target is 100 to 200." font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif" style="display:block;width:472px;height:48px">
+<clipPath id="ruler-clip"><rect x="0" y="4" width="472" height="24" rx="6"></rect></clipPath>
+<g clip-path="url(#ruler-clip)"><rect x="0" y="4" width="94.4" height="24" fill="#FFFFFF"></rect><rect x="94.4" y="4" width="188.8" height="24" fill="#DCEBDF"></rect><rect x="283.2" y="4" width="188.8" height="24" fill="#FFFFFF"></rect></g>
+<rect x="0.5" y="4.5" width="471" height="23" rx="6" fill="none" stroke="#8F8578" stroke-width="1"></rect>
+<text x="102.8" y="21" font-size="14" font-weight="600" fill="#2F6B45">Target 100–200</text>
+<rect x="255.7" y="0" width="2" height="32" fill="#1F1B16"></rect>
+<polygon points="250.7,0 262.7,0 256.7,7" fill="#1F1B16"></polygon>
+<text x="94.4" y="45" text-anchor="middle" font-size="14" font-weight="500" fill="#5F574C">100</text>
+<text x="283.2" y="45" text-anchor="middle" font-size="14" font-weight="500" fill="#5F574C">200</text>
+</svg>
+<p style="margin:0;font-size:18px;line-height:28px;color:#1F1B16">Falling slowly. Lowest before Saturday’s shot, about 151.</p>
+<p style="margin:0;font-size:16px;line-height:24px;color:#5F574C">Estimated from your doses and 4 blood tests, not measured.</p>
+<button type="button" style="display:inline-flex;align-items:center;height:44px;padding:0;border:0;border-radius:0;background:transparent;color:#A34A28;font-weight:600;font-size:18px;line-height:24px;text-decoration:none;cursor:pointer;box-sizing:border-box;align-self:flex-start">How is this worked out?</button>
+<p style="margin:0;font-size:18px;line-height:28px;color:#1F1B16">Next: cyproterone 12.5&nbsp;mg, tonight at 21:00</p>
+<button type="button" title="Shortcut: L" aria-keyshortcuts="L" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:50px;padding:0 20px;border:0;border-radius:14px;background:#A34A28;color:#FFFFFF;font-weight:600;font-size:18px;line-height:24px;cursor:pointer;box-sizing:border-box"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M12 5.5V18.5M5.5 12H18.5"/></svg><span>Log a dose</span></button>
+</section>
+<div style="display:flex;flex-direction:column;gap:24px;min-width:0">
+<section aria-labelledby="pending-title" style="background:#FFFFFF;border:2px dashed #8F8578;border-radius:16px;padding:16px 16px 6px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box">
+<div style="display:flex;align-items:center;gap:8px;color:#5F574C"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:22px;height:22px"><path d="M13.5 6.5V17.5H11A5.5 5.5 0 0 1 11 6.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><path d="M13.5 6.5V17.5H11A5.5 5.5 0 0 1 11 6.5ZM13.5 9.5H17M13.5 14.5H17M20.5 5V19M5.5 12H5A1.5 1.5 0 0 0 3.5 13.5V20.5"/></svg><h2 id="pending-title" style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:22px;line-height:28px;color:#1F1B16">Waiting for you</h2></div>
+<p style="margin:0;font-size:18px;line-height:28px;color:#1F1B16">Claude suggested adding cyproterone acetate 12.5&nbsp;mg, tablet, for Tue&nbsp;Sep&nbsp;22 at 21:10.</p>
+<p style="margin:0;font-size:16px;line-height:24px;color:#5F574C">From Claude Desktop, today at 14:03.<br>Nothing is saved until you add&nbsp;it.</p>
+<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding-top:8px">
+<div style="display:flex;gap:12px;align-self:stretch">
+<button type="button" style="display:flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border:0;border-radius:12px;background:#A34A28;color:#FFFFFF;font-weight:600;font-size:18px;line-height:24px;cursor:pointer;box-sizing:border-box;flex:1 1 0;min-width:0">Add it</button>
+<button type="button" style="display:flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border:0;border-radius:12px;background:#EFE8DD;color:#1F1B16;font-weight:600;font-size:18px;line-height:24px;cursor:pointer;box-sizing:border-box;flex:1 1 0;min-width:0">Change first</button>
+</div>
+<button type="button" style="display:inline-flex;align-items:center;height:44px;padding:0;border:0;border-radius:0;background:transparent;color:#A34A28;font-weight:600;font-size:18px;line-height:24px;text-decoration:none;cursor:pointer;box-sizing:border-box">Don’t add</button>
+</div>
+</section>
+<section aria-labelledby="level-title" style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:16px;padding:16px 0 12px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box">
+<div style="padding:0 20px;display:flex;justify-content:space-between;align-items:center;gap:16px">
+<h2 id="level-title" style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:24px;line-height:30px;color:#1F1B16">Your level</h2>
+<div role="radiogroup" aria-label="Chart range" style="display:flex;gap:4px;padding:4px;background:#F3EEE6;border-radius:12px;box-sizing:border-box;height:48px;width:300px;flex:none">
+<button type="button" role="radio" aria-checked="false" style="flex:1;height:40px;padding:0;border:0;border-radius:8px;background:transparent;color:#5F574C;font-weight:600;font-size:16px;line-height:22px;cursor:pointer;box-sizing:border-box">2 weeks</button>
+<button type="button" role="radio" aria-checked="true" style="flex:1;height:40px;padding:0;border:1px solid #CBBFAE;border-radius:8px;background:#FFFFFF;color:#1F1B16;font-weight:600;font-size:16px;line-height:22px;cursor:pointer;box-sizing:border-box">3 weeks</button>
+<button type="button" role="radio" aria-checked="false" style="flex:1;height:40px;padding:0;border:0;border-radius:8px;background:transparent;color:#5F574C;font-weight:600;font-size:16px;line-height:22px;cursor:pointer;box-sizing:border-box">Month</button>
+</div>
+</div>
+<svg width="544" height="220" viewBox="0 0 544 220" role="img" tabindex="0" aria-label="Estimated estradiol from Sep 12 to Oct 3, about 186 now." aria-describedby="chart-readout" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif" style="display:block;width:544px;height:220px;margin:0 -1px;flex:none">
+<text x="8" y="15" font-size="14" font-weight="600" fill="#5F574C">pg/mL</text>
+<rect x="44" y="28" width="257" height="160" fill="#F3EEE6"></rect>
+<rect x="44" y="92" width="488" height="64" fill="#2F6B45" fill-opacity="0.12"></rect>
+<path d="M44 92H532M44 156H532" stroke="#2F6B45" stroke-opacity="0.6" stroke-width="1" stroke-dasharray="3 3" fill="none"></path>
+<path d="M44 28H532" stroke="#E2DACB" stroke-width="1" fill="none"></path>
+<path d="M44 188H532" stroke="#CBBFAE" stroke-width="1" fill="none"></path>
+<text x="36" y="33" text-anchor="end" font-size="14" font-weight="500" fill="#5F574C">300</text>
+<text x="36" y="97" text-anchor="end" font-size="14" font-weight="500" fill="#5F574C">200</text>
+<text x="36" y="161" text-anchor="end" font-size="14" font-weight="500" fill="#5F574C">100</text>
+<path d="M301 97.4 L304.6 99.2 L310.2 101.9 L315.7 104.4 L321.3 106.6 L326.8 108.6 L332.4 110.5 L337.9 112.2 L343.5 113.7 L349 115.1 L354.5 116.4 L360.1 117.6 L362.9 118.1 L365.6 103.6 L368.4 90.5 L371.2 78.9 L374 68.7 L376.7 59.8 L379.5 52.3 L382.3 46.2 L385 41.3 L387.8 37.6 L390.6 35.1 L393.4 33.6 L396.1 33.1 L398.9 37.1 L404.5 44.5 L410 51.4 L415.5 57.7 L421.1 63.4 L426.6 68.7 L432.2 73.6 L437.7 78 L443.3 82.1 L448.8 85.8 L454.4 89.2 L459.9 92.3 L465.5 95.1 L471 97.7 L476.5 100.1 L482.1 102.2 L487.6 104.2 L493.2 106 L498.7 107.7 L504.3 109.1 L509.8 110.5 L515.4 111.7 L518.1 112.3 L520.9 96.9 L523.7 83.1 L526.5 70.8 L529.2 60 L532 50.7 L532 87 L529.2 94 L526.5 102.3 L523.7 111.7 L520.9 122.5 L518.1 134.5 L515.4 133.8 L509.8 132.4 L504.3 131 L498.7 129.4 L493.2 127.7 L487.6 125.8 L482.1 123.8 L476.5 121.6 L471 119.2 L465.5 116.6 L459.9 113.8 L454.4 110.7 L448.8 107.4 L443.3 103.8 L437.7 99.8 L432.2 95.5 L426.6 90.9 L421.1 85.8 L415.5 80.2 L410 74.2 L404.5 67.6 L398.9 60.4 L396.1 56.6 L393.4 56.7 L390.6 57.6 L387.8 59.5 L385 62.4 L382.3 66.4 L379.5 71.5 L376.7 77.8 L374 85.4 L371.2 94.2 L368.4 104.3 L365.6 115.8 L362.9 128.6 L360.1 127.9 L354.5 126.4 L349 124.9 L343.5 123.2 L337.9 121.4 L332.4 119.4 L326.8 117.2 L321.3 114.9 L315.7 112.3 L310.2 109.6 L304.6 106.6 L301 104.5 Z" fill="#1F1B16" fill-opacity="0.07"></path>
+<path d="M44 121.4 L46.8 122.1 L49.5 122.7 L52.3 123.3 L52.4 123.4 L55.1 110 L57.9 97.7 L60.6 86.8 L63.4 77.3 L66.2 69 L69 62.1 L71.7 56.4 L74.5 51.9 L77.3 48.6 L80 46.4 L82.8 45.2 L85.6 44.8 L88.4 48.6 L91.1 52.4 L93.9 56 L96.7 59.4 L99.5 62.7 L102.2 65.9 L105 68.9 L107.8 71.8 L110.5 74.5 L113.3 77.2 L116.1 79.7 L118.9 82.2 L121.6 84.5 L124.4 86.7 L127.2 88.9 L130 90.9 L132.7 92.9 L135.5 94.7 L138.3 96.5 L141 98.2 L143.8 99.9 L146.6 101.5 L149.4 103 L152.1 104.4 L154.9 105.8 L157.7 107.1 L160.5 108.4 L163.2 109.6 L166 110.8 L168.8 111.9 L171.5 113 L174.3 114 L177.1 115 L179.9 115.9 L182.6 116.8 L185.4 117.7 L188.2 118.5 L191 119.3 L193.7 120 L196.5 120.8 L199.3 121.5 L202 122.1 L204.8 122.8 L207.6 123.4 L207.8 123.4 L210.4 110.6 L213.1 98.2 L215.9 87.2 L218.7 77.6 L221.5 69.3 L224.2 62.4 L227 56.6 L229.8 52.1 L232.5 48.7 L235.3 46.5 L238.1 45.2 L240.9 44.8 L243.6 48.5 L246.4 52.2 L249.2 55.8 L252 59.3 L254.7 62.6 L257.5 65.7 L260.3 68.8 L263 71.7 L265.8 74.4 L268.6 77.1 L271.4 79.6 L274.1 82.1 L276.9 84.4 L279.7 86.6 L282.5 88.8 L285.2 90.8 L288 92.8 L290.8 94.7 L293.5 96.5 L296.3 98.2 L299.1 99.8 L301 100.9" stroke="#A34A28" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path>
+<path d="M301 100.9 L304.6 102.9 L310.2 105.8 L315.7 108.4 L321.3 110.7 L326.8 112.9 L332.4 114.9 L337.9 116.8 L343.5 118.5 L349 120 L354.5 121.4 L360.1 122.7 L362.9 123.3 L365.6 109.7 L368.4 97.4 L371.2 86.5 L374 77 L376.7 68.8 L379.5 61.9 L382.3 56.3 L385 51.8 L387.8 48.6 L390.6 46.4 L393.4 45.2 L396.1 44.8 L398.9 48.7 L404.5 56.1 L410 62.8 L415.5 69 L421.1 74.6 L426.6 79.8 L432.2 84.6 L437.7 88.9 L443.3 92.9 L448.8 96.6 L454.4 99.9 L459.9 103 L465.5 105.8 L471 108.4 L476.5 110.8 L482.1 113 L487.6 115 L493.2 116.8 L498.7 118.5 L504.3 120.1 L509.8 121.5 L515.4 122.8 L518.1 123.4 L520.9 109.7 L523.7 97.4 L526.5 86.5 L529.2 77 L532 68.8" stroke="#A34A28" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round" fill="none"></path>
+<path d="M301 28V188" stroke="#1F1B16" stroke-width="2" fill="none"></path>
+<rect x="257" y="2" width="88" height="24" rx="6" fill="#1F1B16"></rect>
+<text x="301" y="19" text-anchor="middle" font-size="14" font-weight="600" fill="#FBF8F3">Now, 14:05</text>
+<path d="M52.4 181 L56.4 188 L48.4 188 Z" fill="#A34A28"></path><path d="M207.8 181 L211.8 188 L203.8 188 Z" fill="#A34A28"></path><path d="M362.9 181 L366.9 188 L358.9 188 Z" fill="#FBF8F3" stroke="#A34A28" stroke-width="1.5" stroke-linejoin="round"></path><path d="M518.1 181 L522.1 188 L514.1 188 Z" fill="#FBF8F3" stroke="#A34A28" stroke-width="1.5" stroke-linejoin="round"></path>
+<rect x="-5" y="-5" width="10" height="10" transform="translate(118.4 84.3) rotate(45)" fill="#1F1B16"></rect>
+<text x="112" y="67" font-size="14" font-weight="600" fill="#1F1B16">Measured 212</text>
+<rect x="-5" y="-5" width="10" height="10" transform="translate(517.2 123.2) rotate(45)" fill="#FBF8F3" stroke="#1F1B16" stroke-width="2"></rect>
+<text x="532" y="149" text-anchor="end" font-size="14" font-weight="600" fill="#5F574C">Next test</text>
+<path d="M256.7 28V188" stroke="#1F1B16" stroke-width="1" fill="none"></path>
+<circle cx="256.7" cy="64.8" r="5" fill="#FFFFFF" stroke="#1F1B16" stroke-width="2"></circle>
+<text x="48" y="150" font-size="14" font-weight="600" fill="#2F6B45">Target 100–200</text>
+<text x="308" y="174" font-size="14" font-weight="500" fill="#5F574C">If you keep your schedule</text>
+<text x="55.1" y="208" text-anchor="middle" font-size="14" font-weight="500" fill="#5F574C">Sep 12</text><text x="143.8" y="208" text-anchor="middle" font-size="14" font-weight="500" fill="#5F574C">Sep 16</text><text x="232.5" y="208" text-anchor="middle" font-size="14" font-weight="500" fill="#5F574C">Sep 20</text><text x="321.3" y="208" text-anchor="middle" font-size="14" font-weight="500" fill="#5F574C">Sep 24</text><text x="410" y="208" text-anchor="middle" font-size="14" font-weight="500" fill="#5F574C">Sep 28</text><text x="498.7" y="208" text-anchor="middle" font-size="14" font-weight="500" fill="#5F574C">Oct 2</text>
+</svg>
+<div style="padding:0 20px">
+<div id="chart-readout" role="status" aria-live="polite" style="background:#F3EEE6;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:2px">
+<p style="margin:0;font-weight:600;font-size:16px;line-height:24px;color:#1F1B16">Mon Sep 21, 14:05</p>
+<p style="margin:0;font-size:16px;line-height:24px;color:#1F1B16">About 243 pg/mL, estimated. Above your target, which is usual for 2&nbsp;to&nbsp;3&nbsp;days after a shot.</p>
+</div>
+</div>
+<p style="margin:0;padding:0 20px;font-size:16px;line-height:24px;color:#5F574C">Adjusted up 10% to match your 4 blood tests.</p>
+</section>
+<section aria-labelledby="coming-title" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between;min-height:44px;gap:12px">
+<h2 id="coming-title" style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'PingFang TC', 'Hiragino Sans', 'Apple SD Gothic Neo', system-ui, sans-serif;font-weight:600;font-size:24px;line-height:30px;color:#1F1B16">Coming up</h2>
+<a href="#" style="display:inline-flex;align-items:center;height:44px;padding:0;border:0;border-radius:0;background:transparent;color:#A34A28;font-weight:600;font-size:18px;line-height:24px;text-decoration:none;cursor:pointer;box-sizing:border-box">Reminders</a>
+</div>
+<div style="background:#FFFFFF;border:1px solid #E2DACB;border-radius:14px;overflow:hidden;padding:0;display:flex;flex-direction:column">
+<a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:12px 16px;box-sizing:border-box;background:transparent;border:0;text-decoration:none;color:#1F1B16;text-align:left"><div style="width:40px;height:40px;flex:none;border-radius:12px;display:grid;place-items:center;background:#EFE4F2;color:#7A4A8C"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M12 5.5A8.5 5 0 0 0 12 15.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><ellipse cx="12" cy="10.5" rx="8.5" ry="5"/><path d="M3.5 10.5V13.5A8.5 5 0 0 0 20.5 13.5V10.5M12 5.5V15.5"/></svg></div><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:600;font-size:18px;line-height:26px;color:#1F1B16">Cyproterone acetate 12.5&nbsp;mg,&nbsp;tablet</span><span style="font-size:16px;line-height:24px;color:#5F574C">Tonight, 21:00</span></div><span style="font-size:16px;line-height:24px;color:#5F574C;white-space:nowrap">in 7 hours</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:16px;height:16px;color:#5F574C"><path d="M10 6.5L14.5 12L10 17.5"/></svg></a>
+<div aria-hidden="true" style="height:1px;margin-left:68px;background:#E2DACB;flex:none"></div>
+<a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:12px 16px;box-sizing:border-box;background:transparent;border:0;text-decoration:none;color:#1F1B16;text-align:left"><div style="width:40px;height:40px;flex:none;border-radius:12px;display:grid;place-items:center;background:#F6DFD2;color:#A34A28"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M8.75 10.5H15.25V16.5A1.5 1.5 0 0 1 13.75 18H10.25A1.5 1.5 0 0 1 8.75 16.5Z" transform="rotate(45 12 12)" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8.75" y="6.5" width="6.5" height="11.5" rx="1.5" transform="rotate(45 12 12)"/><path d="M8.75 10.5H15.25M12 2V10.5M9.5 2H14.5M7 6.5H17M12 18V22.5" transform="rotate(45 12 12)"/></svg></div><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:600;font-size:18px;line-height:26px;color:#1F1B16">Estradiol valerate 4&nbsp;mg,&nbsp;injection</span><span style="font-size:16px;line-height:24px;color:#5F574C">Sat Sep 26, 09:00. Suggested site: right thigh</span></div><span style="font-size:16px;line-height:24px;color:#5F574C;white-space:nowrap">in 2 days</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:16px;height:16px;color:#5F574C"><path d="M10 6.5L14.5 12L10 17.5"/></svg></a>
+<div aria-hidden="true" style="height:1px;margin-left:68px;background:#E2DACB;flex:none"></div>
+<a href="#" style="display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:12px 16px;box-sizing:border-box;background:transparent;border:0;text-decoration:none;color:#1F1B16;text-align:left"><div style="width:40px;height:40px;flex:none;border-radius:12px;display:grid;place-items:center;background:#F3EEE6;color:#1F1B16"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:20px;height:20px"><path d="M9.5 13.5V18A2.5 2.5 0 0 0 14.5 18V13.5Z" fill="currentColor" fill-opacity="0.18" stroke="none"/><rect x="8" y="3" width="8" height="3.5" rx="1.5"/><path d="M9.5 6.5V18A2.5 2.5 0 0 0 14.5 18V6.5M9.5 13.5H14.5"/></svg></div><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-weight:600;font-size:18px;line-height:26px;color:#1F1B16">Blood test at your low point</span><span style="font-size:16px;line-height:24px;color:#5F574C">Sat Oct 3, 07:30, before your shot</span></div><span style="font-size:16px;line-height:24px;color:#5F574C;white-space:nowrap">in 10 days</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block;flex:none;width:16px;height:16px;color:#5F574C"><path d="M10 6.5L14.5 12L10 17.5"/></svg></a>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1224}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
