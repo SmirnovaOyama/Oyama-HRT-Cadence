@@ -3,6 +3,8 @@ import { DoseEvent, Ester, isTestosteroneEster } from '../../../logic';
 import type { Lang } from '../../i18n/translations';
 import { ListGroup, ListRow } from '../ui';
 import { ChevronRight, Gel, Injection, Patch, Sublingual, Tablet, type IconComponent } from '../icons';
+import type { ForecastedSupply } from '../supplies/useSupplyForecasts';
+import { supplyDate, supplyIcon } from '../supplies/shared';
 import { RouteFamily, UpcomingDose } from '../../utils/schedule';
 import { T, doseText, fmt, formatTime, medName, medShort, relativeTime, routeNoun, whenRow } from './format';
 
@@ -53,6 +55,7 @@ export interface LogDosePrefill {
     /** Hours since 1970, the due time (or now when already due). */
     timeH: number;
     extras: DoseEvent['extras'];
+    scheduleOccurrence?: DoseEvent['scheduleOccurrence'];
 }
 
 export function prefillFor(item: UpcomingDose, nowMs: number): LogDosePrefill {
@@ -68,12 +71,16 @@ interface ComingUpProps {
     t: T;
     isTransmasc: boolean;
     onOpen?: (item: UpcomingDose) => void;
+    /** Supplies that are out or due for reordering, most urgent first. Each
+     *  gets a "Reorder <name>" row after the doses. */
+    reorders?: ForecastedSupply[];
+    onOpenSupplies?: () => void;
 }
 
 /** The next dose of each routine, soonest first (format_rules 1-3): a one-line
  *  title with the medicine and amount, and one state line with when it is due
  *  and how long until then. No trailing value, so the title keeps the row. */
-const ComingUp: React.FC<ComingUpProps> = ({ items, nowMs, lang, t, isTransmasc, onOpen }) => (
+const ComingUp: React.FC<ComingUpProps> = ({ items, nowMs, lang, t, isTransmasc, onOpen, reorders = [], onOpenSupplies }) => (
     <ListGroup chevronIcon={<ChevronRight size={16} />} aria-label={t('today.coming_up')}>
         {items.map(item => {
             const { regimen } = item;
@@ -99,6 +106,26 @@ const ComingUp: React.FC<ComingUpProps> = ({ items, nowMs, lang, t, isTransmasc,
                         </span>
                     }
                     sub={sub}
+                    {...rowProps}
+                />
+            );
+        })}
+        {reorders.map(({ item, forecast }) => {
+            const Icon = supplyIcon(item.kind);
+            const sub = forecast.status === 'out' ? t('today.reorder.out')
+                : forecast.runOutMs !== null ? fmt(t('today.reorder.runs_out'), { date: supplyDate(forecast.runOutMs, lang) })
+                    : t('today.reorder.soon');
+            const rowProps = onOpenSupplies ? { onClick: onOpenSupplies, drillIn: true } : {};
+            return (
+                <ListRow
+                    key={`supply-${item.id}`}
+                    leading={
+                        <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--c-attention-fill)] text-[var(--c-attention)]">
+                            <Icon size={20} />
+                        </span>
+                    }
+                    title={<span className="block truncate font-semibold">{fmt(t('today.reorder.title'), { name: item.name })}</span>}
+                    sub={<span className="text-[var(--c-attention)]">{sub}</span>}
                     {...rowProps}
                 />
             );

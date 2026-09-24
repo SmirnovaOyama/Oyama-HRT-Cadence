@@ -1,19 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from './LanguageContext';
+import { SecondaryPage } from '../components/ui/SecondaryPage';
+import { DialogContext, type DialogType } from './dialogState';
 
-type DialogType = 'alert' | 'confirm';
-
-interface DialogContextType {
-    showDialog: (type: DialogType, message: string, onConfirm?: () => void) => void;
-}
-
-const DialogContext = createContext<DialogContextType | null>(null);
-
-export const useDialog = () => {
-    const ctx = useContext(DialogContext);
-    if (!ctx) throw new Error("useDialog must be used within DialogProvider");
-    return ctx;
-};
+export { useDialog } from './dialogState';
 
 export const DialogProvider = ({ children }: { children: React.ReactNode }) => {
     const { t } = useTranslation();
@@ -34,34 +24,32 @@ export const DialogProvider = ({ children }: { children: React.ReactNode }) => {
     const contextValue = useMemo(() => ({ showDialog }), [showDialog]);
 
     const handleConfirm = () => {
-        if (onConfirm) onConfirm();
+        // The callback may open a result page synchronously. Close this one
+        // first so its result is not overwritten by our final state update.
         setIsOpen(false);
+        if (onConfirm) onConfirm();
     };
 
     return (
         <DialogContext.Provider value={contextValue}>
             {children}
             {isOpen && (
-                <div className="modal-overlay z-[100]">
-                    <div className="modal-shell">
-                        <div className="modal-card">
-                            <h3 className="modal-title">
-                                {type === 'confirm' ? t('dialog.confirm_title') : t('dialog.alert_title')}
-                            </h3>
-                            <p className="text-sm text-muted mb-5 leading-relaxed">{message}</p>
-                            <div className="flex gap-2">
-                                {type === 'confirm' && (
-                                    <button onClick={() => setIsOpen(false)} className="btn-secondary flex-1">
-                                        {t('btn.cancel')}
-                                    </button>
-                                )}
-                                <button onClick={handleConfirm} className="btn-primary flex-1">
-                                    {t('btn.ok')}
-                                </button>
-                            </div>
-                        </div>
+                <SecondaryPage
+                    title={type === 'confirm' ? t('dialog.confirm_title') : t('dialog.alert_title')}
+                    onBack={() => setIsOpen(false)}
+                >
+                    <p className="text-sm text-muted mb-5 leading-relaxed">{message}</p>
+                    <div className="flex gap-2">
+                        {type === 'confirm' && (
+                            <button onClick={() => setIsOpen(false)} className="btn-secondary flex-1">
+                                {t('btn.cancel')}
+                            </button>
+                        )}
+                        <button onClick={handleConfirm} className="btn-primary flex-1">
+                            {t('btn.ok')}
+                        </button>
                     </div>
-                </div>
+                </SecondaryPage>
             )}
         </DialogContext.Provider>
     );

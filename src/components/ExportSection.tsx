@@ -8,6 +8,8 @@ import { Field, Note, Panel, PasswordInput } from '../pages/account/shared';
 interface ExportSectionProps {
     events: DoseEvent[];
     labResults: LabResult[];
+    /** The full backup may contain templates or routines in either mode. */
+    hasBackupData: boolean;
     weight: number;
     onExport: (encrypt: boolean, password?: string) => Promise<string | null>;
     onQuickExport?: () => void;
@@ -15,7 +17,7 @@ interface ExportSectionProps {
 
 /** The export page's body: an encrypted or plain JSON backup as the main
  *  action, then the other formats as a list of rows that act on tap. */
-const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, weight, onExport, onQuickExport }) => {
+const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, hasBackupData, weight, onExport, onQuickExport }) => {
     const { t, lang } = useTranslation();
     const [encrypt, setEncrypt] = useState(true);
     const [password, setPassword] = useState('');
@@ -25,7 +27,7 @@ const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, weigh
     const encryptLabelId = useId();
     const passwordId = useId();
 
-    const hasData = events.length > 0 || labResults.length > 0;
+    const hasReportData = events.length > 0 || labResults.length > 0;
 
     const handleSave = async () => {
         if (!encrypt) {
@@ -62,7 +64,7 @@ const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, weigh
         URL.revokeObjectURL(url);
     };
 
-    if (!hasData) {
+    if (!hasBackupData) {
         return (
             <Panel>
                 <Note>{t('drawer.empty_export')}</Note>
@@ -140,10 +142,12 @@ const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, weigh
                 )}
                 <ListRow
                     title={t('account.export.csv')}
+                    disabled={!hasReportData}
                     onClick={handleCsvExport}
                 />
                 <ListRow
                     title={t('account.export.pdf')}
+                    disabled={!hasReportData}
                     onClick={() => exportToPDF({ events, labResults, weight, lang, t })}
                 />
             </ListGroup>

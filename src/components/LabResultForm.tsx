@@ -43,7 +43,7 @@ const HormoneValueGroup: React.FC<{
     value: string;
     onValueChange: (v: string) => void;
 }> = ({ id, label, units, unit, onUnitChange, value, onValueChange }) => (
-    <ListGroup header={<label htmlFor={id}>{label}</label>}>
+    <ListGroup header={<label htmlFor={id} className="font-normal">{label}</label>}>
         <div className="list-row gap-3">
             <input
                 id={id}
@@ -52,11 +52,12 @@ const HormoneValueGroup: React.FC<{
                 placeholder="0.0"
                 value={value}
                 onChange={e => onValueChange(e.target.value)}
-                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-xl font-semibold tabular-nums text-[var(--c-ink)] outline-none placeholder:font-normal placeholder:text-[var(--c-muted)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-xl font-normal tabular-nums text-[var(--c-ink)] outline-none placeholder:text-[var(--c-muted)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
             <SegmentedControl
                 aria-label={label}
-                className="w-44 shrink-0"
+                variant="inline"
+                className="w-40 shrink-0"
                 options={units.map(u => ({ value: u, label: UNIT_LABELS[u] }))}
                 value={unit}
                 onChange={onUnitChange}

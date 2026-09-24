@@ -36,13 +36,13 @@ In React: `strokeWidth = size >= 22 ? 1.75 : size >= 18 ? 2 : 2.25`. The geometr
 
 This is the Cadence idea at icon scale. On the dial the elapsed part of the day is toned. On charts the past sits on plate and the future on paper, split at the Now rule. The icons use the same logic:
 - today: the day so far, up to the hand
-- timeline: the past under the curve, up to the Now rule
-- tests: the blood sample, up to its fill line
+- timeline: one completed level curve over simple axes, toned down to the base line; no crossing Now rule or repeated peaks at navigation size
+- tests: the sample, up to its fill line, in a wide rounded tube with a single open rim; no enclosed cap or small graduation marks
 - injection: the dose in the barrel, up to the stopper
 - tablet: the half you take, up to the score
 - patch: the part still on the skin, up to the peel fold
 - gel: the gel, up to its level
-- sublingual: the part of the tablet you can see under the tongue tip
+- sublingual: a small tablet beneath an open side-view tongue outline; only the tablet is toned. Keep the two shapes separated, without a mouth ellipse or tongue groove, so the glyph stays quiet and legible at 16px.
 - reminder: the sounding band of the bell
 - you: the body, on its base line
 - site: the side of the body used last time, up to the centre line

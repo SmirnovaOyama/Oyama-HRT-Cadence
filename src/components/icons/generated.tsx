@@ -9,17 +9,15 @@ export const Today = createIcon('today', <>
 </>);
 
 export const Timeline = createIcon('timeline', <>
-    <path d="M3 20V17C4.5 17 5 9 7 9C9 9 10 14.5 12 14.5V20Z" fill="currentColor" fillOpacity="0.18" stroke="none" />
-    <path d="M3 17C4.5 17 5 9 7 9C9 9 10 14.5 12 14.5C14 14.5 14 7 16 7C18 7 19 12.5 21 12.5" />
-    <path d="M3 20H21M12 5V20" />
+    <path d="M3.5 20.5C7.5 20.5 6.5 7.5 10.5 7.5C14.5 7.5 14.5 20.5 20.5 20.5Z" fill="currentColor" fillOpacity="0.18" stroke="none" />
+    <path d="M3.5 4.5V20.5H20.5M3.5 20.5C7.5 20.5 6.5 7.5 10.5 7.5C14.5 7.5 14.5 20.5 20.5 20.5" />
 </>);
 
 export const Log = createIcon('log', <path d="M12 5.5V18.5M5.5 12H18.5" />);
 
 export const Tests = createIcon('tests', <>
-    <path d="M9.5 13.5V18A2.5 2.5 0 0 0 14.5 18V13.5Z" fill="currentColor" fillOpacity="0.18" stroke="none" />
-    <rect x="8" y="3" width="8" height="3.5" rx="1.5" />
-    <path d="M9.5 6.5V18A2.5 2.5 0 0 0 14.5 18V6.5M9.5 13.5H14.5" />
+    <path d="M8.5 12.5V16.5A3.5 3.5 0 0 0 15.5 16.5V12.5Z" fill="currentColor" fillOpacity="0.18" stroke="none" />
+    <path d="M7 4H17M8.5 4V16.5A3.5 3.5 0 0 0 15.5 16.5V4M8.5 12.5H15.5" />
 </>);
 
 export const You = createIcon('you', <>
@@ -53,10 +51,9 @@ export const Gel = createIcon('gel', <>
 </>);
 
 export const Sublingual = createIcon('sublingual', <>
-    <path d="M15 15A4.5 2 0 1 1 11.19 15.93A5 5 0 0 0 15 15Z" fill="currentColor" fillOpacity="0.18" stroke="none" />
-    <ellipse cx="12" cy="6.5" rx="8.5" ry="3" />
-    <path d="M7 8.93V11A5 5 0 0 0 17 11V8.93M12 9.5V11.5" />
-    <path d="M15 15A4.5 2 0 1 1 11.19 15.93" />
+    <ellipse cx="12.5" cy="18.5" rx="3.5" ry="2" fill="currentColor" fillOpacity="0.18" stroke="none" />
+    <path d="M3.5 8C7.5 8 9 4.5 13 4.5H15C18 4.5 20.5 6.5 20.5 9C20.5 11.5 18.5 13.5 15 13.5H3.5" />
+    <ellipse cx="12.5" cy="18.5" rx="3.5" ry="2" />
 </>);
 
 export const Reminder = createIcon('reminder', <>

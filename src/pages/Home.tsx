@@ -37,8 +37,8 @@ import {
     addLocalDays,
     cycleState,
     dailySlots,
-    inferRegimens,
     isPrimaryHormone,
+    regimensFor,
     pickDialRegimens,
     startOfLocalDay,
     toMs,
@@ -49,6 +49,10 @@ import { AppTheme } from '../constants';
 import { useTranslation } from '../contexts/LanguageContext';
 import { getShareCopy } from '../i18n/share';
 import type { SyncStatus } from '../hooks/useCloudSync';
+import type { Schedule } from '../types/routine';
+import type { DueItem } from '../utils/reminders';
+import DueCard from '../components/reminders/DueCard';
+import type { ForecastedSupply } from '../components/supplies/useSupplyForecasts';
 
 export type { LogDosePrefill } from '../components/today/ComingUp';
 
@@ -83,9 +87,23 @@ interface HomeProps {
     lastSyncedAt?: number | null;
     /** Where the backup icon goes (e.g. Account). Without it the icon is a plain status. */
     onOpenBackup?: () => void;
+    /** Explicit schedules: an active one replaces the routine inferred for its
+     *  medicine and route in the dial and Coming up. */
+    schedules?: Schedule[];
+    /** Reminders due now (useReminders), shown as cards at the top. */
+    dueReminders?: DueItem[];
+    onSnoozeReminder?: (item: DueItem, minutes: number) => void;
+    onSkipReminder?: (item: DueItem) => void;
+    /** Supplies that are out or due for reordering, most urgent first. */
+    suppliesAttention?: ForecastedSupply[];
+    onNavigateToReminders?: () => void;
+    onNavigateToSupplies?: () => void;
 }
 
 const MS_H = 3_600_000;
+const NO_SCHEDULES: Schedule[] = [];
+const NO_DUE: DueItem[] = [];
+const NO_SUPPLIES: ForecastedSupply[] = [];
 
 /** Target bands the app already uses (useAppData currentStatus, ResultChart's band). */
 const TARGET_E2: TargetRange = { low: 100, high: 200 };
@@ -130,6 +148,13 @@ const Home: React.FC<HomeProps> = ({
     syncStatus,
     lastSyncedAt,
     onOpenBackup,
+    schedules = NO_SCHEDULES,
+    dueReminders = NO_DUE,
+    onSnoozeReminder,
+    onSkipReminder,
+    suppliesAttention = NO_SUPPLIES,
+    onNavigateToReminders,
+    onNavigateToSupplies,
 }) => {
     const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const isMono = theme === 'mono';
@@ -148,7 +173,7 @@ const Home: React.FC<HomeProps> = ({
 
     // ── Routine ───────────────────────────────────────────────────────────
     // Recomputed each minute with `nowMs`: due times and slot states move with the clock.
-    const regimens = React.useMemo(() => inferRegimens(events, nowMs), [events, nowMs]);
+    const regimens = React.useMemo(() => regimensFor(events, schedules, nowMs), [events, schedules, nowMs]);
     const dialPick = React.useMemo(() => pickDialRegimens(regimens, isTransmasc), [regimens, isTransmasc]);
     const cycle = React.useMemo(() => (dialPick.outer ? cycleState(dialPick.outer, nowMs) : null), [dialPick.outer, nowMs]);
     const slots = React.useMemo(
@@ -448,7 +473,7 @@ const Home: React.FC<HomeProps> = ({
                 type="button"
                 onClick={openInfo}
                 aria-label={centreAria}
-                className="flex flex-col items-center gap-0.5 self-center rounded-2xl px-6 py-2 text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]"
+                className="flex flex-col items-center gap-0.5 self-center rounded-full px-6 py-2 text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]"
             >
                 {centre}
             </button>
@@ -456,6 +481,22 @@ const Home: React.FC<HomeProps> = ({
             {regimens.length === 0 && <p className="m-0 text-sm text-[var(--c-muted)]">{t('today.fallback.hint')}</p>}
         </section>
     );
+
+    // Due reminders sit above everything else: the one thing to act on now.
+    const dueCards = dueReminders.length > 0 && onLogDose ? (
+        <div className="mb-6 flex flex-col gap-3">
+            {dueReminders.map(item => (
+                <DueCard
+                    key={item.key}
+                    item={item}
+                    nowMs={nowMs}
+                    onLog={prefill => onLogDose(prefill)}
+                    onSnooze={(i, minutes) => onSnoozeReminder?.(i, minutes)}
+                    onSkip={i => onSkipReminder?.(i)}
+                />
+            ))}
+        </div>
+    ) : null;
 
     const logButton = (label: string, onClick: () => void) => (
         <Button variant="primary" block onClick={onClick}>
@@ -472,6 +513,7 @@ const Home: React.FC<HomeProps> = ({
             <div className="w-full max-w-2xl px-4 pb-32 md:px-8">
                 <EstimateInfoModal isOpen={isEstimateInfoOpen} onClose={() => setIsEstimateInfoOpen(false)} />
                 <PageHeader title={title} subtitle={subtitle} trailing={backup} />
+                {dueCards}
                 <div className="flex flex-col gap-4">
                     <section aria-label={t('today.empty.title')} className={plate}>
                         <RhythmDial
@@ -504,6 +546,7 @@ const Home: React.FC<HomeProps> = ({
             />
 
             <PageHeader title={title} subtitle={subtitle} trailing={trailing} />
+            {dueCards}
 
             <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-start">
                 {/* Left: the dial plate, notices and the one main action */}
@@ -528,8 +571,16 @@ const Home: React.FC<HomeProps> = ({
 
                 {/* Right on desktop: chart first, then Coming up. Phone order is Coming up, then the chart. */}
                 <div className="flex min-w-0 flex-col gap-8">
-                    {upcoming.length > 0 && (
-                        <Section title={t('today.coming_up')} className="xl:order-2">
+                    {(upcoming.length > 0 || suppliesAttention.length > 0) && (
+                        <Section
+                            title={t('today.coming_up')}
+                            className="xl:order-2"
+                            action={onNavigateToReminders && (
+                                <Button variant="plain" onClick={onNavigateToReminders} className="-mr-3">
+                                    {t('today.reminders_link')}
+                                </Button>
+                            )}
+                        >
                             <ComingUp
                                 items={upcoming}
                                 nowMs={nowMs}
@@ -537,6 +588,8 @@ const Home: React.FC<HomeProps> = ({
                                 t={t}
                                 isTransmasc={isTransmasc}
                                 onOpen={openUpcoming}
+                                reorders={suppliesAttention}
+                                onOpenSupplies={onNavigateToSupplies}
                             />
                         </Section>
                     )}

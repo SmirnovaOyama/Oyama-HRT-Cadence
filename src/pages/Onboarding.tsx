@@ -4,7 +4,6 @@ import PixelMark, { MarkName, MarkState } from '../components/PixelMark';
 import OnboardingCurve, { useOnboardingCurve, BEATS, type Beat, type CurveData } from '../components/OnboardingCurve';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useHRTMode } from '../contexts/HRTModeContext';
-import { Lang, TRANSLATIONS } from '../i18n/translations';
 import { Button, ListGroup, ListRow } from '../components/ui';
 import { LIST_CHECK } from './you/shared';
 
@@ -13,7 +12,7 @@ const ONBOARDING_KEY = 'app-onboarded';
 /**
  * Anyone with records on this device has been using the app since before there
  * was an intro, and greeting them as a stranger — worse, offering to set the
- * language and HRT mode they already chose — is the one way this screen can do
+ * HRT mode they already chose — is the one way this screen can do
  * harm. So an existing dose log counts as having been onboarded.
  *
  * The keys are the ones useAppData writes: `hrt-events` while signed out,
@@ -37,15 +36,6 @@ export const shouldShowOnboarding = (): boolean => {
 export const markOnboardingSeen = (): void => {
     localStorage.setItem(ONBOARDING_KEY, 'true');
 };
-
-/**
- * A hairline under the language list while any rows are still below the fold.
- * The list's scrollbar is hidden like every other scroller in the app, so
- * without a cue a row can end flush against the footer and read as the end of
- * the languages — on a short screen that quietly hides two of them. A flat
- * edge line, like an iOS scroll edge, rather than a fade: no gradients.
- */
-const scrollEdge = 'border-b border-[var(--c-rule)]';
 
 /**
  * The three slots of the "how it works" step, and the only step that splits in
@@ -118,9 +108,6 @@ const StepTitle: React.FC<{ title: string; subtitle: string }> = ({ title, subti
         <p className="m-0 mt-3 text-base text-[var(--c-muted)]">{subtitle}</p>
     </>
 );
-
-/** Read straight out of the packs to size the greeting — see the welcome step. */
-const SUBTITLE_KEY = 'onboarding.welcome_subtitle';
 
 interface PointProps {
     /** One of the pixel sprites in PixelMark. */
@@ -261,23 +248,12 @@ const HowStep: React.FC<{ curve: CurveData | null }> = ({ curve }) => {
 };
 
 interface OnboardingProps {
-    /** Same list Settings uses, rather than a second copy that can drift. */
-    languageOptions: { value: string; label: string }[];
     onDone: () => void;
 }
 
-/**
- * First run. Four screens, in the order a new user needs them: language before
- * anything else (the app defaults to Chinese, so every other word is unreadable
- * until it's set), then HRT mode, then what the app actually does, then what it
- * does with your data and what it can't do for you.
- *
- * Rendered instead of the app shell, not as a tab inside it — the nav would
- * invite tabbing away halfway through, leaving language and mode on defaults
- * that the flow exists to ask about.
- */
-const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
-    const { t, lang, setLang } = useTranslation();
+/** First run: a welcome, HRT mode, how tracking works, and data privacy. */
+const Onboarding: React.FC<OnboardingProps> = ({ onDone }) => {
+    const { t } = useTranslation();
     const { mode, setMode, isTransmasc } = useHRTMode();
     const curve = useOnboardingCurve(isTransmasc);
 
@@ -285,110 +261,20 @@ const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
     // Only so the step change slides the way the app's view changes do.
     const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
 
-    const langListRef = useRef<HTMLDivElement>(null);
-    const [langsBelow, setLangsBelow] = useState(false);
-    const syncLangsBelow = () => {
-        const el = langListRef.current;
-        setLangsBelow(!!el && el.scrollHeight - el.scrollTop - el.clientHeight > 4);
-    };
-    // Re-measured on step change, since the list only exists on step 0. The two
-    // watchers cover different things and neither subsumes the other: `resize`
-    // catches the rotation, while the observer catches the list's box moving
-    // without the window doing anything — the address bar sliding away, or a
-    // font landing late and retyping the rows.
-    useEffect(() => {
-        syncLangsBelow();
-        window.addEventListener('resize', syncLangsBelow);
-        const el = langListRef.current;
-        const observer = new ResizeObserver(syncLangsBelow);
-        if (el) {
-            observer.observe(el);
-            for (const row of Array.from(el.children)) observer.observe(row);
-        }
-        return () => {
-            window.removeEventListener('resize', syncLangsBelow);
-            observer.disconnect();
-        };
-    }, [step]);
-
     const modeOptions = [
         { value: 'transfem', labelKey: 'mode.transfem', descKey: 'onboarding.mode_transfem_desc' },
         { value: 'transmasc', labelKey: 'mode.transmasc', descKey: 'onboarding.mode_transmasc_desc' },
     ] as const;
 
     const steps = [
-        // The cat is the welcome, so it gets the room. Whatever it happens to be
-        // doing at this hour is the greeting — the schedule is the point, and a
-        // pose reserved for first-timers would be the one cat in the app that
-        // isn't living out its day. It obeys the "show pixel cats" preference
-        // like every other cat: someone replaying the intro with them switched
-        // off asked not to see one.
-        // `h-full` only where it earns its keep. On a phone it is what lets the
-        // greeting stay put while the languages scroll under it. On a wide
-        // window there is room for all seven, and filling the height there
-        // pinned this step to the top with a slab of empty page under the last
-        // language — while every other step sat centred, so stepping between
-        // them jumped the page. Sized to its content it centres like the rest.
-        <div key="welcome" className="flex h-full flex-col pt-6 text-center lg:h-auto">
-            {/* The greeting holds its place; only the list below it travels.
-                Seven languages don't fit under the cat on a short screen, and
-                scrolling the whole step would carry away the one sentence
-                explaining what is being chosen. */}
-            <div className="shrink-0">
-                <div className="flex justify-center">
-                    <PixelCat pose="donut" size={182} />
-                </div>
-                <h1 className="m-0 mt-6 text-3xl font-bold text-[var(--c-ink)]">{t('onboarding.welcome_title')}</h1>
-                {/* Every translation of the sentence stacked into one grid cell,
-                    the inactive ones hidden but still taking up their space, so
-                    the box is as tall as the longest one at whatever width this
-                    is. The list below therefore starts at the same y in every
-                    language — otherwise picking Türkçe after 简体中文 grows the
-                    sentence by a line and slides the list down under the finger
-                    that just tapped it. A fixed height can't stand in for this:
-                    the longest runs to four lines at 320px and three at 375px. */}
-                <div className="mx-auto mt-3 grid max-w-sm">
-                    {languageOptions.map(({ value }) => {
-                        const current = value === lang;
-                        const text = current
-                            ? t(SUBTITLE_KEY)
-                            : (TRANSLATIONS as Record<string, Record<string, string>>)[value]?.[SUBTITLE_KEY];
-                        if (!text) return null;
-                        return (
-                            <p
-                                key={value}
-                                className={`col-start-1 row-start-1 m-0 text-base text-[var(--c-muted)] ${current ? '' : 'invisible'}`}
-                            >
-                                {text}
-                            </p>
-                        );
-                    })}
-                </div>
+        <div key="welcome" className="flex flex-col pt-6 text-center">
+            <div className="flex justify-center">
+                <PixelCat pose="donut" size={182} />
             </div>
-            {/* Narrower than the step's max-w-md: the labels are one or two
-                words, and across the full column the check would drift far
-                enough from its language to stop reading as one row.
-
-                min-h keeps the list usable rather than letting flex-1 squeeze
-                it to nothing on a very short viewport — past that point the
-                step outgrows its box and the outer scroller takes over, which
-                is the graceful way to lose the pinned greeting. */}
-            <div
-                ref={langListRef}
-                onScroll={syncLangsBelow}
-                className={`mx-auto mt-7 min-h-[7.5rem] w-full max-w-sm flex-1 overflow-y-auto scrollbar-hide text-start lg:flex-none ${langsBelow ? scrollEdge : ''}`}
-            >
-                <ListGroup selection="single" checkIcon={LIST_CHECK} aria-label={t('onboarding.welcome_title')}>
-                    {languageOptions.map(({ value, label }) => (
-                        <ListRow
-                            key={value}
-                            title={label}
-                            selected={lang === value}
-                            onClick={() => setLang(value as Lang)}
-                        />
-                    ))}
-                </ListGroup>
-            </div>
+            <h1 className="m-0 mt-6 text-3xl font-bold text-[var(--c-ink)]">{t('onboarding.welcome_title')}</h1>
+            <p className="mx-auto mt-3 mb-0 max-w-sm text-base text-[var(--c-muted)]">
+                {t('onboarding.welcome_subtitle')}
+            </p>
         </div>,
 
         <div key="mode" className="pt-8">
@@ -445,29 +331,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ languageOptions, onDone }) => {
                 </Button>
             </div>
 
-            {/* `safe center`, not `start`: on a phone the step is usually taller
-                than the space for it anyway, so this was invisible there. On a
-                wide, short-content window — mode, how-it-works, privacy — start
-                left the card glued to the top of the flex area with a slab of
-                empty page below it down to the footer. Centering fixes that
-                without touching step 0, whose `h-full` already exactly fills
-                the cross axis; `safe` is what keeps a step that overflows a
-                short window scrolling from the top instead of clipping. */}
             <div className="onboarding-steps flex flex-1 overflow-y-auto scrollbar-hide px-4 md:px-6">
-                {/* The welcome step pins its greeting and scrolls its own list,
-                    so it needs the scroller's height to divide up; the rest are
-                    read top to bottom and just grow.
-
-                    Only the chart step widens on a wide window, into the two
-                    columns its Head / Stage / Body slots are placed in. The
-                    other three are a heading and a list of rows: given a second
-                    column there is nothing to put in it, and a column of empty
-                    ground beside a list is worse than a centred one. */}
+                {/* Only the chart step needs a second column on wide screens. */}
                 <div
                     key={step}
                     className={`mx-auto w-full max-w-md
                         ${step === CHART_STEP ? 'lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-center lg:gap-x-14 lg:gap-y-5' : ''}
-                        ${step === 0 ? 'h-full pb-6 lg:h-auto' : 'pb-8'}
+                        pb-8
                         ${direction === 'backward' ? 'view-enter-backward' : 'view-enter-forward'}`}
                 >
                     {steps[step]}

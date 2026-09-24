@@ -1,23 +1,20 @@
 import React, { ReactNode } from 'react';
 import { Attention, Sync } from './icons';
 import { Button } from './ui/Button';
-import { Lang, TRANSLATIONS } from '../i18n/translations';
+import { TRANSLATIONS } from '../i18n/translations';
 
 /**
- * The crash screen reads the language straight out of storage rather than out
- * of the LanguageProvider.
+ * The crash screen uses English directly rather than depending on the
+ * LanguageProvider or an old language preference in storage.
  *
  * This boundary wraps the whole app shell, so the render it is catching may be
  * the provider's own. Taking a dependency on a context that might be the thing
  * that just failed would mean the error screen can fail too, and the one screen
- * that has to survive anything would be the most fragile in the app. localStorage
- * and the raw pack cannot throw here.
+ * that has to survive anything would be the most fragile in the app.
  */
 const tr = (key: string): string => {
-    let lang: string | null = null;
-    try { lang = localStorage.getItem('hrt-lang'); } catch { /* private mode */ }
-    const packs = TRANSLATIONS as unknown as Record<string, Record<string, string>>;
-    return packs[lang as Lang]?.[key] ?? packs.en[key] ?? packs.zh[key] ?? key;
+    const english = TRANSLATIONS.en as Record<string, string>;
+    return english[key] ?? key;
 };
 
 interface Props {

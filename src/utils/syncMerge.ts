@@ -33,8 +33,19 @@ import { isTestosteroneEster, isT_LabUnit } from '../../logic';
 export type ModeKey = 'transfem' | 'transmasc';
 export const MODE_KEYS: readonly ModeKey[] = ['transfem', 'transmasc'];
 
-export type RecordKind = 'events' | 'labResults' | 'doseTemplates';
-export const RECORD_KINDS: readonly RecordKind[] = ['events', 'labResults', 'doseTemplates'];
+export type RecordKind = 'events' | 'labResults' | 'doseTemplates' | 'schedules' | 'supplies';
+export const RECORD_KINDS: readonly RecordKind[] = ['events', 'labResults', 'doseTemplates', 'schedules', 'supplies'];
+
+/**
+ * Kinds this build added on top of the production tracker. Older clients do
+ * not know them and drop them (records and tombstones alike) when they push, so
+ * a remote payload that is silent about one of these says nothing about it:
+ * the merge keeps what this device holds, and only an explicit tombstone
+ * deletes. Union-by-id already behaves that way for a missing list; the one
+ * cost is that a deletion made here and pushed through an old client loses its
+ * tombstone, so a third device still holding the record can bring it back.
+ */
+export const ROUTINE_KINDS: readonly RecordKind[] = ['schedules', 'supplies'];
 
 /** id -> epoch ms the record was deleted. */
 export type TombstoneMap = Record<string, number>;
@@ -44,6 +55,8 @@ export interface ModeBlock {
     events: any[];
     labResults: any[];
     doseTemplates: any[];
+    schedules: any[];
+    supplies: any[];
     deletions: Tombstones;
 }
 
@@ -94,11 +107,11 @@ export const TOMBSTONE_MAX_PER_KIND = 5000;
 // --- Shapes -----------------------------------------------------------------
 
 export function emptyTombstones(): Tombstones {
-    return { events: {}, labResults: {}, doseTemplates: {} };
+    return { events: {}, labResults: {}, doseTemplates: {}, schedules: {}, supplies: {} };
 }
 
 function emptyModeBlock(): ModeBlock {
-    return { events: [], labResults: [], doseTemplates: [], deletions: emptyTombstones() };
+    return { events: [], labResults: [], doseTemplates: [], schedules: [], supplies: [], deletions: emptyTombstones() };
 }
 
 export function emptySyncState(): SyncState {
@@ -131,11 +144,9 @@ export function sanitizeTombstoneMap(raw: unknown): TombstoneMap {
 
 export function sanitizeTombstones(raw: unknown): Tombstones {
     const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-    return {
-        events: sanitizeTombstoneMap(src.events),
-        labResults: sanitizeTombstoneMap(src.labResults),
-        doseTemplates: sanitizeTombstoneMap(src.doseTemplates),
-    };
+    const out = emptyTombstones();
+    for (const kind of RECORD_KINDS) out[kind] = sanitizeTombstoneMap(src[kind]);
+    return out;
 }
 
 /** Drop expired entries, then the oldest ones once the per-kind ceiling is hit. */
@@ -149,11 +160,9 @@ export function pruneTombstoneMap(map: TombstoneMap, now: number): TombstoneMap 
 }
 
 export function pruneTombstones(t: Tombstones, now: number): Tombstones {
-    return {
-        events: pruneTombstoneMap(t.events, now),
-        labResults: pruneTombstoneMap(t.labResults, now),
-        doseTemplates: pruneTombstoneMap(t.doseTemplates, now),
-    };
+    const out = emptyTombstones();
+    for (const kind of RECORD_KINDS) out[kind] = pruneTombstoneMap(t[kind] ?? {}, now);
+    return out;
 }
 
 function mergeTombstoneMaps(a: TombstoneMap, b: TombstoneMap): TombstoneMap {
@@ -212,6 +221,9 @@ export function normalizeSyncState(payload: unknown): SyncState {
                 events: asArray(block.events),
                 labResults: asArray(block.labResults),
                 doseTemplates: asArray(block.doseTemplates),
+                // Absent on payloads from older clients; see ROUTINE_KINDS.
+                schedules: asArray(block.schedules),
+                supplies: asArray(block.supplies),
                 deletions: sanitizeTombstones(block.deletions),
             };
         }
@@ -241,9 +253,11 @@ export function normalizeSyncState(payload: unknown): SyncState {
  * make two byte-identical records look like a conflict.
  */
 const CONTENT_FIELDS: Record<RecordKind, readonly string[]> = {
-    events: ['route', 'ester', 'doseMG', 'timeH', 'extras'],
+    events: ['route', 'ester', 'doseMG', 'timeH', 'extras', 'scheduleOccurrence'],
     labResults: ['unit', 'concValue', 'timeH'],
     doseTemplates: ['name', 'route', 'ester', 'doseMG', 'extras'],
+    schedules: ['route', 'ester', 'doseMG', 'extras', 'cadence', 'remind', 'active', 'createdAt'],
+    supplies: ['name', 'kind', 'unit', 'amount', 'setAt', 'link', 'perDose', 'strengthMG', 'reorderLeadDays', 'createdAt'],
 };
 
 export function stableString(value: unknown): string {
@@ -378,17 +392,14 @@ export function mergeSyncStates(local: SyncState, remote: SyncState | null): Mer
 
     const merged = emptySyncState();
     for (const m of MODE_KEYS) {
-        const deletions: Tombstones = {
-            events: mergeTombstoneMaps(local.modes[m].deletions.events, remote.modes[m].deletions.events),
-            labResults: mergeTombstoneMaps(local.modes[m].deletions.labResults, remote.modes[m].deletions.labResults),
-            doseTemplates: mergeTombstoneMaps(local.modes[m].deletions.doseTemplates, remote.modes[m].deletions.doseTemplates),
-        };
-        merged.modes[m] = {
-            events: mergeKind('events', local.modes[m].events, remote.modes[m].events, deletions.events, stats),
-            labResults: mergeKind('labResults', local.modes[m].labResults, remote.modes[m].labResults, deletions.labResults, stats),
-            doseTemplates: mergeKind('doseTemplates', local.modes[m].doseTemplates, remote.modes[m].doseTemplates, deletions.doseTemplates, stats),
-            deletions,
-        };
+        const mine = local.modes[m];
+        const theirs = remote.modes[m];
+        const block = emptyModeBlock();
+        for (const kind of RECORD_KINDS) {
+            block.deletions[kind] = mergeTombstoneMaps(mine.deletions[kind] ?? {}, theirs.deletions[kind] ?? {});
+            block[kind] = mergeKind(kind, asArray(mine[kind]), asArray(theirs[kind]), block.deletions[kind], stats);
+        }
+        merged.modes[m] = block;
     }
 
     const weight = resolveScalar(local.weight, local.weightUpdatedAt, remote.weight, remote.weightUpdatedAt);
@@ -421,8 +432,8 @@ export function hasContent(state: SyncState): boolean {
     for (const m of MODE_KEYS) {
         const block = state.modes[m];
         for (const kind of RECORD_KINDS) {
-            if ((block[kind] as any[]).length > 0) return true;
-            if (Object.keys(block.deletions[kind]).length > 0) return true;
+            if (asArray(block[kind]).length > 0) return true;
+            if (Object.keys(block.deletions[kind] ?? {}).length > 0) return true;
         }
     }
     return state.weightUpdatedAt > 1 || state.pkParamsUpdatedAt > 1;
@@ -441,7 +452,7 @@ export function fingerprintState(state: SyncState): string {
     for (const m of MODE_KEYS) {
         const block = state.modes[m];
         for (const kind of RECORD_KINDS) {
-            const rows = (block[kind] as any[])
+            const rows = asArray(block[kind])
                 .map(r => {
                     const id = recordId(r);
                     return id ? `${id}=${contentFingerprint(kind, r)}` : null;
@@ -449,7 +460,7 @@ export function fingerprintState(state: SyncState): string {
                 .filter((r): r is string => r !== null)
                 .sort();
             parts.push(`${m}.${kind}:${rows.join(';')}`);
-            parts.push(`${m}.${kind}.del:${Object.keys(block.deletions[kind]).sort().join(';')}`);
+            parts.push(`${m}.${kind}.del:${Object.keys(block.deletions[kind] ?? {}).sort().join(';')}`);
         }
     }
     parts.push(`weight:${state.weight === undefined ? '' : stableString(state.weight)}`);

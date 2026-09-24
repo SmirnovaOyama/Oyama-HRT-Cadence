@@ -63,6 +63,9 @@ export interface DoseEvent {
     doseMG: number; // Dose in mg (of the ester/compound), NOT E2-equivalent
     ester: Ester;
     extras: Partial<Record<ExtraKey, number>>;
+    // Optional app metadata: the reminder explicitly completed by this log.
+    // The model still uses the actual timeH above, never the scheduled time.
+    scheduleOccurrence?: { scheduleId: string; occurrenceMs: number };
     // Epoch ms of the last edit, stamped by the app on write. Only cloud sync
     // reads it: when two devices hold the same id with different contents, this
     // is what says which edit came second. Optional because records written

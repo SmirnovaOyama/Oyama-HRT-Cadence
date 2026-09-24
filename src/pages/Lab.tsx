@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BloodDrop, ChevronRight, Close } from '../components/icons';
+import { BloodDrop, ChevronRight } from '../components/icons';
 import {
     CalibrationHistoryMode, CalibrationMethod, CalibrationPoint, CalibrationResult, DoseEvent, LabResult, Route,
     convertToNgDl, convertToPgMl, getHormoneLevelAdvisory, isTestosteroneEster, isT_LabUnit,
@@ -7,13 +7,13 @@ import {
 import { Lang } from '../i18n/translations';
 import { LOCALE_MAP } from '../utils/helpers';
 import { useHRTMode } from '../contexts/HRTModeContext';
-import { useEscape } from '../hooks/useEscape';
 import { useElementSize } from '../hooks/useElementSize';
 import LabResultForm from '../components/LabResultForm';
 import { makeDayFormatter } from '../components/DoseHeatmap';
 import PixelCat from '../components/PixelCat';
 import { HormoneLevelAdvisoryLine } from '../components/DoseAdvisory';
 import { Button, Lead, ListGroup, ListRow, PageHeader, Section } from '../components/ui';
+import { SecondaryPage } from '../components/ui/SecondaryPage';
 import { CalibrationChoices, CalibrationSummary, methodName } from './CalibrationSettings';
 
 const NBSP = '\u00a0';
@@ -294,8 +294,7 @@ const Lab: React.FC<LabProps> = ({
         setEditing(null);
         if (isQuickAddLabOpen) setIsQuickAddLabOpen(false);
     };
-    useEscape(closeSheet, sheetOpen);
-    // Opening one sheet closes the other.
+    // Opening a new result closes the edit page.
     useEffect(() => { if (isQuickAddLabOpen) setEditing(null); }, [isQuickAddLabOpen]);
 
     const injections = useMemo(() => (events ?? []).filter(e => e.route === Route.injection), [events]);
@@ -476,25 +475,13 @@ const Lab: React.FC<LabProps> = ({
                 </div>
             </div>
 
-            {/* Add or edit, as a sheet. */}
+            {/* Add or edit in the current window. */}
             {sheetOpen && (
-                <div className="modal-overlay" onClick={closeSheet}>
-                    <div className="modal-shell-wide" onClick={e => e.stopPropagation()}>
-                        <div
-                            role="dialog"
-                            aria-modal="true"
-                            aria-labelledby="lab-sheet-title"
-                            className="modal-card flex max-h-[92dvh] w-full flex-col p-0"
-                        >
-                            <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3">
-                                <h2 id="lab-sheet-title" className="m-0 text-xl font-semibold text-[var(--c-ink)]">
-                                    {editing ? t('tests.edit') : t('tests.add')}
-                                </h2>
-                                <Button variant="icon" aria-label={t('btn.cancel')} onClick={closeSheet}>
-                                    <Close size={22} />
-                                </Button>
-                            </div>
-                            <div className="overflow-y-auto px-4 pb-4">
+                <SecondaryPage
+                    title={editing ? t('tests.edit') : t('tests.add')}
+                    onBack={closeSheet}
+                    backLabel={t('tests.page_title')}
+                >
                                 <LabResultForm
                                     key={editing?.id ?? 'new'}
                                     resultToEdit={editing}
@@ -505,10 +492,7 @@ const Lab: React.FC<LabProps> = ({
                                     onCancel={closeSheet}
                                     onDelete={onDeleteLabResult}
                                 />
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </SecondaryPage>
             )}
         </div>
     );

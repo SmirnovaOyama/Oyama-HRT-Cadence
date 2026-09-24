@@ -78,11 +78,9 @@ export const formatBytes = (bytes: number): string => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 };
 
-// No locale: `hour12: false` with two-digit fields renders "14:05" identically
-// in all seven of the app's locales, so threading `lang` through here would
-// change three call sites and no pixels.
+// Keep the clock in English regardless of the browser's own locale.
 export const formatTime = (date: Date, timeZone?: string) => {
-    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone });
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone });
 };
 
 const iconMuted = "w-5 h-5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]";

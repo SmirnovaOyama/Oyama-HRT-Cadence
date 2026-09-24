@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DoseEvent, SimulationResult, runSimulation } from '../../logic';
-import { PROJECTION_DAYS, inferRegimens, plannedEvents } from '../utils/schedule';
+import { PROJECTION_DAYS, plannedEvents, regimensFor } from '../utils/schedule';
+import type { Schedule } from '../types/routine';
 
 /**
  * The estimate "if you keep your schedule": the logged doses plus the doses
@@ -33,32 +34,40 @@ function useSlowClock(enabled: boolean): number {
     return tick;
 }
 
+/** Build from the complete log: inferred routines omit short histories and
+ *  coalesce nearby entries, which are still real doses for explicit schedules. */
+export function buildProjection(events: DoseEvent[], weight: number, schedules: Schedule[] = [], nowMs = Date.now()): Projection | null {
+    if (events.length === 0 || !(weight > 0)) return null;
+    const planned = plannedEvents(regimensFor(events, schedules, nowMs), nowMs, PROJECTION_DAYS);
+    if (planned.length === 0) return null;
+    let sim: SimulationResult | null = null;
+    try {
+        sim = runSimulation([...events, ...planned], weight);
+    } catch {
+        return null;
+    }
+    if (!sim || sim.timeH.length === 0) return null;
+    return { ...sim, planned, horizonMs: nowMs + PROJECTION_DAYS * 24 * 3_600_000 };
+}
+
 /**
  * Runs the pharmacokinetic model on `events` plus the planned doses that
  * continue every usable routine for PROJECTION_DAYS days. Null when disabled,
  * when there is no usable routine to continue, or when the model has nothing
  * to say.
  */
-export function useProjection({ events, weight, enabled = true }: {
+export function useProjection({ events, weight, schedules, enabled = true }: {
     events: DoseEvent[];
     weight: number;
+    /** Explicit schedules; an active one replaces the routine inferred for
+     *  its medicine and route. */
+    schedules?: Schedule[];
     enabled?: boolean;
 }): Projection | null {
     const tick = useSlowClock(enabled);
     return useMemo(() => {
-        if (!enabled || events.length === 0 || !(weight > 0)) return null;
-        const nowMs = Date.now();
-        const planned = plannedEvents(inferRegimens(events, nowMs), nowMs, PROJECTION_DAYS);
-        if (planned.length === 0) return null;
-        let sim: SimulationResult | null = null;
-        try {
-            sim = runSimulation([...events, ...planned], weight);
-        } catch {
-            return null;
-        }
-        if (!sim || sim.timeH.length === 0) return null;
-        return { ...sim, planned, horizonMs: nowMs + PROJECTION_DAYS * 24 * 3_600_000 };
+        return enabled ? buildProjection(events, weight, schedules) : null;
         // `tick` re-plans as the clock moves past due times.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [events, weight, enabled, tick]);
+    }, [events, weight, schedules, enabled, tick]);
 }

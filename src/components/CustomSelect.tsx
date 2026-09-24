@@ -1,5 +1,7 @@
-import React, { useId, useState } from 'react';
-import { ChevronDown, Check } from './icons';
+import React, { useState } from 'react';
+import { ChevronRight, Check } from './icons';
+import { ListGroup, ListRow } from './ui';
+import { SecondaryPage } from './ui/SecondaryPage';
 
 interface Option {
     value: string;
@@ -31,9 +33,8 @@ interface CustomSelectProps {
 
 /**
  * A pick-one list view (spec/listview_v3.md). Closed, it is a single row:
- * the label, the chosen value and a chevron. Opened, the options unfold
- * underneath as rows of the same inset group, with a trailing check on the
- * chosen one. No floating menu, no radio circles.
+ * the label, the chosen value and a chevron. The row opens a secondary page
+ * of grouped choices, with a trailing check on the chosen one.
  */
 const CustomSelect: React.FC<CustomSelectProps> = ({
     value,
@@ -47,7 +48,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     defaultOpen = false,
 }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
-    const listId = useId();
     const selected = options.find(o => o.value === value);
     const leading = icon ?? selected?.icon;
     const hasIcons = options.some(o => o.icon != null);
@@ -63,9 +63,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             <button
                 type="button"
                 className={`list-row ${leading != null ? 'list-row-tall' : ''} ${label != null ? 'list-row-has-value' : ''}`}
-                aria-expanded={isOpen}
-                aria-controls={listId}
-                onClick={() => setIsOpen(open => !open)}
+                onClick={() => setIsOpen(true)}
             >
                 {leading != null && <span className="list-row-leading">{leading}</span>}
                 <span className="list-row-text">
@@ -73,50 +71,32 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 </span>
                 {label != null && <span className="list-row-value">{summary}</span>}
                 <span className="list-row-chevron" aria-hidden="true">
-                    <ChevronDown size={16} className={`chev ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronRight size={16} />
                 </span>
             </button>
             {isOpen && (
-                <div id={listId} role="radiogroup" aria-label={label}>
-                    {options.map((opt, i) => {
-                        const isSelected = opt.value === value;
-                        const iconAbove = i === 0 ? leading != null : options[i - 1].icon != null;
-                        return (
-                            <React.Fragment key={opt.value}>
-                                <div
-                                    role="presentation"
-                                    aria-hidden="true"
-                                    className={iconAbove ? 'list-sep list-sep-icon' : 'list-sep'}
-                                />
-                                <button
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={isSelected}
-                                    className={`list-row ${opt.icon != null ? 'list-row-tall' : ''} ${opt.description ? 'list-row-has-value' : ''}`}
-                                    onClick={() => {
-                                        onChange(opt.value);
-                                        setIsOpen(false);
-                                    }}
-                                >
-                                    {opt.icon != null ? (
-                                        <span className="list-row-leading">{opt.icon}</span>
-                                    ) : hasIcons ? (
-                                        <span className="list-row-leading w-10" />
-                                    ) : null}
-                                    <span className="list-row-text">
-                                        <span className="list-row-title">{opt.label}</span>
-                                    </span>
-                                    {opt.description && <span className="list-row-value">{opt.description}</span>}
-                                    {isSelected && (
-                                        <span className="list-row-check" aria-hidden="true">
-                                            <Check size={22} />
-                                        </span>
-                                    )}
-                                </button>
-                            </React.Fragment>
-                        );
-                    })}
-                </div>
+                <SecondaryPage title={label ?? header ?? selected?.label ?? value} onBack={() => setIsOpen(false)}>
+                    <ListGroup
+                        selection="single"
+                        aria-label={label ?? selected?.label ?? value}
+                        checkIcon={<Check size={22} />}
+                        footer={footer}
+                    >
+                        {options.map(opt => (
+                            <ListRow
+                                key={opt.value}
+                                title={opt.label}
+                                value={opt.description}
+                                leading={opt.icon ?? (hasIcons ? <span className="w-10" /> : undefined)}
+                                selected={opt.value === value}
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                            />
+                        ))}
+                    </ListGroup>
+                </SecondaryPage>
             )}
         </>
     );

@@ -1,0 +1,73 @@
+.dose-stepper .stepper-action > span {
+    transition: background-color var(--duration-quick) var(--ease-standard),
+                transform 120ms ease-out;
+}
+
+.dose-stepper .stepper-action:active:not(:disabled) > span {
+    transform: scale(0.92);
+}
+
+.dose-stepper-value[data-rolling="true"] > input,
+.dose-stepper-value[data-rolling="true"] > input::placeholder {
+    color: transparent;
+    caret-color: transparent;
+}
+
+.dose-stepper-motion {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.dose-stepper-number {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    animation-duration: 200ms;
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+    animation-fill-mode: both;
+}
+
+.dose-stepper-number-old {
+    animation-name: stepper-number-out;
+}
+
+.dose-stepper-number-new {
+    animation-name: stepper-number-in;
+}
+
+@keyframes stepper-number-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(calc(var(--stepper-travel) * -1)); }
+}
+
+@keyframes stepper-number-in {
+    from { opacity: 0; transform: translateY(var(--stepper-travel)); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dose-stepper .stepper-action > span {
+        transition: none;
+    }
+    .dose-stepper .stepper-action:active:not(:disabled) > span {
+        transform: none;
+    }
+    .dose-stepper-motion {
+        display: none;
+    }
+    .dose-stepper-number {
+        animation: none;
+    }
+    .dose-stepper-value[data-rolling="true"] > input {
+        color: var(--c-ink);
+        caret-color: auto;
+    }
+    .dose-stepper-value[data-rolling="true"] > input::placeholder {
+        color: var(--c-muted);
+    }
+}

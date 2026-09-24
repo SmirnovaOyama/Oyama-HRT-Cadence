@@ -11,6 +11,9 @@ import {
     MODE_KEYS, RecordKind, SyncState, Tombstones,
     pruneTombstones, sanitizeTombstones,
 } from '../utils/syncMerge';
+import type { Schedule, SupplyItem } from '../types/routine';
+import { sanitizeSchedules, sanitizeSupplies } from '../utils/routineRecords';
+import { sanitizeScheduleOccurrence } from '../utils/scheduleOccurrence';
 
 /** Namespace used while signed out. Its keys are the original, un-prefixed ones. */
 const LOCAL_OWNER = 'local';
@@ -30,7 +33,7 @@ const nsFor = (owner: string, suffix: string) =>
 const modeKeyFor = (owner: string, mode: 'transfem' | 'transmasc', suffix: string) =>
     nsFor(owner, mode === 'transmasc' ? `masc-${suffix}` : suffix);
 
-const MODE_SUFFIXES = ['events', 'lab-results', 'dose-templates', 'quick-doses', 'deletions'] as const;
+const MODE_SUFFIXES = ['events', 'lab-results', 'dose-templates', 'quick-doses', 'deletions', 'schedules', 'supplies'] as const;
 const SHARED_SUFFIXES = [
     'weight', 'pk-params', 'cal-method', 'cal-history-mode',
     'weight-at', 'pk-params-at',
@@ -202,6 +205,10 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
     };
     const [doseTemplates, setDoseTemplates] = useState<DoseTemplate[]>(() => loadJSON(keyFor(mode, 'dose-templates'), [] as DoseTemplate[]));
     const [quickDoses, setQuickDoses] = useState<QuickDose[]>(() => loadJSON(keyFor(mode, 'quick-doses'), [] as QuickDose[]));
+    // Planned routines and supplies on hand. Scoped like doses, synced inside the
+    // encrypted backup, and never part of a share link.
+    const [schedules, setSchedules] = useState<Schedule[]>(() => loadJSON(keyFor(mode, 'schedules'), [] as Schedule[]));
+    const [supplies, setSupplies] = useState<SupplyItem[]>(() => loadJSON(keyFor(mode, 'supplies'), [] as SupplyItem[]));
     const [pkParams, setPkParamsState] = useState<PKCustomParams | null>(() => {
         const saved = localStorage.getItem(sharedKey('pk-params'));
         if (!saved) return null;
@@ -246,6 +253,8 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
         setLabResults(loadJSON(keyFor(mode, 'lab-results'), [] as LabResult[]));
         setDoseTemplates(loadJSON(keyFor(mode, 'dose-templates'), [] as DoseTemplate[]));
         setQuickDoses(loadJSON(keyFor(mode, 'quick-doses'), [] as QuickDose[]));
+        setSchedules(loadJSON(keyFor(mode, 'schedules'), [] as Schedule[]));
+        setSupplies(loadJSON(keyFor(mode, 'supplies'), [] as SupplyItem[]));
         // Mode-independent, but still per-account, so they reload on the same beat.
         const savedWeight = localStorage.getItem(sharedKey('weight'));
         setWeightState(savedWeight ? parseFloat(savedWeight) : 70.0);
@@ -279,7 +288,7 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
         loadedScopeRef.current = scope;
         setReadyScope(prev => (prev === scope ? prev : scope));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [events, labResults, doseTemplates, quickDoses]);
+    }, [events, labResults, doseTemplates, quickDoses, schedules, supplies]);
 
 
     useEffect(() => {
@@ -315,6 +324,14 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
         if (loadedScopeRef.current !== scope) return;
         localStorage.setItem(keyFor(mode, 'quick-doses'), JSON.stringify(quickDoses));
     }, [quickDoses, scope]);
+    useEffect(() => {
+        if (loadedScopeRef.current !== scope) return;
+        localStorage.setItem(keyFor(mode, 'schedules'), JSON.stringify(schedules));
+    }, [schedules, scope]);
+    useEffect(() => {
+        if (loadedScopeRef.current !== scope) return;
+        localStorage.setItem(keyFor(mode, 'supplies'), JSON.stringify(supplies));
+    }, [supplies, scope]);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -479,6 +496,34 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
         setDoseTemplates(prev => prev.filter(t => t.id !== id));
     };
 
+    const addSchedule = (s: Schedule) => {
+        forgetDeletions('schedules', [s.id]);
+        const next = stamp(s);
+        setSchedules(prev => [...prev.filter(p => p.id !== s.id), next]);
+    };
+    const updateSchedule = (s: Schedule) => {
+        const next = stamp(s);
+        setSchedules(prev => prev.map(p => p.id === s.id ? next : p));
+    };
+    const deleteSchedule = (id: string) => {
+        recordDeletions('schedules', [id]);
+        setSchedules(prev => prev.filter(p => p.id !== id));
+    };
+
+    const addSupply = (item: SupplyItem) => {
+        forgetDeletions('supplies', [item.id]);
+        const next = stamp(item);
+        setSupplies(prev => [...prev.filter(p => p.id !== item.id), next]);
+    };
+    const updateSupply = (item: SupplyItem) => {
+        const next = stamp(item);
+        setSupplies(prev => prev.map(p => p.id === item.id ? next : p));
+    };
+    const deleteSupply = (id: string) => {
+        recordDeletions('supplies', [id]);
+        setSupplies(prev => prev.filter(p => p.id !== id));
+    };
+
     // Quick doses are a per-device shortcut list, not part of the record — they
     // are neither exported nor synced, so no tombstone is needed.
     const addQuickDose = (dose: QuickDose) => setQuickDoses(prev => [...prev, dose]);
@@ -528,6 +573,7 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                 doseMG: Number.isFinite(doseNum) ? Math.min(DOSE_MG_MAX, Math.max(0, doseNum)) : 0,
                 ester: validEster,
                 extras: sanitizedExtras,
+                scheduleOccurrence: sanitizeScheduleOccurrence(item.scheduleOccurrence),
                 updatedAt: keepStamp(item)
             } as DoseEvent;
         }).filter((item): item is DoseEvent => item !== null);
@@ -583,6 +629,8 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
             let newLabs: LabResult[] = [];
             let newTemplates: DoseTemplate[] = [];
             let newPkParams: PKCustomParams | undefined = undefined;
+            let newSchedules: Schedule[] = [];
+            let newSupplies: SupplyItem[] = [];
             let importedOtherMode = false;
             // Which kinds the payload actually *speaks about*, tracked one by
             // one. A single "it had something for this mode" flag replaced all
@@ -596,7 +644,9 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
             // records what it drops as deletions: silence used to cost a wipe
             // this device might get back from another one, and would now cost
             // the same wipe on every device.
-            const replaced = { events: false, labResults: false, doseTemplates: false };
+            // Schedules and supplies only ever travel inside `modes`; a file
+            // from a client that predates them is silent about both.
+            const replaced = { events: false, labResults: false, doseTemplates: false, schedules: false, supplies: false };
 
             // New multi-mode payload: { modes: { transfem: {...}, transmasc: {...} } }
             if (parsed && typeof parsed === 'object' && parsed.modes && typeof parsed.modes === 'object') {
@@ -607,7 +657,11 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                     const evs = Array.isArray(block.events) ? sanitizeImportedEvents(block.events) : [];
                     const ls = Array.isArray(block.labResults) ? sanitizeImportedLabResults(block.labResults) : [];
                     const tmps = Array.isArray(block.doseTemplates) ? sanitizeImportedTemplates(block.doseTemplates) : [];
+                    const sch = sanitizeSchedules(block.schedules);
+                    const sup = sanitizeSupplies(block.supplies);
                     if (m === mode) {
+                        if (Array.isArray(block.schedules)) { newSchedules = sch; replaced.schedules = true; }
+                        if (Array.isArray(block.supplies)) { newSupplies = sup; replaced.supplies = true; }
                         if (Array.isArray(block.events)) { newEvents = evs; replaced.events = true; }
                         if (Array.isArray(block.labResults)) { newLabs = ls; replaced.labResults = true; }
                         if (Array.isArray(block.doseTemplates)) { newTemplates = tmps; replaced.doseTemplates = true; }
@@ -626,6 +680,16 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                         if (Array.isArray(block.doseTemplates)) {
                             reconcileReplacement(m, 'doseTemplates', loadJSON<DoseTemplate[]>(keyFor(m, 'dose-templates'), []), tmps);
                             localStorage.setItem(keyFor(m, 'dose-templates'), JSON.stringify(tmps));
+                            importedOtherMode = true;
+                        }
+                        if (Array.isArray(block.schedules)) {
+                            reconcileReplacement(m, 'schedules', loadJSON<Schedule[]>(keyFor(m, 'schedules'), []), sch);
+                            localStorage.setItem(keyFor(m, 'schedules'), JSON.stringify(sch));
+                            importedOtherMode = true;
+                        }
+                        if (Array.isArray(block.supplies)) {
+                            reconcileReplacement(m, 'supplies', loadJSON<SupplyItem[]>(keyFor(m, 'supplies'), []), sup);
+                            localStorage.setItem(keyFor(m, 'supplies'), JSON.stringify(sup));
                             importedOtherMode = true;
                         }
                     }
@@ -699,7 +763,8 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                 }
             }
 
-            if (!importedOtherMode && !newEvents.length && !newWeight && !newLabs.length && !newTemplates.length && !newPkParams) throw new Error('No valid entries');
+            if (!importedOtherMode && !newEvents.length && !newWeight && !newLabs.length && !newTemplates.length && !newPkParams
+                && !newSchedules.length && !newSupplies.length) throw new Error('No valid entries');
 
             // A replace-import states the whole set for each kind it mentions,
             // so anything it drops from one is a deletion. Recording it is what
@@ -717,6 +782,14 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                 reconcileReplacement(mode, 'doseTemplates', doseTemplates, newTemplates);
                 setDoseTemplates(newTemplates);
             }
+            if (replaced.schedules) {
+                reconcileReplacement(mode, 'schedules', schedules, newSchedules);
+                setSchedules(newSchedules);
+            }
+            if (replaced.supplies) {
+                reconcileReplacement(mode, 'supplies', supplies, newSupplies);
+                setSupplies(newSupplies);
+            }
             if (newWeight !== undefined) setWeight(newWeight);
             if (newPkParams !== undefined) setPkParams(newPkParams);
 
@@ -729,12 +802,30 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
         }
     };
 
+    /** Add the records another mode's storage lacks; returns how many were new. */
+    const mergeRoutinesIntoStorage = (
+        m: 'transfem' | 'transmasc',
+        kind: 'schedules' | 'supplies',
+        suffix: 'schedules' | 'supplies',
+        incoming: { id: string }[],
+    ): number => {
+        if (!incoming.length) return 0;
+        const existing = loadJSON<{ id: string }[]>(keyFor(m, suffix), []);
+        const ids = new Set(existing.map(r => r.id));
+        const fresh = incoming.filter(r => !ids.has(r.id));
+        forgetDeletions(kind, incoming.map(r => r.id), m);
+        if (fresh.length) localStorage.setItem(keyFor(m, suffix), JSON.stringify([...existing, ...fresh]));
+        return fresh.length;
+    };
+
     const mergeImportedData = (parsed: any): boolean => {
         try {
             let incomingEvents: DoseEvent[] = [];
             let incomingWeight: number | undefined = undefined;
             let incomingLabs: LabResult[] = [];
             let incomingTemplates: DoseTemplate[] = [];
+            let incomingSchedules: Schedule[] = [];
+            let incomingSupplies: SupplyItem[] = [];
             let mergedOther = 0;
 
             if (parsed && typeof parsed === 'object' && parsed.modes && typeof parsed.modes === 'object') {
@@ -745,10 +836,14 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                     const evs = Array.isArray(block.events) ? sanitizeImportedEvents(block.events) : [];
                     const ls = Array.isArray(block.labResults) ? sanitizeImportedLabResults(block.labResults) : [];
                     const tmps = Array.isArray(block.doseTemplates) ? sanitizeImportedTemplates(block.doseTemplates) : [];
+                    const sch = sanitizeSchedules(block.schedules);
+                    const sup = sanitizeSupplies(block.supplies);
                     if (m === mode) {
                         incomingEvents = evs;
                         incomingLabs = ls;
                         incomingTemplates = tmps;
+                        incomingSchedules = sch;
+                        incomingSupplies = sup;
                     } else {
                         // Merge into the other mode's localStorage directly.
                         const existingEvs = loadJSON<DoseEvent[]>(keyFor(m, 'events'), []);
@@ -769,6 +864,8 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                         if (newLs.length) localStorage.setItem(keyFor(m, 'lab-results'), JSON.stringify([...existingLs, ...newLs]));
                         if (newTmps.length) localStorage.setItem(keyFor(m, 'dose-templates'), JSON.stringify([...existingTmps, ...newTmps]));
                         mergedOther += newEvs.length + newLs.length;
+                        mergedOther += mergeRoutinesIntoStorage(m, 'schedules', 'schedules', sch);
+                        mergedOther += mergeRoutinesIntoStorage(m, 'supplies', 'supplies', sup);
                     }
                 }
                 if (typeof parsed.weight === 'number' && parsed.weight > 0) incomingWeight = parsed.weight;
@@ -820,7 +917,8 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                 }
             }
 
-            if (!mergedOther && !incomingEvents.length && !incomingWeight && !incomingLabs.length && !incomingTemplates.length) throw new Error('No valid entries');
+            if (!mergedOther && !incomingEvents.length && !incomingWeight && !incomingLabs.length && !incomingTemplates.length
+                && !incomingSchedules.length && !incomingSupplies.length) throw new Error('No valid entries');
 
             let merged = mergedOther;
 
@@ -856,6 +954,22 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
                 if (newOnes.length > 0) setDoseTemplates(prev => [...prev, ...newOnes]);
             }
 
+            if (incomingSchedules.length > 0) {
+                const existingIds = new Set(schedules.map(s => s.id));
+                const newOnes = incomingSchedules.filter(s => !existingIds.has(s.id));
+                merged += newOnes.length;
+                forgetDeletions('schedules', incomingSchedules.map(s => s.id));
+                if (newOnes.length > 0) setSchedules(prev => [...prev, ...newOnes]);
+            }
+
+            if (incomingSupplies.length > 0) {
+                const existingIds = new Set(supplies.map(s => s.id));
+                const newOnes = incomingSupplies.filter(s => !existingIds.has(s.id));
+                merged += newOnes.length;
+                forgetDeletions('supplies', incomingSupplies.map(s => s.id));
+                if (newOnes.length > 0) setSupplies(prev => [...prev, ...newOnes]);
+            }
+
             showDialog('alert', (t('account.merge_success') as string).replace('{n}', String(merged)));
             return true;
         } catch (err) {
@@ -870,6 +984,8 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
             events: loadJSON<DoseEvent[]>(keyFor(m, 'events'), []),
             labResults: loadJSON<LabResult[]>(keyFor(m, 'lab-results'), []),
             doseTemplates: loadJSON<DoseTemplate[]>(keyFor(m, 'dose-templates'), []),
+            schedules: loadJSON<Schedule[]>(keyFor(m, 'schedules'), []),
+            supplies: loadJSON<SupplyItem[]>(keyFor(m, 'supplies'), []),
             deletions: readTombstones(m),
         });
         const modes = {
@@ -877,7 +993,7 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
             transmasc: readMode('transmasc'),
         };
         // Overlay current in-memory state for the active mode.
-        modes[mode] = { events, labResults, doseTemplates, deletions: readTombstones(mode) };
+        modes[mode] = { events, labResults, doseTemplates, schedules, supplies, deletions: readTombstones(mode) };
 
         return {
             meta: { version: 2, exportedAt: new Date().toISOString() },
@@ -919,6 +1035,8 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
             events: sanitizeImportedEvents(state.modes[m].events),
             labResults: sanitizeImportedLabResults(state.modes[m].labResults),
             doseTemplates: sanitizeImportedTemplates(state.modes[m].doseTemplates),
+            schedules: sanitizeSchedules(state.modes[m].schedules),
+            supplies: sanitizeSupplies(state.modes[m].supplies),
             deletions: state.modes[m].deletions,
         }));
 
@@ -927,10 +1045,14 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
             localStorage.setItem(keyFor(block.m, 'events'), JSON.stringify(block.events));
             localStorage.setItem(keyFor(block.m, 'lab-results'), JSON.stringify(block.labResults));
             localStorage.setItem(keyFor(block.m, 'dose-templates'), JSON.stringify(block.doseTemplates));
+            localStorage.setItem(keyFor(block.m, 'schedules'), JSON.stringify(block.schedules));
+            localStorage.setItem(keyFor(block.m, 'supplies'), JSON.stringify(block.supplies));
             if (block.m === mode) {
                 setEvents(block.events);
                 setLabResults(block.labResults);
                 setDoseTemplates(block.doseTemplates);
+                setSchedules(block.schedules);
+                setSupplies(block.supplies);
             }
         }
 
@@ -976,6 +1098,8 @@ export const useAppData = (showDialog: (type: 'alert' | 'confirm', message: stri
         addLabResult, updateLabResult, deleteLabResult, clearLabResults,
         addTemplate, deleteTemplate,
         addQuickDose, deleteQuickDose,
+        schedules, addSchedule, updateSchedule, deleteSchedule,
+        supplies, addSupply, updateSupply, deleteSupply,
         processImportedData,
         mergeImportedData,
         buildExportPayload,

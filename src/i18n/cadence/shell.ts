@@ -7,6 +7,7 @@ import type { AreaStrings } from './types';
 // in the reader's locale ("4 minutes ago", "4分钟前", "4 dakika önce").
 export const shell: AreaStrings = {
     zh: {
+        'shell.back': '返回',
         'shell.nav.main': '主导航',
         'shell.nav.sidebar': '侧边栏',
         'shell.tab.today': '今天',
@@ -26,8 +27,10 @@ export const shell: AreaStrings = {
         'shell.sync.synced_plain': '已备份到云端',
         'shell.sync.locked': '云端备份已加密，需要解锁',
         'shell.sync.error': '备份失败，稍后会重试',
+        'shell.rail.supplies_attention': '用品，有东西需要补货',
     },
     'zh-TW': {
+        'shell.back': '返回',
         'shell.nav.main': '主導覽',
         'shell.nav.sidebar': '側邊欄',
         'shell.tab.today': '今天',
@@ -47,8 +50,10 @@ export const shell: AreaStrings = {
         'shell.sync.synced_plain': '已備份到雲端',
         'shell.sync.locked': '雲端備份已加密，需要解鎖',
         'shell.sync.error': '備份失敗，稍後會重試',
+        'shell.rail.supplies_attention': '用品，有東西需要補貨',
     },
     yue: {
+        'shell.back': '返回',
         'shell.nav.main': '主導覽',
         'shell.nav.sidebar': '側邊欄',
         'shell.tab.today': '今日',
@@ -68,8 +73,10 @@ export const shell: AreaStrings = {
         'shell.sync.synced_plain': '已經備份到雲端',
         'shell.sync.locked': '雲端備份加咗密，要解鎖先得',
         'shell.sync.error': '備份唔成功，陣間會再試',
+        'shell.rail.supplies_attention': '用品，有嘢要補貨',
     },
     en: {
+        'shell.back': 'Back',
         'shell.nav.main': 'Main',
         'shell.nav.sidebar': 'Sidebar',
         'shell.tab.today': 'Today',
@@ -89,8 +96,10 @@ export const shell: AreaStrings = {
         'shell.sync.synced_plain': 'Backed up to the cloud',
         'shell.sync.locked': 'Cloud backup is locked',
         'shell.sync.error': 'Backup failed, will try again',
+        'shell.rail.supplies_attention': 'Supplies, something needs reordering',
     },
     ja: {
+        'shell.back': '戻る',
         'shell.nav.main': 'メイン',
         'shell.nav.sidebar': 'サイドバー',
         'shell.tab.today': '今日',
@@ -110,8 +119,10 @@ export const shell: AreaStrings = {
         'shell.sync.synced_plain': 'クラウドにバックアップ済み',
         'shell.sync.locked': 'クラウドバックアップはロックされています',
         'shell.sync.error': 'バックアップに失敗しました。再試行します',
+        'shell.rail.supplies_attention': 'ストック、補充が必要なものがあります',
     },
     ko: {
+        'shell.back': '뒤로',
         'shell.nav.main': '주 메뉴',
         'shell.nav.sidebar': '사이드바',
         'shell.tab.today': '오늘',
@@ -131,8 +142,10 @@ export const shell: AreaStrings = {
         'shell.sync.synced_plain': '클라우드에 백업됨',
         'shell.sync.locked': '클라우드 백업이 잠겨 있어요',
         'shell.sync.error': '백업하지 못했어요. 다시 시도할게요',
+        'shell.rail.supplies_attention': '재고, 다시 주문할 항목이 있어요',
     },
     tr: {
+        'shell.back': 'Geri',
         'shell.nav.main': 'Ana menü',
         'shell.nav.sidebar': 'Kenar çubuğu',
         'shell.tab.today': 'Bugün',
@@ -152,5 +165,6 @@ export const shell: AreaStrings = {
         'shell.sync.synced_plain': 'Buluta yedeklendi',
         'shell.sync.locked': 'Bulut yedeği kilitli',
         'shell.sync.error': 'Yedekleme başarısız, yeniden denenecek',
+        'shell.rail.supplies_attention': 'Malzemeler, yeniden sipariş gereken bir şey var',
     },
 };

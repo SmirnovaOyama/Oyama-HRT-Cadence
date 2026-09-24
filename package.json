@@ -9,6 +9,7 @@
     "build:watch": "vite build --watch",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "i18n:check": "bun scripts/check-i18n.ts",
     "icons": "bun scripts/gen-icons.ts",
     "wrangler:dev": "bun run build && wrangler dev",

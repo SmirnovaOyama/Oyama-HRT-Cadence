@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-    Attention, ChevronLeft, ChevronRight, Close, Cloud, Delete, Notice, Search, Verified,
+    Attention, ChevronLeft, ChevronRight, Cloud, Delete, Notice, Search, Verified,
 } from '../components/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -10,6 +10,8 @@ import { useDialog } from '../contexts/DialogContext';
 import { noticeService, NoticeLevel, SiteNotice } from '../services/notice';
 import { Lang } from '../i18n/translations';
 import { BackHeader, Button, ListGroup, ListRow, PageHeader, SegmentedControl } from '../components/ui';
+import { SecondaryPage } from '../components/ui/SecondaryPage';
+import DateTimePicker from '../components/DateTimePicker';
 import { Avatar, LIST_CHECK, LIST_CHEVRON, YouPage } from './you/shared';
 import { ActionTitle, BusySpinner, DangerTitle, ErrorNote, Field, Loading, Note, Panel, PasswordInput } from './account/shared';
 
@@ -73,6 +75,7 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const [noticeStart, setNoticeStart] = useState('');
     const [noticeEnd, setNoticeEnd] = useState('');
     const [noticeLang, setNoticeLang] = useState<'default' | Lang>('default');
+    const [noticePicker, setNoticePicker] = useState<'start' | 'end' | null>(null);
 
     const cats: { value: AdminCat; label: string }[] = [
         { value: 'users', label: 'Users' },
@@ -257,21 +260,13 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         const user = panel.user;
 
         return (
-            <div className="modal-overlay" onClick={() => setPanel(null)}>
-                <div className="modal-shell-wide" onClick={e => e.stopPropagation()}>
-                    <div className="modal-card flex flex-col gap-5" role="dialog" aria-modal="true" aria-labelledby="admin-panel-title">
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <Avatar username={user.username} size={40} />
-                                <div className="min-w-0">
-                                    <h2 id="admin-panel-title" className="modal-title m-0 truncate">{user.username}</h2>
-                                    <p className="m-0 text-sm text-[var(--c-muted)]">{panelSubtitle(panel.type)}</p>
-                                </div>
-                            </div>
-                            <Button variant="icon" onClick={() => setPanel(null)} aria-label="Close" className="-me-2">
-                                <Close size={22} />
-                            </Button>
-                        </div>
+            <SecondaryPage
+                key={`${user.id}-${panel.type}`}
+                title={panel.type === 'actions' ? user.username : panelSubtitle(panel.type)}
+                backLabel={panel.type === 'actions' ? t('nav.admin') : user.username}
+                onBack={() => setPanel(panel.type === 'actions' ? null : { type: 'actions', user })}
+            >
+                    <div className="flex flex-col gap-5">
 
                         {panel.type === 'actions' && (
                             <div className="flex flex-col gap-6">
@@ -321,12 +316,9 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                                         autoFocus
                                     />
                                 </Field>
-                                <div className="flex gap-3">
-                                    <Button variant="secondary" compact className="flex-1" onClick={() => setPanel(null)}>Cancel</Button>
-                                    <Button type="submit" variant="primary" compact className="flex-1" disabled={newPassword.length < 8}>
-                                        Update password
-                                    </Button>
-                                </div>
+                                <Button type="submit" variant="primary" block disabled={newPassword.length < 8}>
+                                    Update password
+                                </Button>
                             </form>
                         )}
 
@@ -424,7 +416,7 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                                         {backups.map(b => (
                                             <ListRow
                                                 key={b.id}
-                                                title={<span className="block truncate">{new Date(b.created_at * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</span>}
+                                                title={<span className="block truncate">{new Date(b.created_at * 1000).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</span>}
                                                 sub={<span className="block truncate">{formatBytes(b.data_size)}, <span className="font-mono">{b.id.slice(0, 8)}</span></span>}
                                                 trailing={
                                                     <Button
@@ -446,8 +438,7 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                             )
                         )}
                     </div>
-                </div>
-            </div>
+            </SecondaryPage>
         );
     };
 
@@ -508,7 +499,7 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             ) : users.length === 0 ? (
                 <Panel><Note>No users found{searchDebounce ? ` for "${searchDebounce}"` : ''}.</Note></Panel>
             ) : (
-                <ListGroup chevronIcon={LIST_CHEVRON} footer={`${totalUsers.toLocaleString()} registered account${totalUsers === 1 ? '' : 's'}`}>
+                <ListGroup chevronIcon={LIST_CHEVRON} footer={`${totalUsers.toLocaleString('en-US')} registered account${totalUsers === 1 ? '' : 's'}`}>
                     {users.map(u => (
                         <ListRow
                             key={u.id}
@@ -541,7 +532,7 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                                 type="button"
                                 onClick={() => setPage(item)}
                                 aria-current={page === item ? 'page' : undefined}
-                                className={`h-11 min-w-11 rounded-xl px-2 text-base tabular-nums ${page === item
+                                className={`h-11 min-w-11 rounded-full px-2 text-base tabular-nums ${page === item
                                     ? 'bg-[var(--c-plate-strong)] font-semibold text-[var(--c-ink)]'
                                     : 'text-[var(--c-muted)] hover:bg-[var(--c-plate)] hover:text-[var(--c-ink)]'}`}
                             >
@@ -562,7 +553,7 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         </div>
     );
 
-    // datetime-local <-> unix seconds. The input speaks the operator's local
+    // Local date/time <-> unix seconds. The picker speaks the operator's local
     // time; everything stored and compared server-side is UTC seconds.
     const toLocalInput = (ts: number | null): string => {
         if (!ts) return '';
@@ -606,13 +597,13 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
     const noticeLangs: { id: 'default' | Lang; label: string }[] = [
         { id: 'default', label: 'Default' },
-        { id: 'zh', label: '简体' },
-        { id: 'zh-TW', label: '繁體' },
-        { id: 'yue', label: '粵語' },
-        { id: 'en', label: 'EN' },
-        { id: 'ja', label: '日本語' },
-        { id: 'ko', label: '한국어' },
-        { id: 'tr', label: 'TR' },
+        { id: 'zh', label: 'Simplified Chinese' },
+        { id: 'zh-TW', label: 'Traditional Chinese' },
+        { id: 'yue', label: 'Cantonese' },
+        { id: 'en', label: 'English' },
+        { id: 'ja', label: 'Japanese' },
+        { id: 'ko', label: 'Korean' },
+        { id: 'tr', label: 'Turkish' },
     ];
 
     const noticeTextFor = (id: 'default' | Lang): string =>
@@ -667,9 +658,9 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const noticeWindowLabel = (): string => {
         if (!notice) return 'Nothing is being shown.';
         const now = Math.floor(Date.now() / 1000);
-        if (notice.startsAt != null && now < notice.startsAt) return `Scheduled for ${new Date(notice.startsAt * 1000).toLocaleString()}`;
-        if (notice.expiresAt != null && now >= notice.expiresAt) return `Expired ${new Date(notice.expiresAt * 1000).toLocaleString()}`;
-        if (notice.expiresAt != null) return `Live until ${new Date(notice.expiresAt * 1000).toLocaleString()}`;
+        if (notice.startsAt != null && now < notice.startsAt) return `Scheduled for ${new Date(notice.startsAt * 1000).toLocaleString('en-US')}`;
+        if (notice.expiresAt != null && now >= notice.expiresAt) return `Expired ${new Date(notice.expiresAt * 1000).toLocaleString('en-US')}`;
+        if (notice.expiresAt != null) return `Live until ${new Date(notice.expiresAt * 1000).toLocaleString('en-US')}`;
         return 'Live now, until you clear it';
     };
 
@@ -725,13 +716,27 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     />
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Field label="Show from (optional)" htmlFor="admin-notice-start">
-                        <input id="admin-notice-start" type="datetime-local" value={noticeStart} onChange={e => setNoticeStart(e.target.value)} className="input-base" />
-                    </Field>
-                    <Field label="Hide after (optional)" htmlFor="admin-notice-end">
-                        <input id="admin-notice-end" type="datetime-local" value={noticeEnd} onChange={e => setNoticeEnd(e.target.value)} className="input-base" />
-                    </Field>
+                <div className="flex flex-col gap-2">
+                    <ListGroup chevronIcon={LIST_CHEVRON}>
+                        <ListRow
+                            title="Show from"
+                            sub={noticeStart ? new Date(noticeStart).toLocaleString('en-US') : 'Any time'}
+                            drillIn
+                            onClick={() => setNoticePicker('start')}
+                        />
+                        <ListRow
+                            title="Hide after"
+                            sub={noticeEnd ? new Date(noticeEnd).toLocaleString('en-US') : 'No end time'}
+                            drillIn
+                            onClick={() => setNoticePicker('end')}
+                        />
+                    </ListGroup>
+                    {(noticeStart || noticeEnd) && (
+                        <div className="flex flex-wrap gap-2">
+                            {noticeStart && <Button variant="plain" compact onClick={() => setNoticeStart('')}>Clear start time</Button>}
+                            {noticeEnd && <Button variant="plain" compact onClick={() => setNoticeEnd('')}>Clear end time</Button>}
+                        </div>
+                    )}
                 </div>
 
                 {noticePreview.trim() && (
@@ -777,7 +782,7 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 <ListGroup
                     header="Storage"
                     footer={storage
-                        ? `${formatBytes(storage.payload_bytes)} of payload across ${storage.tables.reduce((n, tb) => n + tb.rows, 0).toLocaleString()} rows, measured ${timeAgo(storage.measured_at)}.`
+                        ? `${formatBytes(storage.payload_bytes)} of payload across ${storage.tables.reduce((n, tb) => n + tb.rows, 0).toLocaleString('en-US')} rows, measured ${timeAgo(storage.measured_at)}.`
                         : 'How much of the database each table uses, to compare against the D1 plan limit.'}
                 >
                     {(storage?.tables ?? []).map(tb => (
@@ -786,7 +791,7 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                             title={<span className="block truncate font-mono text-sm">{tb.table}</span>}
                             value={
                                 <span className="tabular-nums">
-                                    {tb.rows.toLocaleString()}{tb.payload_bytes > 0 ? `, ${formatBytes(tb.payload_bytes)}` : ''}
+                                    {tb.rows.toLocaleString('en-US')}{tb.payload_bytes > 0 ? `, ${formatBytes(tb.payload_bytes)}` : ''}
                                 </span>
                             }
                         />
@@ -822,6 +827,20 @@ const Admin: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </div>
 
             {renderPanel()}
+            {noticePicker && (
+                <DateTimePicker
+                    isOpen
+                    title={noticePicker === 'start' ? 'Show from' : 'Hide after'}
+                    initialDate={new Date((noticePicker === 'start' ? noticeStart : noticeEnd) || Date.now())}
+                    onClose={() => setNoticePicker(null)}
+                    onConfirm={date => {
+                        const value = toLocalInput(date.getTime() / 1000);
+                        if (noticePicker === 'start') setNoticeStart(value);
+                        else setNoticeEnd(value);
+                        setNoticePicker(null);
+                    }}
+                />
+            )}
         </YouPage>
     );
 };

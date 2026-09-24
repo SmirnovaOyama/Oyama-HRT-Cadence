@@ -67,8 +67,14 @@ export interface BackupSummary {
     events: any[];
     labResults: any[];
     doseTemplates: any[];
+    /** Planned routines. Empty for backups written by clients that predate them. */
+    schedules: any[];
+    /** Supplies on hand. Empty for backups written by clients that predate them. */
+    supplies: any[];
     weight?: number;
 }
+
+const listOf = (value: unknown): any[] => (Array.isArray(value) ? value : []);
 
 // Outcome of trying to read a cloud backup:
 //  - ok:      decrypted (or plaintext) and ready to use
@@ -144,7 +150,7 @@ export async function parseCloudBackup(rawData: string | unknown): Promise<any |
 /** Flatten v1/v2 backup payloads into counts usable by the account UI. */
 export function normalizeBackupPayload(parsed: any): BackupSummary {
     if (!parsed || typeof parsed !== 'object') {
-        return { events: [], labResults: [], doseTemplates: [] };
+        return { events: [], labResults: [], doseTemplates: [], schedules: [], supplies: [] };
     }
 
     if (parsed.modes && typeof parsed.modes === 'object') {
@@ -157,6 +163,8 @@ export function normalizeBackupPayload(parsed: any): BackupSummary {
                 events: Array.isArray(preferredBlock.events) ? preferredBlock.events : [],
                 labResults: Array.isArray(preferredBlock.labResults) ? preferredBlock.labResults : [],
                 doseTemplates: Array.isArray(preferredBlock.doseTemplates) ? preferredBlock.doseTemplates : [],
+                schedules: listOf(preferredBlock.schedules),
+                supplies: listOf(preferredBlock.supplies),
                 weight: typeof parsed.weight === 'number' ? parsed.weight : undefined,
             };
         }
@@ -164,17 +172,23 @@ export function normalizeBackupPayload(parsed: any): BackupSummary {
         const events: any[] = [];
         const labResults: any[] = [];
         const doseTemplates: any[] = [];
+        const schedules: any[] = [];
+        const supplies: any[] = [];
         for (const mode of ['transfem', 'transmasc'] as const) {
             const block = modesBlock[mode];
             if (!block || typeof block !== 'object') continue;
             if (Array.isArray(block.events)) events.push(...block.events);
             if (Array.isArray(block.labResults)) labResults.push(...block.labResults);
             if (Array.isArray(block.doseTemplates)) doseTemplates.push(...block.doseTemplates);
+            schedules.push(...listOf(block.schedules));
+            supplies.push(...listOf(block.supplies));
         }
         return {
             events,
             labResults,
             doseTemplates,
+            schedules,
+            supplies,
             weight: typeof parsed.weight === 'number' ? parsed.weight : undefined,
         };
     }
@@ -183,6 +197,9 @@ export function normalizeBackupPayload(parsed: any): BackupSummary {
         events: Array.isArray(parsed.events) ? parsed.events : [],
         labResults: Array.isArray(parsed.labResults) ? parsed.labResults : [],
         doseTemplates: Array.isArray(parsed.doseTemplates) ? parsed.doseTemplates : [],
+        // Flat (v1) payloads never carried routines.
+        schedules: [],
+        supplies: [],
         weight: typeof parsed.weight === 'number' ? parsed.weight : undefined,
     };
 }

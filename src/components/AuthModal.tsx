@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Close, Passkey, TwoStep } from './icons';
+import { Passkey, TwoStep } from './icons';
 import { Button } from './ui';
 import { BusySpinner, ErrorNote, Field, Panel, PasswordInput } from '../pages/account/shared';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../contexts/LanguageContext';
 import { authService, serializeAssertionCredential, b64url2ab } from '../services/auth';
-import { useEscape } from '../hooks/useEscape';
+import { SecondaryPage } from './ui/SecondaryPage';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -19,8 +19,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [needsTOTP, setNeedsTOTP] = useState(false);
-    // Escape closes the sheet, like the other sheets, unless a request is in flight.
-    useEscape(() => { if (!loading) onClose(); }, isOpen);
     const [twoFAMethod, setTwoFAMethod] = useState<'totp' | 'passkey' | null>(null);
     const [totpCode, setTotpCode] = useState('');
     const [useBackupCode, setUseBackupCode] = useState(false);
@@ -119,138 +117,128 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     const webauthn = typeof window !== 'undefined' && !!window.PublicKeyCredential;
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-shell">
-                <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                        <h2 id="auth-title" className="modal-title m-0">
-                            {isLogin ? t('account.auth.sign_in') : t('account.auth.create_title')}
-                        </h2>
-                        <Button variant="icon" onClick={onClose} aria-label={t('account.close')} className="-me-2">
-                            <Close size={22} />
-                        </Button>
-                    </div>
+        <SecondaryPage
+            title={isLogin ? t('account.auth.sign_in') : t('account.auth.create_title')}
+            onBack={() => { if (!loading) onClose(); }}
+        >
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <ErrorNote>{error}</ErrorNote>
 
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                        <ErrorNote>{error}</ErrorNote>
+                <Field label={t('auth.username')} htmlFor="auth-username">
+                    <input
+                        id="auth-username"
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="input-base"
+                        placeholder={t('auth.username_placeholder')}
+                        autoComplete="username"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        required
+                    />
+                </Field>
 
-                        <Field label={t('auth.username')} htmlFor="auth-username">
-                            <input
-                                id="auth-username"
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="input-base"
-                                placeholder={t('auth.username_placeholder')}
-                                autoComplete="username"
-                                autoCapitalize="off"
-                                autoCorrect="off"
-                                spellCheck={false}
-                                required
-                            />
-                        </Field>
+                <Field label={t('auth.password')} htmlFor="auth-password">
+                    <PasswordInput
+                        id="auth-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={t('auth.password_placeholder')}
+                        autoComplete={isLogin ? 'current-password' : 'new-password'}
+                        required
+                    />
+                </Field>
 
-                        <Field label={t('auth.password')} htmlFor="auth-password">
-                            <PasswordInput
-                                id="auth-password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder={t('auth.password_placeholder')}
-                                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                                required
-                            />
-                        </Field>
-
-                        {needsTOTP && isLogin && (
-                            <div className="flex flex-col gap-4">
-                                <Panel>
-                                    <div className="flex items-start gap-3">
-                                        <TwoStep size={22} className="mt-px flex-none text-[var(--c-ink)]" />
-                                        <p className="m-0 text-sm text-[var(--c-ink)]">{t('auth.needs_2fa')}</p>
-                                    </div>
-                                </Panel>
-                                {useBackupCode ? (
-                                    <>
-                                        <Field label={t('account.field.backup_code')} htmlFor="auth-backup">
-                                            <input
-                                                id="auth-backup"
-                                                type="text"
-                                                value={backupCode}
-                                                onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
-                                                className="input-base text-center font-mono"
-                                                placeholder={t('auth.backup_code_placeholder')}
-                                                autoComplete="off"
-                                                autoFocus
-                                                required={useBackupCode}
-                                            />
-                                        </Field>
-                                        <Button variant="plain" className="self-start" onClick={() => { setUseBackupCode(false); setBackupCode(''); }}>
-                                            {twoFAMethod === 'totp' ? t('account.auth.use_app_code') : t('account.auth.use_passkey')}
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <>
-                                        {twoFAMethod !== 'passkey' && (
-                                            <Field label={t('account.field.code')} htmlFor="auth-totp">
-                                                <input
-                                                    id="auth-totp"
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]{6}"
-                                                    maxLength={6}
-                                                    value={totpCode}
-                                                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                                    className="input-base text-center font-mono tabular-nums"
-                                                    placeholder="000000"
-                                                    autoComplete="one-time-code"
-                                                    autoFocus
-                                                    required={needsTOTP && !useBackupCode}
-                                                />
-                                            </Field>
-                                        )}
-                                        {twoFAMethod === 'passkey' && !webauthn && (
-                                            <ErrorNote>{t('auth.passkey_unsupported')}</ErrorNote>
-                                        )}
-                                        {webauthn && (
-                                            <Button
-                                                variant={twoFAMethod === 'passkey' ? 'primary' : 'secondary'}
-                                                block
-                                                onClick={() => handlePasskeyLogin()}
-                                                disabled={passkeyLoading}
-                                            >
-                                                {passkeyLoading ? <BusySpinner /> : twoFAMethod === 'passkey' ? <Passkey size={20} /> : null}
-                                                {t('account.auth.use_passkey')}
-                                            </Button>
-                                        )}
-                                        <Button variant="plain" className="self-start" onClick={() => setUseBackupCode(true)}>
-                                            {t('account.auth.use_backup')}
-                                        </Button>
-                                    </>
-                                )}
+                {needsTOTP && isLogin && (
+                    <div className="flex flex-col gap-4">
+                        <Panel>
+                            <div className="flex items-start gap-3">
+                                <TwoStep size={22} className="mt-px flex-none text-[var(--c-ink)]" />
+                                <p className="m-0 text-sm text-[var(--c-ink)]">{t('auth.needs_2fa')}</p>
                             </div>
+                        </Panel>
+                        {useBackupCode ? (
+                            <>
+                                <Field label={t('account.field.backup_code')} htmlFor="auth-backup">
+                                    <input
+                                        id="auth-backup"
+                                        type="text"
+                                        value={backupCode}
+                                        onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
+                                        className="input-base text-center font-mono"
+                                        placeholder={t('auth.backup_code_placeholder')}
+                                        autoComplete="off"
+                                        autoFocus
+                                        required={useBackupCode}
+                                    />
+                                </Field>
+                                <Button variant="plain" className="self-start" onClick={() => { setUseBackupCode(false); setBackupCode(''); }}>
+                                    {twoFAMethod === 'totp' ? t('account.auth.use_app_code') : t('account.auth.use_passkey')}
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                {twoFAMethod !== 'passkey' && (
+                                    <Field label={t('account.field.code')} htmlFor="auth-totp">
+                                        <input
+                                            id="auth-totp"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]{6}"
+                                            maxLength={6}
+                                            value={totpCode}
+                                            onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                            className="input-base text-center font-mono tabular-nums"
+                                            placeholder="000000"
+                                            autoComplete="one-time-code"
+                                            autoFocus
+                                            required={needsTOTP && !useBackupCode}
+                                        />
+                                    </Field>
+                                )}
+                                {twoFAMethod === 'passkey' && !webauthn && (
+                                    <ErrorNote>{t('auth.passkey_unsupported')}</ErrorNote>
+                                )}
+                                {webauthn && (
+                                    <Button
+                                        variant={twoFAMethod === 'passkey' ? 'primary' : 'secondary'}
+                                        block
+                                        onClick={() => handlePasskeyLogin()}
+                                        disabled={passkeyLoading}
+                                    >
+                                        {passkeyLoading ? <BusySpinner /> : twoFAMethod === 'passkey' ? <Passkey size={20} /> : null}
+                                        {t('account.auth.use_passkey')}
+                                    </Button>
+                                )}
+                                <Button variant="plain" className="self-start" onClick={() => setUseBackupCode(true)}>
+                                    {t('account.auth.use_backup')}
+                                </Button>
+                            </>
                         )}
+                    </div>
+                )}
 
-                        {!passkeyOnly && (
-                            <Button type="submit" variant="primary" block disabled={loading} className="mt-1">
-                                {loading && <BusySpinner />}
-                                {isLogin ? t('account.auth.sign_in') : t('account.auth.create')}
-                            </Button>
-                        )}
+                {!passkeyOnly && (
+                    <Button type="submit" variant="primary" block disabled={loading} className="mt-1">
+                        {loading && <BusySpinner />}
+                        {isLogin ? t('account.auth.sign_in') : t('account.auth.create')}
+                    </Button>
+                )}
 
-                        <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm text-[var(--c-muted)]">
-                            <span>{isLogin ? t('auth.no_account') : t('auth.has_account')}</span>
-                            <Button
-                                variant="plain"
-                                className="px-1"
-                                onClick={() => { setIsLogin(!isLogin); setError(null); }}
-                            >
-                                {isLogin ? t('account.auth.create') : t('account.auth.sign_in')}
-                            </Button>
-                        </div>
-                    </form>
+                <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm text-[var(--c-muted)]">
+                    <span>{isLogin ? t('auth.no_account') : t('auth.has_account')}</span>
+                    <Button
+                        variant="plain"
+                        className="px-1"
+                        onClick={() => { setIsLogin(!isLogin); setError(null); }}
+                    >
+                        {isLogin ? t('account.auth.create') : t('account.auth.sign_in')}
+                    </Button>
                 </div>
-            </div>
-        </div>
+            </form>
+        </SecondaryPage>
     );
 };
 

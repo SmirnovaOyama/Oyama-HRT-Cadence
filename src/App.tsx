@@ -7,6 +7,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { APP_VERSION, AppTheme } from './constants';
 import { DoseEvent, decompressData, encryptData, decryptData } from '../logic';
 import { parseCloudBackup } from './utils/cloudBackup';
+import { hasBackupRecords } from './utils/backupAvailability';
+import { accessibleView } from './utils/accessibleView';
 import { useAppData } from './hooks/useAppData';
 import { useProjection } from './hooks/useProjection';
 import { useAppNavigation, ViewKey } from './hooks/useAppNavigation';
@@ -41,7 +43,6 @@ import EditProfilePage from './pages/EditProfile';
 import EditAvatarPage from './pages/EditAvatar';
 import PKParamsPage from './pages/PKParams';
 import HRTModeSettings from './pages/HRTModeSettings';
-import LanguageSettings from './pages/LanguageSettings';
 import AppearanceSettings from './pages/AppearanceSettings';
 import WeightSettings from './pages/WeightSettings';
 import ExportSettings from './pages/ExportSettings';
@@ -51,14 +52,20 @@ import MilkTeaEasterEgg from './pages/MilkTeaEasterEgg';
 import CatStates from './pages/CatStates';
 import PublicShare from './pages/PublicShare';
 import ShareSettings from './pages/ShareSettings';
+import Reminders from './pages/Reminders';
+import SuppliesPage from './pages/Supplies';
+import { useReminders } from './hooks/useReminders';
+import { suppliesNeedingAttention, useSupplyForecasts } from './components/supplies';
 import Onboarding, { markOnboardingSeen, shouldShowOnboarding } from './pages/Onboarding';
 import SiteNoticeBanner from './components/SiteNotice';
+import { SecondaryPageHost, SecondaryPageProvider, useSecondaryNavigation } from './components/ui/SecondaryPage';
 
 const AppContent = () => {
-    const { t, lang, setLang } = useTranslation();
+    const { t, lang } = useTranslation();
     const { showDialog } = useDialog();
     const { mode } = useHRTMode();
-    const { user, token, logout, needsSetup2FA, clearSetup2FA } = useAuth();
+    const { hasPages, closeAll: closeSecondaryPages } = useSecondaryNavigation();
+    const { user, token, logout, needsSetup2FA, clearSetup2FA, isLoading: isAuthLoading } = useAuth();
     const [twoFAEnabled, setTwoFAEnabled] = useState(false);
 
     // Use Custom Hooks
@@ -89,6 +96,8 @@ const AppContent = () => {
         applySyncedState,
         scope,
         readyScope,
+        schedules, addSchedule, updateSchedule, deleteSchedule,
+        supplies, addSupply, updateSupply, deleteSupply,
     } = useAppData(showDialog);
 
     useLiveShareSync({
@@ -111,9 +120,19 @@ const AppContent = () => {
     const projection = useProjection({
         events,
         weight,
+        schedules,
         enabled: currentView === 'home' || currentView === 'history',
     });
 
+
+    // Reminders run wherever the app is, not only on Today: the hook raises the
+    // system notification, and Today shows the due cards it reports.
+    const reminders = useReminders({ schedules, events, t });
+
+    // Supply forecasts feed the rail's attention icon, the You row and Today's
+    // "Reorder" rows.
+    const supplyForecasts = useSupplyForecasts(supplies, schedules, events);
+    const suppliesAttention = useMemo(() => suppliesNeedingAttention(supplyForecasts), [supplyForecasts]);
 
     // --- Local UI State (Modals & Forms) ---
     const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
@@ -177,9 +196,19 @@ const AppContent = () => {
         events,
         labResults,
         doseTemplates,
+        schedules,
+        supplies,
         weight,
         pkParams,
     });
+
+    // A lost session must not leave a token-gated route rendering nothing.
+    // Keep any session-expired result page open above the sign-in destination.
+    useEffect(() => {
+        if (isAuthLoading) return;
+        const next = accessibleView(currentView, { signedIn: !!token, isAdmin: !!user?.isAdmin });
+        if (next !== currentView) handleViewChange(next);
+    }, [currentView, token, user?.isAdmin, isAuthLoading, handleViewChange]);
 
     // --- Theme Effect ---
     useEffect(() => {
@@ -210,17 +239,6 @@ const AppContent = () => {
             applyTheme(theme === 'dark');
         }
     }, [theme]);
-
-    const languageOptions = useMemo(() => ([
-        { value: 'zh', label: '简体中文' },
-        { value: 'zh-TW', label: '正體中文' },
-        { value: 'yue', label: '廣東話' },
-        { value: 'en', label: 'English' },
-        { value: 'ja', label: '日本語' },
-        { value: 'ko', label: '한국어' },
-        { value: 'tr', label: 'Türkçe' },
-    ]), []);
-
 
     // --- Modal Logic Wrappers ---
 
@@ -285,9 +303,17 @@ const AppContent = () => {
     // the one last opened for editing. A "Coming up" row on Today passes the
     // routine it belongs to, so the sheet opens on that medicine and amount.
     const handleLogNewDose = (prefill?: LogDosePrefill) => {
+        if (isFormOpen) return;
+        closeSecondaryPages();
         setEditingEvent(null);
         setDoseFormPrefill(prefill
-            ? { route: prefill.route, ester: prefill.ester, doseMG: prefill.doseMG, extras: { ...prefill.extras } }
+            ? {
+                route: prefill.route,
+                ester: prefill.ester,
+                doseMG: prefill.doseMG,
+                extras: { ...prefill.extras },
+                scheduleOccurrence: prefill.scheduleOccurrence,
+            }
             : null);
         setIsFormOpen(true);
     };
@@ -306,17 +332,22 @@ const AppContent = () => {
                     : 'you.title');
 
     // The rail's "Add a blood test": Blood tests, with its add form open.
-    const handleAddLabResult = () => { handleViewChange('lab'); setIsQuickAddLabOpen(true); };
+    const handleAddLabResult = () => { closeSecondaryPages(); handleViewChange('lab'); setIsQuickAddLabOpen(true); };
 
     // While a forced 2FA setup is pending, the nav stays locked on that page.
-    const handleNavChange = (view: ViewKey) => { if (!needsSetup2FA) handleViewChange(view); };
+    const handleNavChange = (view: ViewKey) => {
+        if (!needsSetup2FA) {
+            closeSecondaryPages();
+            handleViewChange(view);
+        }
+    };
 
     const handleQuickExport = () => {
-        if (events.length === 0 && labResults.length === 0) {
+        const exportData = buildExportPayload();
+        if (!hasBackupRecords(exportData)) {
             showDialog('alert', t('drawer.empty_export'));
             return;
         }
-        const exportData = buildExportPayload();
         const json = JSON.stringify(exportData, null, 2);
         navigator.clipboard.writeText(json).then(() => {
             showDialog('alert', t('drawer.export_copied'));
@@ -400,7 +431,7 @@ const AppContent = () => {
                 showDialog('alert', t('account.cloud_load_failed'));
                 return;
             }
-            showDialog('confirm', (t('account.load_confirm') as string).replace('{time}', new Date(timestamp * 1000).toLocaleString()), () => {
+            showDialog('confirm', (t('account.load_confirm') as string).replace('{time}', new Date(timestamp * 1000).toLocaleString('en-US')), () => {
                 processImportedData(parsed);
             });
         } catch (e) {
@@ -424,13 +455,12 @@ const AppContent = () => {
     };
 
     // Takes over the whole screen rather than sitting in the view stack: the
-    // intro is where language and HRT mode get chosen, and leaving the nav up
-    // would let someone tab away with both still on their defaults. Yields to a
+    // intro is where HRT mode gets chosen, and leaving the nav up
+    // would let someone tab away before choosing. Yields to a
     // forced 2FA setup, which is the one thing that can't wait behind a tour.
     if (showOnboarding && !needsSetup2FA) {
         return (
             <Onboarding
-                languageOptions={languageOptions}
                 onDone={() => { markOnboardingSeen(); setShowOnboarding(false); }}
             />
         );
@@ -445,9 +475,7 @@ const AppContent = () => {
                 onAddTest={handleAddLabResult}
                 isAdmin={!!user?.isAdmin}
                 locked={needsSetup2FA}
-                isSignedIn={!!token}
-                syncStatus={syncState.status}
-                lastSyncedAt={syncState.lastSyncedAt}
+                suppliesAttention={suppliesAttention.length > 0}
             />
             <div className="flex-1 min-w-0 flex flex-col overflow-hidden w-full bg-[var(--c-paper)] relative pt-[env(safe-area-inset-top,0px)] md:pt-0">
 
@@ -457,9 +485,11 @@ const AppContent = () => {
 
                 <div
                     ref={mainScrollRef}
+                    data-page-scroll
                     key={currentView}
                     className={`flex-1 flex flex-col overflow-y-auto scrollbar-hide scroll-pb-nav ${transitionDirection === 'backward' ? 'view-enter-backward' : 'view-enter-forward'}`}
                 >
+                    <div style={{ display: hasPages ? 'none' : undefined }}>
                     {currentView === 'home' && (
                         <Home
                             t={t}
@@ -483,6 +513,13 @@ const AppContent = () => {
                             syncStatus={token ? syncState.status : undefined}
                             lastSyncedAt={syncState.lastSyncedAt}
                             onOpenBackup={() => handleViewChange('account')}
+                            schedules={schedules}
+                            dueReminders={reminders.due}
+                            onSnoozeReminder={reminders.snooze}
+                            onSkipReminder={reminders.skip}
+                            suppliesAttention={suppliesAttention}
+                            onNavigateToReminders={() => handleViewChange('reminders')}
+                            onNavigateToSupplies={() => handleViewChange('supplies')}
                         />
                     )}
 
@@ -566,10 +603,8 @@ const AppContent = () => {
                         <Settings
                             t={t}
                             lang={lang}
-                            setLang={setLang}
                             theme={theme}
                             setTheme={setTheme}
-                            languageOptions={languageOptions}
                             onImportJson={importEventsFromJson}
                             labResults={labResults}
                             onExport={handleExportConfirm}
@@ -586,7 +621,6 @@ const AppContent = () => {
                             pkParams={pkParams}
                             onNavigateToPKParams={() => openPKParams('settings')}
                             onNavigateToHRTMode={() => handleViewChange('settings-hrt-mode')}
-                            onNavigateToLanguage={() => handleViewChange('settings-language')}
                             onNavigateToAppearance={() => handleViewChange('settings-appearance')}
                             onNavigateToWeight={() => handleViewChange('settings-weight')}
                             onNavigateToExport={() => handleViewChange('settings-export')}
@@ -608,20 +642,37 @@ const AppContent = () => {
                             syncStatus={syncState.status}
                             syncErrorCode={syncState.errorCode}
                             lastSyncedAt={syncState.lastSyncedAt}
+                            schedules={schedules}
+                            supplyForecasts={supplyForecasts}
+                        />
+                    )}
+
+                    {currentView === 'reminders' && (
+                        <Reminders
+                            schedules={schedules}
+                            events={events}
+                            addSchedule={addSchedule}
+                            updateSchedule={updateSchedule}
+                            deleteSchedule={deleteSchedule}
+                            onBack={() => handleViewChange('settings')}
+                        />
+                    )}
+
+                    {currentView === 'supplies' && (
+                        <SuppliesPage
+                            supplies={supplies}
+                            schedules={schedules}
+                            events={events}
+                            isTransmasc={mode === 'transmasc'}
+                            addSupply={addSupply}
+                            updateSupply={updateSupply}
+                            deleteSupply={deleteSupply}
+                            onBack={() => handleViewChange('settings')}
                         />
                     )}
 
                     {currentView === 'settings-hrt-mode' && (
                         <HRTModeSettings
-                            onBack={() => handleViewChange('settings')}
-                        />
-                    )}
-
-                    {currentView === 'settings-language' && (
-                        <LanguageSettings
-                            lang={lang}
-                            setLang={setLang}
-                            languageOptions={languageOptions}
                             onBack={() => handleViewChange('settings')}
                         />
                     )}
@@ -646,6 +697,7 @@ const AppContent = () => {
                         <ExportSettings
                             events={events}
                             labResults={labResults}
+                            hasBackupData={hasBackupRecords(buildExportPayload())}
                             weight={weight}
                             onExport={handleExportConfirm}
                             onQuickExport={handleQuickExport}
@@ -669,7 +721,7 @@ const AppContent = () => {
                             onCloudSave={handleCloudSave}
                             onCloudLoad={handleCloudLoad}
                             onCloudMerge={handleCloudMerge}
-                            localData={{ events, labResults, doseTemplates, weight }}
+                            localData={{ events, labResults, doseTemplates, schedules, supplies, weight }}
                             onNavigate={(v) => handleViewChange(v as ViewKey)}
                             twoFAEnabled={twoFAEnabled}
                             onTwoFAStatusChange={setTwoFAEnabled}
@@ -751,6 +803,8 @@ const AppContent = () => {
                     {currentView === 'admin' && user?.isAdmin && (
                         <Admin onBack={() => handleViewChange('settings')} />
                     )}
+                    </div>
+                    <SecondaryPageHost />
                 </div>
 
                 {/* Docked tab bar (mobile only). Part of the column, not fixed over
@@ -793,6 +847,7 @@ const AppContent = () => {
                 onAddQuickDose={addQuickDose}
                 onDeleteQuickDose={deleteQuickDose}
                 events={events}
+                schedules={schedules}
             />
 
             <DisclaimerModal
@@ -847,6 +902,7 @@ const App = () => {
                         <PublicShare token={shareRoute.token} />
                     </ErrorBoundary>
                 ) : (
+                    <SecondaryPageProvider>
                     <DialogProvider>
                         <AuthProvider>
                             <PixelCatProvider>
@@ -856,6 +912,7 @@ const App = () => {
                             </PixelCatProvider>
                         </AuthProvider>
                     </DialogProvider>
+                    </SecondaryPageProvider>
                 )}
             </HRTModeProvider>
         </LanguageProvider>

@@ -9,13 +9,14 @@ import { Lead } from './account/shared';
 interface ExportSettingsProps {
     events: DoseEvent[];
     labResults: LabResult[];
+    hasBackupData: boolean;
     weight: number;
     onExport: (encrypt: boolean, password?: string) => Promise<string | null>;
     onQuickExport: () => void;
     onBack: () => void;
 }
 
-const ExportSettings: React.FC<ExportSettingsProps> = ({ events, labResults, weight, onExport, onQuickExport, onBack }) => {
+const ExportSettings: React.FC<ExportSettingsProps> = ({ events, labResults, hasBackupData, weight, onExport, onQuickExport, onBack }) => {
     const { t } = useTranslation();
 
     return (
@@ -25,6 +26,7 @@ const ExportSettings: React.FC<ExportSettingsProps> = ({ events, labResults, wei
             <ExportSection
                 events={events}
                 labResults={labResults}
+                hasBackupData={hasBackupData}
                 weight={weight}
                 onExport={onExport}
                 onQuickExport={onQuickExport}

@@ -1,4 +1,4 @@
-# Cadence revision 3: Apple system fonts and refined buttons
+# Cadence: Apple system fonts and capsule controls
 
 User feedback (2026-09-23): "字体全部用 Apple font" (use Apple fonts for all text) and "有些按钮设计也是粗犷"
 (some buttons look crude/clunky — they circled the 64px full-width terracotta "Log it now" button with its
@@ -17,14 +17,15 @@ those are Apple HIG sizes, which were designed for SF Pro).
 - `-apple-system` gives SF Pro with automatic optical sizes (Text below 20px, Display above) and Apple's own
   tracking. Do not add letter-spacing.
 - Weights: page titles and the Today date title 700 (like an iOS large title); section headings, block titles,
-  sheet titles, row titles, buttons, tabs 600; body 400; the big dial number 600 with
+  sheet titles, row titles, tabs 600; shared button and Back labels 500; body 400; the big dial number 600 with
   `font-variant-numeric: tabular-nums`. Everything else keeps its weight.
 - SF Pro is narrower than the old Atkinson face, so text re-wraps: re-check every heading, row and chart label, and
   re-fit the board height.
 
 ## 2. Buttons: refined, Apple-like, never chunky
 
-Retire the 64px "primary-xl" completely. The set is:
+Retire the 64px "primary-xl" completely. The original set is below; revision 6 supersedes its control radii,
+button weights, secondary fills, and field edges.
 
 | Kind | Height | Radius | Fill / text (light) | Fill / text (dark) | Type |
 |---|---|---|---|---|---|
@@ -61,5 +62,35 @@ The owner said the rounded-rectangle buttons were not good looking and picked op
 side-by-side styles: **every button is a capsule** (border-radius: 9999px), with the same colours as before
 (primary #A34A28 / dark #B5532F with white text, tinted secondary #EFE8DD / dark #332C24 with ink text, plain
 and destructive text buttons unchanged). Heights stay 50 (primary) and 44 (compact); small header buttons are
-36px capsules. Cards around buttons use radius 20. Segmented controls, inputs and list groups keep their
-rectangles (they are fields and containers, not buttons). This overrides the radius column in the table above.
+36px capsules. Cards around buttons use radius 20. This overrides the radius column in the table above;
+the latest control-shape scope and lighter treatment are in revision 6 below.
+
+## Revision 6: capsule controls (owner-approved, 2026-09-24)
+
+The owner approved the capsule-shaped chart range selector and requested the same treatment for other
+square controls. Use `border-radius: 9999px` for standalone buttons, icon buttons (circles when square),
+both the outer track and individual segments of segmented controls, date/time triggers, single-line fields,
+and sidebar navigation items. Keep the Apple font family and existing layout and hit targets, with the lighter
+control treatment below.
+The selected segment retains its existing surface fill and thin border; no shadows or gradients.
+
+Preserve the structure and corner treatment of grouped list rows and containers, cards, charts and their
+data marks, and multiline textareas. Choice rows remain grouped lists with trailing checks, not capsule chips.
+Substantial selectors still use secondary pages with Back. Simple numeric values may be typed in place.
+Date/time capsules are buttons that expand an inline calendar or options within the page; they are not text
+boxes. Keep selection in the current page flow, without navigation, overlays, or native popup pickers.
+Capsule styling does not introduce popup menus or dialogs.
+This revision overrides older artboards and recipes that keep segmented controls or single-line fields rectangular.
+
+The owner's follow-up requested less visual weight. Shared `.btn-*` labels and Back labels use weight 500;
+page-title weights and the approved segmented labels (600) stay unchanged. Secondary buttons use the plate fill
+(light #F3EEE6, dark #26211B); the filled primary keeps its existing colours. `.input-base` uses a quiet 1px
+`--c-rule` edge, retaining strong focus styling and the original `--c-control` edge under `prefers-contrast: more`.
+Steppers use 36px visible circles inside their existing 48px hit targets, a 24px/32px weight-500 number,
+and a 17px regular muted unit. On increment/decrement, the number may roll slightly in the corresponding
+direction while the unit stays stationary; reduced-motion updates are instant. This refinement supersedes
+the heavier button and field values above.
+
+Segmented selections move one shared capsule between the options with a quiet 240ms ease-out transition.
+Rapid selections retarget that same capsule; first paint and resizing do not animate. Disable the transition
+when the user prefers reduced motion. Keep labels still and add no shadows, gradients, or decorative flashes.

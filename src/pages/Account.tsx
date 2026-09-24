@@ -16,11 +16,9 @@ import PasswordInputModal from '../components/PasswordInputModal';
 import { describeSyncError, SyncStatus } from '../hooks/useCloudSync';
 import { formatBytes } from '../utils/helpers';
 import { MAX_CLOUD_BACKUPS } from '../../backupPolicy';
+import { computeBackupMergeDiff, type BackupMergeRecords } from '../utils/backupMergePreview';
 
-interface LocalData {
-    events: any[];
-    labResults: any[];
-    doseTemplates: any[];
+interface LocalData extends BackupMergeRecords {
     weight: number;
 }
 
@@ -279,30 +277,6 @@ const Account: React.FC<AccountProps> = ({
         setUnlockError(null);
     };
 
-    const computeDiff = (backupData: any) => {
-        const localEventIds = new Set(localData.events.map((e: any) => e.id));
-        const localLabIds = new Set(localData.labResults.map((r: any) => r.id));
-        const localTemplateIds = new Set(localData.doseTemplates.map((t: any) => t.id));
-        const backupEventIds = new Set((backupData.events || []).map((e: any) => e.id));
-        const backupLabIds = new Set((backupData.labResults || []).map((r: any) => r.id));
-        const backupTemplateIds = new Set((backupData.doseTemplates || []).map((t: any) => t.id));
-
-        const newEvents = (backupData.events || []).filter((e: any) => !localEventIds.has(e.id));
-        const newLabs = (backupData.labResults || []).filter((r: any) => !localLabIds.has(r.id));
-        const newTemplates = (backupData.doseTemplates || []).filter((t: any) => !localTemplateIds.has(t.id));
-
-        const localOnlyEvents = localData.events.filter((e: any) => !backupEventIds.has(e.id));
-        const localOnlyLabs = localData.labResults.filter((r: any) => !backupLabIds.has(r.id));
-        const localOnlyTemplates = localData.doseTemplates.filter((t: any) => !backupTemplateIds.has(t.id));
-
-        return {
-            newEvents, newLabs, newTemplates,
-            localOnlyEvents, localOnlyLabs, localOnlyTemplates,
-            total: newEvents.length + newLabs.length + newTemplates.length,
-            totalDiff: newEvents.length + newLabs.length + newTemplates.length + localOnlyEvents.length + localOnlyLabs.length + localOnlyTemplates.length
-        };
-    };
-
     const handleAuthSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setAuthError(null);
@@ -499,7 +473,7 @@ const Account: React.FC<AccountProps> = ({
                                                         >
                                                             <span className="list-row-text">
                                                                 <span className="list-row-title">
-                                                                    {new Date(b.created_at * 1000).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                                                                    {new Date(b.created_at * 1000).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
                                                                 </span>
                                                                 <span className="list-row-sub">{formatBytes(b.data_size)}</span>
                                                             </span>
@@ -524,18 +498,20 @@ const Account: React.FC<AccountProps> = ({
                                                                 </div>
                                                             ) : expandedData[b.id] ? (() => {
                                                                 const data = expandedData[b.id];
-                                                                const diff = computeDiff(data);
+                                                                const diff = computeBackupMergeDiff(localData, data);
                                                                 const showingDiff = mergeDiffId === b.id;
                                                                 const events = (data.events || []) as any[];
                                                                 return (
                                                                     <div className="flex flex-col gap-4 px-4 pb-4 pt-1">
                                                                         {/* What is inside */}
-                                                                        <dl className="m-0 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                                                        <dl className="m-0 grid grid-cols-2 gap-3 sm:grid-cols-3">
                                                                             {[
                                                                                 { label: t('you.account.stat_doses'), val: events.length },
                                                                                 { label: t('you.account.stat_weight'), val: data.weight ?? '–' },
                                                                                 { label: t('you.account.stat_labs'), val: (data.labResults || []).length },
                                                                                 { label: t('you.account.stat_templates'), val: (data.doseTemplates || []).length },
+                                                                                { label: t('reminders.schedules'), val: (data.schedules || []).length },
+                                                                                { label: t('supplies.title'), val: (data.supplies || []).length },
                                                                             ].map(({ label, val }) => (
                                                                                 <div key={label} className="rounded-[12px] bg-[var(--c-plate)] px-3 py-2">
                                                                                     <dt className="text-sm text-[var(--c-muted)]">{label}</dt>
@@ -578,9 +554,13 @@ const Account: React.FC<AccountProps> = ({
                                                                                         {diff.newEvents.length > 0 && <DiffLine added label={t('you.account.new_doses')} n={diff.newEvents.length} />}
                                                                                         {diff.newLabs.length > 0 && <DiffLine added label={t('you.account.new_labs')} n={diff.newLabs.length} />}
                                                                                         {diff.newTemplates.length > 0 && <DiffLine added label={t('you.account.new_templates')} n={diff.newTemplates.length} />}
+                                                                                        {diff.newSchedules.length > 0 && <DiffLine added label={t('you.account.new_schedules')} n={diff.newSchedules.length} />}
+                                                                                        {diff.newSupplies.length > 0 && <DiffLine added label={t('you.account.new_supplies')} n={diff.newSupplies.length} />}
                                                                                         {diff.localOnlyEvents.length > 0 && <DiffLine added={false} label={t('you.account.local_only_doses')} n={diff.localOnlyEvents.length} />}
                                                                                         {diff.localOnlyLabs.length > 0 && <DiffLine added={false} label={t('you.account.local_only_labs')} n={diff.localOnlyLabs.length} />}
                                                                                         {diff.localOnlyTemplates.length > 0 && <DiffLine added={false} label={t('you.account.local_only_templates')} n={diff.localOnlyTemplates.length} />}
+                                                                                        {diff.localOnlySchedules.length > 0 && <DiffLine added={false} label={t('you.account.local_only_schedules')} n={diff.localOnlySchedules.length} />}
+                                                                                        {diff.localOnlySupplies.length > 0 && <DiffLine added={false} label={t('you.account.local_only_supplies')} n={diff.localOnlySupplies.length} />}
                                                                                     </ul>
                                                                                 )}
                                                                                 {diff.total > 0 && (

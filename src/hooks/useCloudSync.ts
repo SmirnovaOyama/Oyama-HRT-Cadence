@@ -102,6 +102,8 @@ interface Options {
     events: unknown;
     labResults: unknown;
     doseTemplates: unknown;
+    schedules: unknown;
+    supplies: unknown;
     weight: unknown;
     pkParams: unknown;
 }
@@ -154,7 +156,7 @@ type RemoteRead =
 
 export const useCloudSync = ({
     token, userId, enabled, ready, buildPayload, applyRemote,
-    events, labResults, doseTemplates, weight, pkParams,
+    events, labResults, doseTemplates, schedules, supplies, weight, pkParams,
 }: Options): CloudSyncState => {
     // The reported half of the state. `syncNow` is grafted on at the end so
     // the setters below stay plain data.
@@ -482,7 +484,7 @@ export const useCloudSync = ({
             if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [events, labResults, doseTemplates, weight, pkParams]);
+    }, [events, labResults, doseTemplates, schedules, supplies, weight, pkParams]);
 
     const syncNow = useCallback(async () => {
         const outcome = await runSync(true);

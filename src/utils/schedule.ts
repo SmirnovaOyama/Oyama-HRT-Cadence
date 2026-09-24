@@ -13,12 +13,14 @@
 // due time by the clock, not by 3600 s.
 
 import { DoseEvent, Ester, ExtraKey, Route, isTestosteroneEster } from '../../logic';
+import type { Schedule } from '../types/routine';
+import { assignScheduleEvents, doseMatchesSchedule, intervalDays, isSatisfied, nextOccurrences, occurrencesBetween, scheduleTimes } from './reminders';
 
 export type RouteFamily = 'injection' | 'oral' | 'sublingual' | 'gel' | 'patch';
 export type RegimenKind = 'daily' | 'cycle' | 'interval';
 
 export interface Regimen {
-    /** `${ester}:${family}` */
+    /** `${ester}:${family}` for inference; explicit schedules also carry their id. */
     key: string;
     ester: Ester;
     family: RouteFamily;
@@ -39,6 +41,13 @@ export interface Regimen {
     regular: boolean;
     /** Still in use: the last dose is recent relative to the interval. */
     active: boolean;
+    /**
+     * Set when the regimen comes from a schedule the person set up rather than
+     * from the log. Then `last` carries the schedule's dose (id "schedule-<id>",
+     * timeH of the latest matching logged dose, or the schedule's creation) and
+     * `events` may be empty.
+     */
+    schedule?: Schedule;
 }
 
 const MS_H = 3_600_000;
@@ -63,19 +72,26 @@ export function routeFamily(route: Route): RouteFamily | null {
 /** Local midnight of the day containing `ms`. */
 export function startOfLocalDay(ms: number): number {
     const d = new Date(ms);
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
 }
 
 /** Local midnight `n` calendar days after the day containing `ms`. */
 export function addLocalDays(ms: number, n: number): number {
     const d = new Date(ms);
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n).getTime();
+    d.setHours(0, 0, 0, 0);
+    // setFullYear preserves years 0–99 instead of adding the constructor's
+    // 1900 offset. Reset again if the source midnight normalized to 01:00.
+    d.setFullYear(d.getFullYear(), d.getMonth(), d.getDate() + n);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
 }
 
 /** `dayStartMs` plus a time of day, by the local clock. */
 export function atTimeOfDay(dayStartMs: number, minutes: number): number {
     const d = new Date(dayStartMs);
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, Math.round(minutes)).getTime();
+    d.setHours(0, Math.round(minutes), 0, 0);
+    return d.getTime();
 }
 
 /** Whole calendar days from the day of `a` to the day of `b` (DST-safe). */
@@ -235,7 +251,10 @@ export function cycleState(regimen: Regimen, nowMs: number = Date.now()): CycleS
     if (regimen.kind !== 'cycle' || regimen.cycleDays < 2) return null;
     const n = regimen.cycleDays;
     const lastDoseMs = toMs(regimen.last.timeH);
-    const cycleStartMs = startOfLocalDay(lastDoseMs);
+    // An explicit schedule's cycle runs up to its next occurrence, whatever the log says.
+    const cycleStartMs = regimen.schedule
+        ? addLocalDays(regimen.nextDueMs, -n)
+        : startOfLocalDay(lastDoseMs);
     const cycleEndMs = addLocalDays(cycleStartMs, n);
     const daysIn = calendarDaysBetween(cycleStartMs, nowMs);
     const fraction = Math.min(1, Math.max(0, (nowMs - cycleStartMs) / (cycleEndMs - cycleStartMs)));
@@ -273,7 +292,8 @@ export interface DailySlot {
 /** One slot per calendar day, starting at the day containing `startMs`. */
 export function dailySlots(regimen: Regimen, startMs: number, days: number, nowMs: number = Date.now()): DailySlot[] {
     const today = startOfLocalDay(nowMs);
-    const firstDay = startOfLocalDay(toMs(regimen.events[0].timeH));
+    const firstMs = regimen.events.length ? toMs(regimen.events[0].timeH) : Infinity;
+    const firstDay = startOfLocalDay(Math.min(firstMs, regimen.schedule?.createdAt ?? firstMs));
     const byDay = new Map<number, DoseEvent>();
     for (const e of regimen.events) {
         const d = startOfLocalDay(toMs(e.timeH));
@@ -282,6 +302,20 @@ export function dailySlots(regimen: Regimen, startMs: number, days: number, nowM
     const slots: DailySlot[] = [];
     for (let i = 0; i < days; i++) {
         const dayStartMs = addLocalDays(startMs, i);
+        if (regimen.schedule?.cadence.kind === 'daily') {
+            const s = regimen.schedule;
+            const occurrences = occurrencesBetween(s, dayStartMs, addLocalDays(dayStartMs, 1))
+                .filter(ms => ms >= s.createdAt);
+            const pending = occurrences.filter(ms => !isSatisfied(ms, s, regimen.events));
+            const dueMs = pending[0] ?? occurrences[0] ?? atTimeOfDay(dayStartMs, regimen.timeOfDayMin);
+            const state: SlotState = !occurrences.length ? 'none'
+                : !pending.length ? 'taken'
+                : dayStartMs < today ? 'missed'
+                : dayStartMs === today ? nowMs >= dueMs ? 'dueNow' : 'due'
+                : 'upcoming';
+            slots.push({ dayStartMs, dueMs, state, event: state === 'taken' ? byDay.get(dayStartMs) : undefined });
+            continue;
+        }
         const dueMs = atTimeOfDay(dayStartMs, regimen.timeOfDayMin);
         const event = byDay.get(dayStartMs);
         let state: SlotState;
@@ -357,13 +391,54 @@ export const PROJECTION_DAYS = 14;
  * now) and the schedule carries on from there. A slot that already holds a
  * logged dose (one entered ahead of time) is skipped rather than doubled.
  * Ids are prefixed "planned-" so they can never collide with a logged dose.
+ *
+ * With `schedules`, each active schedule replaces the inferred regimen for the
+ * same ester and route family (see mergeRegimens); the log used to tell which
+ * occurrences are already taken is the doses held by `regimens`. Callers that
+ * have the full log should pass `regimensFor(events, schedules, nowMs)` instead.
+ * Regimens that come from a schedule follow its exact times.
  */
-export function plannedEvents(regimens: Regimen[], fromMs: number, days: number): DoseEvent[] {
+export function plannedEvents(regimens: Regimen[], fromMs: number, days: number, schedules?: Schedule[]): DoseEvent[] {
+    if (schedules?.length) {
+        const log = regimens.flatMap(r => r.events);
+        regimens = mergeRegimens(regimens, scheduleRegimens(schedules, log, fromMs));
+    }
     const endMs = fromMs + days * 24 * MS_H;
     const out: DoseEvent[] = [];
     for (const r of usableRegimens(regimens)) {
         const tolH = Math.min(12, r.intervalH / 2);
         const logged = r.events.map(e => e.timeH);
+        const last = r.last;
+        const doseAt = (dueMs: number, i: number): DoseEvent => {
+            const extras = { ...last.extras };
+            // A planned patch comes off when the next one goes on. Without
+            // this, a routine logged with separate removals would leave every
+            // planned patch on the skin for good.
+            if (r.family === 'patch' && !(Number(extras[ExtraKey.patchWearH]) > 0)) {
+                extras[ExtraKey.patchWearH] = r.intervalH;
+            }
+            return {
+                id: `planned-${r.key}-${i}`,
+                route: last.route,
+                timeH: dueMs / MS_H,
+                doseMG: last.doseMG,
+                ester: last.ester,
+                extras,
+            };
+        };
+        if (r.schedule) {
+            const s = r.schedule;
+            let i = 0;
+            // An overdue occurrence is taken now, like an inferred one.
+            if (r.nextDueMs < fromMs) out.push(doseAt(fromMs, i++));
+            const occ = occurrencesBetween(s, Math.max(fromMs, r.nextDueMs), endMs + 1);
+            for (const ms of occ) {
+                if (ms === fromMs && i > 0) continue;
+                if (isSatisfied(ms, s, r.events)) continue;
+                out.push(doseAt(ms, i++));
+            }
+            continue;
+        }
         const nextAfter = (ms: number): number => {
             if (r.kind === 'daily') return atTimeOfDay(addLocalDays(ms, 1), r.timeOfDayMin);
             if (r.kind === 'cycle') return atTimeOfDay(addLocalDays(ms, r.cycleDays), r.timeOfDayMin);
@@ -372,28 +447,96 @@ export function plannedEvents(regimens: Regimen[], fromMs: number, days: number)
         let dueMs = Math.max(r.nextDueMs, fromMs);
         for (let i = 0; dueMs <= endMs && i < 1000; i++) {
             const h = dueMs / MS_H;
-            if (!logged.some(l => Math.abs(l - h) < tolH)) {
-                const last = r.last;
-                const extras = { ...last.extras };
-                // A planned patch comes off when the next one goes on. Without
-                // this, a routine logged with separate removals would leave every
-                // planned patch on the skin for good.
-                if (r.family === 'patch' && !(Number(extras[ExtraKey.patchWearH]) > 0)) {
-                    extras[ExtraKey.patchWearH] = r.intervalH;
-                }
-                out.push({
-                    id: `planned-${r.key}-${i}`,
-                    route: last.route,
-                    timeH: h,
-                    doseMG: last.doseMG,
-                    ester: last.ester,
-                    extras,
-                });
-            }
+            if (!logged.some(l => Math.abs(l - h) < tolH)) out.push(doseAt(dueMs, i));
             const next = nextAfter(dueMs);
             if (!(next > dueMs)) break;
             dueMs = next;
         }
     }
     return out.sort((a, b) => a.timeH - b.timeH);
+}
+
+// ── Explicit schedules ───────────────────────────────────────────────────────
+
+/**
+ * When the schedule's next dose is due: the latest occurrence that has come
+ * (within one interval, not before the schedule was created) if nothing was
+ * logged for it, otherwise the first later occurrence not already logged.
+ */
+function scheduleNextDue(s: Schedule, events: DoseEvent[], nowMs: number): number {
+    const lookback = Math.max(s.createdAt, addLocalDays(nowMs, -intervalDays(s)));
+    const past = occurrencesBetween(s, lookback, nowMs + 1);
+    const latest = past[past.length - 1];
+    if (latest !== undefined && !isSatisfied(latest, s, events)) return latest;
+    const ahead = nextOccurrences(s, Math.max(nowMs + 1, s.createdAt), 16);
+    return ahead.find(ms => !isSatisfied(ms, s, events)) ?? ahead[ahead.length - 1] ?? nowMs;
+}
+
+/**
+ * The regimen an explicit schedule stands for, in the same shape the dial,
+ * Coming up and the projection use. Null for an inactive schedule or one whose
+ * route is not a dose (patch removal).
+ */
+export function scheduleToRegimen(s: Schedule, events: DoseEvent[], nowMs: number = Date.now()): Regimen | null {
+    if (!s.active) return null;
+    const family = routeFamily(s.route);
+    const times = scheduleTimes(s);
+    if (!family || !times.length) return null;
+    const n = intervalDays(s);
+    const perDay = s.cadence.kind === 'daily' ? times.length : 1;
+    const kind: RegimenKind = n >= 2 ? 'cycle' : 'daily';
+    const matching = events
+        .filter(e => Number.isFinite(e.timeH) && doseMatchesSchedule(s, e))
+        .sort((a, b) => a.timeH - b.timeH);
+    const lastLogged = matching[matching.length - 1];
+    const last: DoseEvent = {
+        id: `schedule-${s.id}`,
+        route: s.route,
+        ester: s.ester,
+        doseMG: s.doseMG,
+        extras: { ...s.extras },
+        timeH: lastLogged ? lastLogged.timeH : s.createdAt / MS_H,
+    };
+    return {
+        key: `${s.ester}:${family}:${s.id}`,
+        ester: s.ester,
+        family,
+        kind,
+        intervalH: (n * 24) / perDay,
+        cycleDays: n,
+        timeOfDayMin: times[0],
+        events: matching,
+        last,
+        nextDueMs: scheduleNextDue(s, events, nowMs),
+        regular: true,
+        active: true,
+        schedule: s,
+    };
+}
+
+/** Regimens for every active schedule, with each logged dose assigned once. */
+export function scheduleRegimens(schedules: Schedule[], events: DoseEvent[], nowMs: number = Date.now()): Regimen[] {
+    const assigned = assignScheduleEvents(schedules, events);
+    return schedules.map(s => scheduleToRegimen(s, assigned.get(s.id) ?? [], nowMs))
+        .filter((r): r is Regimen => r !== null);
+}
+
+/**
+ * Explicit regimens first, then every inferred regimen for a medicine and route
+ * family that has no explicit schedule.
+ */
+export function mergeRegimens(inferred: Regimen[], explicit: Regimen[]): Regimen[] {
+    const keys = new Set(explicit.map(r => `${r.ester}:${r.family}`));
+    return [...explicit, ...inferred.filter(r => !keys.has(`${r.ester}:${r.family}`))];
+}
+
+/**
+ * The regimens to show: an active schedule wins for its ester and route family,
+ * and inference from the log fills in for medicines without one. With no
+ * schedules this is exactly inferRegimens.
+ */
+export function regimensFor(events: DoseEvent[], schedules: Schedule[] = [], nowMs: number = Date.now()): Regimen[] {
+    const inferred = inferRegimens(events, nowMs);
+    if (!schedules.length) return inferred;
+    return mergeRegimens(inferred, scheduleRegimens(schedules, events, nowMs));
 }

@@ -1,5 +1,5 @@
 import React, { useId, useState } from 'react';
-import { External } from '../components/icons';
+import { Attention, External } from '../components/icons';
 import { Button, ListGroup, ListRow, PageHeader, Switch } from '../components/ui';
 import { Lang } from '../i18n/translations';
 import { AppTheme } from '../constants';
@@ -9,14 +9,15 @@ import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/AuthModal';
 import type { SyncStatus } from '../hooks/useCloudSync';
 import { Avatar, LIST_CHEVRON, YouPage, useSyncWords } from './you/shared';
+import type { Schedule } from '../types/routine';
+import type { ForecastedSupply } from '../components/supplies';
+import { fmt } from '../components/today/format';
 
 interface SettingsProps {
     t: (key: string) => string;
     lang: Lang;
-    setLang: (lang: Lang) => void;
     theme: AppTheme;
     setTheme: (theme: AppTheme) => void;
-    languageOptions: { value: string; label: string }[];
     onImportJson: (text: string) => boolean | Promise<boolean>;
     labResults: any[];
     onExport: (encrypt: boolean, password?: string) => Promise<string | null>;
@@ -33,7 +34,6 @@ interface SettingsProps {
     pkParams: PKCustomParams | null;
     onNavigateToPKParams: () => void;
     onNavigateToHRTMode: () => void;
-    onNavigateToLanguage: () => void;
     onNavigateToAppearance: () => void;
     onNavigateToWeight: () => void;
     onNavigateToExport: () => void;
@@ -58,6 +58,10 @@ interface SettingsProps {
     syncStatus?: SyncStatus;
     syncErrorCode?: string | null;
     lastSyncedAt?: number | null;
+    /** Explicit schedules, for the Reminders row's value. */
+    schedules?: Schedule[];
+    /** Forecast for each tracked supply, for the Supplies row's value. */
+    supplyForecasts?: ForecastedSupply[];
 }
 
 const THEME_LABEL: Record<AppTheme, string> = {
@@ -94,18 +98,19 @@ const ExternalMark = () => (
 
 /**
  * The You tab, in the Apple Settings shape (design/cadence/spec/format_rules.md):
- * the account at the top, then small-headed groups of one-line rows, each with
+ * the account at the top, then spaced groups of one-line rows, each with
  * a value or a state line but never both, and the destructive actions in their
  * own groups at the bottom.
  */
 const Settings: React.FC<SettingsProps> = ({
-    t, lang, theme, languageOptions, onClearAllEvents, events,
+    t, lang, theme, onClearAllEvents, events,
     showDialog, setIsDisclaimerOpen, onShowIntro, onNavigateToTransparency, appVersion,
     weight, pkParams, onNavigateToPKParams, onNavigateToHRTMode,
-    onNavigateToLanguage, onNavigateToAppearance, onNavigateToWeight,
+    onNavigateToAppearance, onNavigateToWeight,
     onNavigateToExport, onNavigateToImport, autoSync, setAutoSync, isLoggedIn,
     devMode, setDevMode, onNavigateToMilkTea, onNavigateToCatStates, isAdmin, onNavigateToAdmin,
     onNavigate, onSignIn, syncStatus, syncErrorCode, lastSyncedAt,
+    schedules = [], supplyForecasts = [],
 }) => {
     const { mode } = useHRTMode();
     const { user, logout } = useAuth();
@@ -120,7 +125,16 @@ const Settings: React.FC<SettingsProps> = ({
     const openExternal = (confirmKey: string, url: string) =>
         showDialog('confirm', t(confirmKey), () => window.open(url, '_blank', 'noopener'));
 
-    const languageLabel = languageOptions.find(o => o.value === lang)?.label ?? lang;
+    // Reminders: how many schedules actually remind. Supplies: the most urgent
+    // state in words when something needs attention, otherwise the count.
+    const remindersOn = schedules.filter(s => s.active && s.remind.enabled).length;
+    const remindersValue = remindersOn > 0 ? fmt(t('you.reminders_on'), { n: remindersOn }) : t('you.reminders_off');
+    const suppliesValue = supplyForecasts.some(s => s.forecast.status === 'out') ? t('supplies.status.out')
+        : supplyForecasts.some(s => s.forecast.status === 'reorder_soon') ? t('supplies.status.reorder_soon')
+            : supplyForecasts.length > 0 ? fmt(t('you.supplies_tracked'), { n: supplyForecasts.length })
+                : undefined;
+    const suppliesAttention = supplyForecasts.some(s => s.forecast.status !== 'ok');
+
     const danger = (text: string) => <span className="text-[var(--c-danger)]">{text}</span>;
 
     return (
@@ -156,7 +170,7 @@ const Settings: React.FC<SettingsProps> = ({
                     </section>
                 )}
 
-                <ListGroup header={t('you.routine')} chevronIcon={LIST_CHEVRON}>
+                <ListGroup chevronIcon={LIST_CHEVRON}>
                     <ListRow
                         title={t('you.hrt_mode')}
                         value={t(mode === 'transfem' ? 'mode.transfem' : 'mode.transmasc')}
@@ -169,14 +183,36 @@ const Settings: React.FC<SettingsProps> = ({
                         drillIn
                         onClick={onNavigateToWeight}
                     />
+                    {onNavigate && (
+                        <ListRow
+                            title={t('reminders.title')}
+                            value={remindersValue}
+                            drillIn
+                            onClick={() => onNavigate('reminders')}
+                        />
+                    )}
+                    {onNavigate && (
+                        <ListRow
+                            title={t('supplies.title')}
+                            value={suppliesAttention
+                                ? (
+                                    <span className="inline-flex items-center gap-1.5 text-[var(--c-attention)]">
+                                        <Attention size={18} className="flex-none" />
+                                        <span>{suppliesValue}</span>
+                                    </span>
+                                )
+                                : suppliesValue}
+                            drillIn
+                            onClick={() => onNavigate('supplies')}
+                        />
+                    )}
                 </ListGroup>
 
-                <ListGroup header={t('you.display')} chevronIcon={LIST_CHEVRON}>
-                    <ListRow title={t('drawer.lang')} value={languageLabel} drillIn onClick={onNavigateToLanguage} />
+                <ListGroup chevronIcon={LIST_CHEVRON}>
                     <ListRow title={t('settings.theme')} value={t(THEME_LABEL[theme])} drillIn onClick={onNavigateToAppearance} />
                 </ListGroup>
 
-                <ListGroup header={t('you.data')} chevronIcon={LIST_CHEVRON}>
+                <ListGroup chevronIcon={LIST_CHEVRON}>
                     {signedIn && (
                         <SwitchRow title={t('you.sync.switch')} checked={autoSync} onChange={setAutoSync} />
                     )}
@@ -187,7 +223,7 @@ const Settings: React.FC<SettingsProps> = ({
                     )}
                 </ListGroup>
 
-                <ListGroup header={t('you.model')} footer={t('you.model_footer')} chevronIcon={LIST_CHEVRON}>
+                <ListGroup footer={t('you.model_footer')} chevronIcon={LIST_CHEVRON}>
                     <ListRow
                         title={t('you.pk_params')}
                         value={t(pkParams ? 'pk.customized' : 'pk.default')}
@@ -202,7 +238,7 @@ const Settings: React.FC<SettingsProps> = ({
                     />
                 </ListGroup>
 
-                <ListGroup header={t('settings.group.about')} chevronIcon={LIST_CHEVRON}>
+                <ListGroup chevronIcon={LIST_CHEVRON}>
                     <ListRow title={t('settings.version')} value={appVersion} />
                     <ListRow title={t('drawer.disclaimer')} drillIn onClick={() => setIsDisclaimerOpen(true)} />
                     {/* The intro only ever shows itself once, so this is the only way back

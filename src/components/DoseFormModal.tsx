@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useId } from 'react';
+import React from 'react';
 import DoseForm, { DoseTemplate, DoseFormPrefill } from './DoseForm';
 import type { QuickDose } from './dose_form/QuickDoseButtons';
-import { useEscape } from '../hooks/useEscape';
+import { useTranslation } from '../contexts/LanguageContext';
+import { SecondaryPage } from './ui/SecondaryPage';
 import { DoseEvent } from '../../logic';
+import type { Schedule } from '../types/routine';
 
 export type { DoseTemplate, QuickDose };
 
@@ -21,11 +23,11 @@ interface DoseFormModalProps {
     events?: DoseEvent[];
     /** Opens a new dose on this medicine and amount. */
     prefill?: DoseFormPrefill | null;
+    /** Explicit schedules, listed first in the "What" list. */
+    schedules?: Schedule[];
 }
 
-/** The Log a dose sheet: paper background, 28px top corners and a grab bar
- *  on a phone, a centred panel from tablet width up. No shadow: the hairline
- *  edge and the scrim carry it. */
+/** Dose editor presented as a child page in the main content column. */
 const DoseFormModal: React.FC<DoseFormModalProps> = ({
     isOpen,
     onClose,
@@ -40,65 +42,34 @@ const DoseFormModal: React.FC<DoseFormModalProps> = ({
     onDeleteQuickDose,
     events = [],
     prefill = null,
+    schedules = [],
 }) => {
-    const [isVisible, setIsVisible] = useState(false);
-    const titleId = useId();
-
-    useEffect(() => {
-        if (isOpen) setIsVisible(true);
-    }, [isOpen]);
-
-    const handleClose = () => {
-        setIsVisible(false);
+    const { t } = useTranslation();
+    if (!isOpen) return null;
+    const handleSave = (event: DoseEvent) => {
+        onSave?.(event);
         onClose();
     };
-
-    useEscape(() => {
-        if (!document.querySelector('.z-\\[70\\]')) {
-            handleClose();
-        }
-    }, isOpen);
-
-    const handleSave = (event: any) => {
-        if (onSave) {
-            onSave(event);
-        }
-        handleClose();
-    };
-
-    if (!isVisible && !isOpen) return null;
-
     return (
-        <div className="modal-overlay">
-            <div className="modal-shell modal-shell-wide">
-                <section
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby={titleId}
-                    className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-[28px] border border-b-0 border-[var(--c-hairline)] bg-[var(--c-paper)] text-[var(--c-ink)] md:h-[min(85vh,880px)] md:rounded-[20px] md:border-b"
-                >
-                    <div className="flex h-5 shrink-0 items-center justify-center" aria-hidden="true">
-                        <div className="h-1 w-9 rounded-sm bg-[var(--c-rule)] md:hidden" />
-                    </div>
+        <SecondaryPage title={t(eventToEdit ? 'log.edit_title' : 'log.title')} onBack={onClose}>
                     <DoseForm
                         eventToEdit={eventToEdit}
                         onSave={handleSave}
                         onDelete={onDelete}
-                        onCancel={handleClose}
+                        onCancel={onClose}
                         templates={templates}
                         onSaveTemplate={onSaveTemplate}
                         onDeleteTemplate={onDeleteTemplate}
                         quickDoses={quickDoses}
                         onAddQuickDose={onAddQuickDose}
                         onDeleteQuickDose={onDeleteQuickDose}
-                        isInline={false}
+                        isInline
+                        hideHeader
                         events={events}
-                        titleId={titleId}
                         prefill={eventToEdit ? null : prefill}
+                        schedules={schedules}
                     />
-                </section>
-            </div>
-        </div>
+        </SecondaryPage>
     );
 };
 

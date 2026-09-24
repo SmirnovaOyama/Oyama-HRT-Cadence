@@ -92,9 +92,15 @@ export const buildSharedDosageSnapshot = ({
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
         createdAt: Date.now(),
         // Never send the app's stable local event IDs to the share service.
+        // Fields are listed rather than spread so nothing else rides along:
+        // schedules, supplies and edit stamps stay inside the encrypted backup
+        // and never reach a share link.
         events: events.map(event => ({
-            ...event,
             id: uuidv4(),
+            route: event.route,
+            timeH: event.timeH,
+            doseMG: event.doseMG,
+            ester: event.ester,
             extras: { ...event.extras },
         })),
         simulation: sharedSimulation,

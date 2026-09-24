@@ -171,6 +171,13 @@
     }
 }
 
+/* Time and date fields inside list rows: the whole field opens the picker
+   (onClick calls showPicker), so Chrome's own clock and calendar glyphs are
+   hidden. Our icons only. */
+.row-picker::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
 /* The layout is drawn for a ~1280 px column, which leaves it undersized on a
    wide display: small type stranded in a lot of empty page. Everything is sized
    in rem, so lifting the root size scales type, spacing and the content column
@@ -406,7 +413,7 @@ html.mono {
 
     --c-btn-primary: #A34A28;
     --c-btn-primary-hover: #8F3F20;
-    --c-btn-secondary: #EFE8DD;
+    --c-btn-secondary: #F3EEE6;
     --c-btn-secondary-hover: #E9E2D6;
     /* Secondary on a tinted surface (plate, the desktop rail) */
     --c-btn-on-tint: #FFFFFF;
@@ -444,7 +451,7 @@ html.mono {
 
     --c-btn-primary: #B5532F;
     --c-btn-primary-hover: #A34A28;
-    --c-btn-secondary: #332C24;
+    --c-btn-secondary: #26211B;
     --c-btn-secondary-hover: #3A332B;
     --c-btn-on-tint: #332C24;
     --c-btn-on-tint-hover: #3A332B;
@@ -615,140 +622,14 @@ body {
     color: var(--c-ink);
 }
 
-/* ── Modals: scrim, bottom sheet, dialog (recipe C18) ──────────────
-   Markup: .modal-overlay > .modal-shell (or .modal-shell-wide) > .modal-card.
-   Below md the card is a bottom sheet: full width, flush with the bottom
-   edge, 28px top corners, a top hairline and a grab bar. From md up it is a
-   centred dialog with 16px corners and a hairline all round. Flat scrim, no
-   shadow anywhere.
-
-   The overlay's position, colour and animation sit in the components layer so
-   a utility on the element wins (`z-[60]`, `z-[100]` stack dialogs above the
-   dose sheet). Its mobile padding stays unlayered on purpose: a `p-4` written
-   for the old floating card must not lift the sheet off the bottom edge. */
-@layer components {
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 50;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        background-color: var(--c-scrim);
-        animation: fade-in var(--duration-base) var(--ease-standard);
-    }
-
-    .modal-shell,
-    .modal-shell-wide {
-        width: 100%;
-        max-width: 24rem;
-        animation: rise-in var(--duration-base) var(--ease-standard);
-    }
-
-    .modal-shell-wide {
-        max-width: 36rem;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .modal-overlay {
-        padding: 0;
-    }
-
-    .modal-shell,
-    .modal-shell-wide {
-        max-width: none;
-    }
-}
-
-@media (min-width: 768px) {
-    .modal-overlay {
-        align-items: center;
-        padding: 1rem;
-    }
-}
-
-/* A grab bar for sheets that draw their own (a sheet built without
-   .modal-card, or a full-height form). 36×4 in the rule colour, centred in a
-   20px row. */
-.sheet-grab {
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 20px;
-}
-.sheet-grab::before {
-    content: "";
-    width: 36px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--c-rule);
-}
-@media (min-width: 768px) {
-    .sheet-grab {
-        display: none;
-    }
-}
-
 /* ── Cadence components ────────────────────────────────────────────
    In the components layer so a Tailwind utility on the same element wins
-   (`modal-card p-0`, `input-base pr-11`, `btn-secondary text-red-500`).
+   (`input-base pr-11`, `btn-secondary text-red-500`).
    Flat everywhere: no box-shadow and no gradient. Depth comes from tone,
    a 1px hairline border and spacing. Colours come from the --c-* tokens,
    which switch with the .dark class, so no rule here needs a dark twin. */
 @layer components {
-    .modal-card {
-        position: relative;
-        background-color: var(--c-surface);
-        border: 1px solid var(--c-hairline);
-        border-radius: 16px;
-        padding: 1.25rem;
-        max-height: 88vh;
-        overflow-y: auto;
-        color: var(--c-ink);
-    }
-
-    /* Bottom sheet below md. The home-indicator inset is a bottom border in
-       the surface colour rather than padding, so it holds even on cards that
-       zero their padding with p-0. The grab bar is drawn in the top 20px,
-       which every card's own top padding or header already leaves clear. */
-    @media (max-width: 767.98px) {
-        .modal-overlay .modal-card {
-            border-width: 1px 0 env(safe-area-inset-bottom, 0px);
-            border-color: var(--c-hairline) transparent var(--c-surface);
-            border-radius: 28px 28px 0 0;
-            padding-top: 1.75rem;
-            max-height: calc(92dvh - env(safe-area-inset-top, 0px));
-        }
-        .modal-overlay .modal-card::before {
-            content: "";
-            position: absolute;
-            top: 8px;
-            left: 50%;
-            width: 36px;
-            height: 4px;
-            margin-left: -18px;
-            border-radius: 2px;
-            background: var(--c-rule);
-            pointer-events: none;
-        }
-        /* A card that already draws .sheet-grab gets no second bar. */
-        .modal-overlay .modal-card:has(> .sheet-grab)::before {
-            content: none;
-        }
-    }
-
-    /* Section-heading size, 22/28 600, sentence case, no tracking. */
-    .modal-title {
-        font-size: 1.375rem;
-        line-height: 1.75rem;
-        font-weight: 600;
-        color: var(--c-ink);
-        margin-bottom: 0.75rem;
-    }
-
-    /* ── Buttons (spec/fonts_buttons_v2.md, revision 5) ──────────
+    /* ── Buttons (spec/fonts_buttons_v2.md, revision 6) ──────────
        Every button is a capsule (the owner's pick, option B). Primary:
        filled, one per region. Secondary: tinted fill, no border. Plain and
        destructive: text only. Icon: a 44×44 circle. Heights are
@@ -769,7 +650,7 @@ body {
         font-family: inherit;
         font-size: 1.0625rem;
         line-height: 1.375rem;
-        font-weight: 600;
+        font-weight: 500;
         text-align: center;
         text-decoration: none;
         white-space: nowrap;
@@ -845,6 +726,26 @@ body {
         background-color: var(--c-plate);
     }
 
+    /* A quiet 36px circle inside the existing 48px stepper hit target. */
+    .stepper-action,
+    .stepper-action:hover:not(:disabled) {
+        width: 48px;
+        height: 48px;
+        background-color: transparent;
+    }
+    .stepper-action > span {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 9999px;
+        background-color: var(--c-btn-secondary);
+        transition: background-color var(--duration-quick) var(--ease-standard);
+    }
+    .stepper-action:hover:not(:disabled) > span {
+        background-color: var(--c-btn-secondary-hover);
+    }
+
     /* Inside cards, sidebars and inline pairs. */
     .btn-primary.btn-compact,
     .btn-secondary.btn-compact {
@@ -880,6 +781,15 @@ body {
         cursor: not-allowed;
     }
 
+    /* A primary that can't be pressed yet goes neutral rather than showing a
+       washed-out terracotta, which read as broken. */
+    .btn-primary:disabled,
+    .btn-primary[aria-disabled="true"] {
+        opacity: 1;
+        color: var(--c-muted);
+        background-color: var(--c-plate-strong);
+    }
+
     .btn-primary:focus-visible,
     .btn-secondary:focus-visible,
     .btn-plain:focus-visible,
@@ -908,23 +818,27 @@ body {
     }
 
     /* ── Inputs ─────────────────────────────────────────────────
-       Fields keep a border because they are operable: 1px control. Focus
-       thickens it to a 2px ink edge with an inset outline (no glow). */
+       Single-line fields are capsules. Multiline editors keep room for text.
+       Quiet 1px edges become strong ink outlines on focus. */
     .input-base {
         display: block;
         width: 100%;
         min-height: 48px;
         box-sizing: border-box;
-        padding: 11px 14px;
+        padding: 11px 20px;
         font-family: inherit;
         font-size: 1.0625rem;
         line-height: 1.5rem;
         color: var(--c-ink);
         background-color: var(--c-surface);
-        border: 1px solid var(--c-control);
-        border-radius: 12px;
+        border: 1px solid var(--c-rule);
+        border-radius: 9999px;
         outline: none;
         transition: border-color var(--duration-quick) var(--ease-standard);
+    }
+    textarea.input-base {
+        padding: 11px 14px;
+        border-radius: 12px;
     }
     .input-base::placeholder {
         color: var(--c-muted);
@@ -938,6 +852,11 @@ body {
     .input-base:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+    @media (prefers-contrast: more) {
+        .input-base:not(:focus) {
+            border-color: var(--c-control);
+        }
     }
 
     /* A quiet note on plate: tone, not a border, sets it apart. */
@@ -1321,6 +1240,33 @@ body {
     }
 }
 
+/* One measured capsule moves between selections; labels and focus outlines
+   stay on their own buttons. Layout changes and first paint do not animate. */
+.segmented-control > .segmented-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--c-rule);
+    border-radius: 9999px;
+    background-color: var(--c-surface);
+    pointer-events: none;
+    visibility: hidden;
+}
+.segmented-control > .segmented-indicator[data-positioned="true"] {
+    visibility: visible;
+}
+.segmented-control > .segmented-indicator[data-animated="true"] {
+    transition: transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1),
+                width 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+    .segmented-control > .segmented-indicator[data-animated="true"] {
+        transition: none;
+    }
+}
+
 /* Toggle switches: the knob slid instantly between its two offsets and the
    track colour cut over with it. */
 .switch-track {
@@ -1593,6 +1539,7 @@ body {
     .btn-plain,
     .btn-destructive,
     .btn-icon,
+    .stepper-action > span,
     .input-base,
     .m3-menu-item,
     .list-row,

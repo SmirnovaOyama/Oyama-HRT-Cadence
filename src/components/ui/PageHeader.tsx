@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { Back } from '../icons';
 
 /* Page and section headings from the Cadence boards. Sentence case always: these
@@ -46,7 +46,7 @@ export function BackHeader({ parentLabel, onBack, title, trailing, className }: 
                 <button
                     type="button"
                     onClick={onBack}
-                    className="-ml-1 inline-flex h-11 items-center gap-1 rounded-xl pl-1 pr-2 text-base font-semibold text-[var(--c-ink)] hover:bg-[var(--c-plate)]"
+                    className="-ml-3 inline-flex h-11 items-center gap-1 rounded-full pl-3 pr-4 text-base font-medium text-[var(--c-ink)] hover:bg-[var(--c-plate)]"
                 >
                     <Back size={20} />
                     <span>{parentLabel}</span>
@@ -111,29 +111,106 @@ export interface SegmentedControlProps<T extends string> {
     value: T;
     onChange: (value: T) => void;
     'aria-label': string;
+    /** 'sm' is 36px tall, for units sitting inside a list row. */
+    size?: 'md' | 'sm';
+    /** A quiet 30px unit selector inside a 44px-tall interaction area. */
+    variant?: 'default' | 'inline';
     className?: string;
 }
 
-/** 2 to 4 short choices (chart ranges, units). Longer choices belong in a ListGroup. */
-export function SegmentedControl<T extends string>({ options, value, onChange, className, ...rest }: SegmentedControlProps<T>) {
-    return (
+/** Capsule track and segments for 2 to 4 short choices (chart ranges, units).
+ *  Longer choices belong in a ListGroup. */
+export function SegmentedControl<T extends string>({ options, value, onChange, size = 'md', variant = 'default', className, ...rest }: SegmentedControlProps<T>) {
+    const inline = variant === 'inline';
+    const trackRef = useRef<HTMLDivElement>(null);
+    const indicatorRef = useRef<HTMLSpanElement>(null);
+    const buttonRefs = useRef(new Map<T, HTMLButtonElement>());
+    const previousValue = useRef(value);
+    const geometry = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+
+    const positionIndicator = useCallback((animate: boolean) => {
+        const track = trackRef.current;
+        const indicator = indicatorRef.current;
+        const button = buttonRefs.current.get(value);
+        if (!track || !indicator) return;
+        if (!button || !button.getClientRects().length) {
+            indicator.dataset.positioned = 'false';
+            geometry.current = null;
+            return;
+        }
+
+        const trackRect = track.getBoundingClientRect();
+        const buttonRect = button.getBoundingClientRect();
+        const next = {
+            x: buttonRect.left - trackRect.left - track.clientLeft + track.scrollLeft,
+            y: buttonRect.top - trackRect.top - track.clientTop + track.scrollTop,
+            width: buttonRect.width,
+            height: buttonRect.height,
+        };
+        const previous = geometry.current;
+        if (previous && previous.x === next.x && previous.y === next.y
+            && previous.width === next.width && previous.height === next.height) return;
+
+        // The first measurement and layout changes settle immediately. Only a
+        // changed selection moves the same pill, including during rapid taps.
+        indicator.dataset.animated = String(animate && previous !== null);
+        indicator.style.transform = `translate3d(${next.x}px, ${next.y}px, 0)`;
+        indicator.style.width = `${next.width}px`;
+        indicator.style.height = `${next.height}px`;
+        indicator.dataset.positioned = 'true';
+        geometry.current = next;
+    }, [value]);
+
+    useLayoutEffect(() => {
+        positionIndicator(previousValue.current !== value);
+        previousValue.current = value;
+    });
+
+    useLayoutEffect(() => {
+        const track = trackRef.current;
+        if (!track) return;
+        const resize = () => positionIndicator(false);
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', resize);
+            return () => window.removeEventListener('resize', resize);
+        }
+        const observer = new ResizeObserver(resize);
+        observer.observe(track);
+        for (const button of buttonRefs.current.values()) observer.observe(button);
+        return () => observer.disconnect();
+    }, [positionIndicator, options]);
+
+    const control = (
         <div
+            ref={trackRef}
             role="radiogroup"
             aria-label={rest['aria-label']}
-            className={`flex h-11 gap-1 rounded-xl bg-[var(--c-plate)] p-1 ${className ?? ''}`}
+            className={`segmented-control relative isolate flex rounded-full ${inline ? 'h-[30px] w-full gap-0.5 p-0.5 bg-transparent' : `${size === 'sm' ? 'h-9 gap-0.5 p-0.5' : 'h-11 gap-1 p-1'} bg-[var(--c-plate)]`} ${inline ? '' : className ?? ''}`}
         >
+            <span
+                ref={indicatorRef}
+                aria-hidden="true"
+                className="segmented-indicator"
+                style={inline ? { borderWidth: 0, backgroundColor: 'var(--c-plate)' } : undefined}
+            />
             {options.map(opt => {
                 const selected = opt.value === value;
                 return (
                     <button
                         key={opt.value}
+                        ref={button => {
+                            if (button) buttonRefs.current.set(opt.value, button);
+                            else buttonRefs.current.delete(opt.value);
+                        }}
                         type="button"
                         role="radio"
                         aria-checked={selected}
                         onClick={() => onChange(opt.value)}
-                        className={`flex-1 rounded-lg px-3 text-sm font-semibold ${selected
-                            ? 'border border-[var(--c-rule)] bg-[var(--c-surface)] text-[var(--c-ink)]'
-                            : 'border border-transparent text-[var(--c-muted)] hover:text-[var(--c-ink)]'}`}
+                        className={`relative z-[1] flex-1 rounded-full bg-transparent text-sm ${inline
+                            ? "border-0 px-2 font-normal before:absolute before:inset-x-0 before:top-1/2 before:h-[44px] before:-translate-y-1/2 before:content-['']"
+                            : `border border-transparent ${size === 'sm' ? 'px-2' : 'px-3'} font-semibold`} ${selected
+                            ? 'text-[var(--c-ink)]'
+                            : 'text-[var(--c-muted)] hover:text-[var(--c-ink)]'}`}
                     >
                         {opt.label}
                     </button>
@@ -141,4 +218,6 @@ export function SegmentedControl<T extends string>({ options, value, onChange, c
             })}
         </div>
     );
+
+    return inline ? <div className={`flex h-11 items-center ${className ?? ''}`}>{control}</div> : control;
 }

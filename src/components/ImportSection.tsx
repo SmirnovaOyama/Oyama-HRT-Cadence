@@ -27,7 +27,7 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onImportJson }) => {
     };
 
     const handleTextImport = async () => {
-        await onImportJson(text);
+        if (!await onImportJson(text)) return;
         setText('');
         setShowPaste(false);
     };
@@ -48,7 +48,7 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onImportJson }) => {
                             {showPaste ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                         </span>
                     }
-                    onClick={() => { setShowPaste(v => !v); setText(''); }}
+                    onClick={() => setShowPaste(v => !v)}
                 />
             </ListGroup>
             <input

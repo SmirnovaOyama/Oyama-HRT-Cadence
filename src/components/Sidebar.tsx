@@ -1,18 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Today, Timeline, Tests, You, Shield, Log } from './icons';
+import React from 'react';
+import { Today, Timeline, Tests, You, Shield, Log, Reminder, Supplies, Attention } from './icons';
 import type { IconComponent } from './icons';
 import { Button } from './ui';
 import PixelCat from './PixelCat';
 import { useTranslation } from '../contexts/LanguageContext';
-import { useHRTMode } from '../contexts/HRTModeContext';
 import { tabForView, TabKey, ViewKey } from '../hooks/useAppNavigation';
-import type { SyncStatus } from '../hooks/useCloudSync';
-import { LOCALE_MAP } from '../utils/helpers';
-import type { Lang } from '../i18n/translations';
 
 /* Desktop rail (boards DesktopToday / DesktopAssistant, recipe C17): plate
    background with a right hairline, the wordmark, the two main actions, the
-   top-level destinations and a footer with the HRT mode and the backup state.
+   top-level destinations. Account, mode and backup details belong on You.
    Hidden below md, where the bottom TabBar takes over. */
 
 interface SidebarProps {
@@ -25,9 +21,9 @@ interface SidebarProps {
     isAdmin: boolean;
     /** Forced 2FA setup: everything but the setup page is locked. */
     locked?: boolean;
-    isSignedIn: boolean;
-    syncStatus: SyncStatus;
-    lastSyncedAt: number | null;
+    /** A tracked supply is out or due for reordering: the Supplies item then
+     *  carries the attention icon and says so to screen readers. */
+    suppliesAttention?: boolean;
 }
 
 interface RailItem {
@@ -40,53 +36,12 @@ const ITEMS: RailItem[] = [
     { id: 'home', labelKey: 'shell.tab.today', icon: Today },
     { id: 'history', labelKey: 'shell.tab.timeline', icon: Timeline },
     { id: 'lab', labelKey: 'shell.rail.tests', icon: Tests },
+    { id: 'reminders', labelKey: 'reminders.title', icon: Reminder },
+    { id: 'supplies', labelKey: 'supplies.title', icon: Supplies },
     { id: 'settings', labelKey: 'shell.tab.you', icon: You },
 ];
 
 const ADMIN_ITEM: RailItem = { id: 'admin', labelKey: 'nav.admin', icon: Shield };
-
-/** "4 minutes ago" in the reader's language, or null under a minute. */
-const relativeTime = (thenMs: number, nowMs: number, lang: Lang): string | null => {
-    const sec = Math.max(0, Math.round((nowMs - thenMs) / 1000));
-    if (sec < 60) return null;
-    let rtf: Intl.RelativeTimeFormat;
-    try {
-        rtf = new Intl.RelativeTimeFormat(LOCALE_MAP[lang] || 'en-US', { numeric: 'always' });
-    } catch {
-        return null;
-    }
-    if (sec < 3600) return rtf.format(-Math.floor(sec / 60), 'minute');
-    if (sec < 86400) return rtf.format(-Math.floor(sec / 3600), 'hour');
-    return rtf.format(-Math.floor(sec / 86400), 'day');
-};
-
-/** The cloud backup state in words, for the rail footer. */
-export const useBackupLine = (isSignedIn: boolean, status: SyncStatus, lastSyncedAt: number | null): string => {
-    const { t, lang } = useTranslation();
-    const [now, setNow] = useState(() => Date.now());
-
-    // Keep "4 minutes ago" honest while the page sits open.
-    useEffect(() => {
-        if (status !== 'synced' || lastSyncedAt === null) return;
-        setNow(Date.now());
-        const id = window.setInterval(() => setNow(Date.now()), 30_000);
-        return () => window.clearInterval(id);
-    }, [status, lastSyncedAt]);
-
-    if (!isSignedIn) return t('shell.sync.local_only');
-    switch (status) {
-        case 'off': return t('shell.sync.off');
-        case 'idle': return t('shell.sync.idle');
-        case 'syncing': return t('shell.sync.syncing');
-        case 'locked': return t('shell.sync.locked');
-        case 'error': return t('shell.sync.error');
-        case 'synced': {
-            if (lastSyncedAt === null) return t('shell.sync.synced_plain');
-            const rel = relativeTime(lastSyncedAt, now, lang);
-            return rel === null ? t('shell.sync.synced_now') : t('shell.sync.synced').replace('{time}', rel);
-        }
-    }
-};
 
 const Sidebar: React.FC<SidebarProps> = ({
     currentView,
@@ -95,16 +50,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     onAddTest,
     isAdmin,
     locked = false,
-    isSignedIn,
-    syncStatus,
-    lastSyncedAt,
+    suppliesAttention = false,
 }) => {
     const { t } = useTranslation();
-    const { mode } = useHRTMode();
-    const backupLine = useBackupLine(isSignedIn, syncStatus, lastSyncedAt);
 
     const items = isAdmin ? [...ITEMS, ADMIN_ITEM] : ITEMS;
-    const activeTab = tabForView(currentView, isAdmin);
+    const activeTab = tabForView(currentView, isAdmin, true);
 
     return (
         <aside
@@ -130,6 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <nav aria-label={t('shell.nav.main')} className="flex flex-col gap-1">
                 {items.map(({ id, labelKey, icon: Icon }) => {
                     const isActive = activeTab === id;
+                    const attention = id === 'supplies' && suppliesAttention;
                     return (
                         <button
                             key={id}
@@ -137,24 +89,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                             onClick={() => onViewChange(id)}
                             disabled={locked}
                             aria-current={isActive ? 'page' : undefined}
-                            className={`flex h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-base ${isActive
+                            aria-label={attention ? t('shell.rail.supplies_attention') : undefined}
+                            className={`flex h-11 w-full items-center gap-3 rounded-full border px-4 text-left text-base ${isActive
                                 ? 'border-[var(--c-hairline)] bg-[var(--c-surface)] font-semibold text-[var(--c-ink)]'
                                 : 'border-transparent font-medium text-[var(--c-muted)] hover:text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]'
                                 } disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                             <Icon size={20} className="shrink-0" />
                             <span className="min-w-0 flex-1 truncate">{t(labelKey)}</span>
+                            {attention && <Attention size={20} aria-hidden className="shrink-0 text-[var(--c-attention)]" />}
                         </button>
                     );
                 })}
             </nav>
 
-            <div className="flex-1" />
-
-            <div className="flex flex-col gap-1 border-t border-[var(--c-hairline)] pt-4 text-sm text-[var(--c-muted)]">
-                <p className="m-0">{t(mode === 'transmasc' ? 'mode.transmasc' : 'mode.transfem')}</p>
-                <p className="m-0">{backupLine}</p>
-            </div>
         </aside>
     );
 };

@@ -106,7 +106,7 @@ const SiteNoticeBanner: React.FC = () => {
                 onClick={dismiss}
                 aria-label={t('notice.dismiss')}
                 title={t('notice.dismiss')}
-                className="-mr-2 -mt-2.5 grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[var(--c-muted)] hover:bg-[var(--c-plate)] hover:text-[var(--c-ink)]"
+                className="-mr-2 -mt-2.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--c-muted)] hover:bg-[var(--c-plate)] hover:text-[var(--c-ink)]"
             >
                 <Close size={18} />
             </button>

@@ -1418,7 +1418,7 @@ export const TRANSLATIONS_BASE = {
         "onboarding.next": "Next",
         "onboarding.start": "Get started",
         "onboarding.welcome_title": "Hello there",
-        "onboarding.welcome_subtitle": "This app keeps track of your HRT doses and estimates where your hormone levels sit between blood tests. Pick a language to start.",
+        "onboarding.welcome_subtitle": "This app keeps track of your HRT doses and estimates where your hormone levels sit between blood tests.",
         "onboarding.mode_title": "What are you tracking?",
         "onboarding.mode_subtitle": "This sets which hormones the app follows. You can change it any time in Settings.",
         "onboarding.mode_transfem_desc": "Estradiol, plus CPA or another anti-androgen.",

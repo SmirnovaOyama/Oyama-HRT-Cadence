@@ -30,8 +30,11 @@ import {
     routeName,
 } from './dose_form/shared';
 import { isDue, regimenSub, sameDose } from './dose_form/regimens';
-import { Regimen, inferRegimens, sameLocalDay, usableRegimens } from '../utils/schedule';
+import { Regimen, regimensFor, sameLocalDay, usableRegimens } from '../utils/schedule';
+import type { Schedule } from '../types/routine';
 import { useHRTMode } from '../contexts/HRTModeContext';
+import { doseTimeForSave, toLocalMinuteString as toLocalInput } from '../utils/doseEventTime';
+import { retainedScheduleOccurrence } from '../utils/doseScheduleLink';
 
 export interface DoseTemplate {
     id: string;
@@ -132,11 +135,11 @@ const holdFromTheta = (thetaVal: number): number => {
 // Display order of the route list (the enum's own order is not meaningful).
 const ROUTE_ORDER: Route[] = [Route.injection, Route.oral, Route.sublingual, Route.gel, Route.patchApply, Route.patchRemove];
 
-const toLocalInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-
 /** "custom" (the full route and medicine fields), one of the person's
  *  routines (inferred from the log), or a saved row. */
 type WhatChoice = 'custom' | `reg:${string}` | `tpl:${string}` | `qd:${string}`;
+
+const NO_SCHEDULES: Schedule[] = [];
 
 interface DoseFormProps {
     eventToEdit: DoseEvent | null;
@@ -158,6 +161,9 @@ interface DoseFormProps {
     /** A new dose that should open on this medicine, route and amount (a
      *  "Coming up" row on Today). Ignored when editing. */
     prefill?: DoseFormPrefill | null;
+    /** Explicit schedules: listed first in "What", ahead of the routines
+     *  inferred from the log, and replacing any they cover. */
+    schedules?: Schedule[];
 }
 
 /** What a "Coming up" row hands the sheet. Time stays "Now". */
@@ -166,6 +172,8 @@ export interface DoseFormPrefill {
     ester: Ester;
     doseMG: number;
     extras: Partial<Record<ExtraKey, number>>;
+    /** Explicit reminder being logged; absent for ordinary entry points. */
+    scheduleOccurrence?: DoseEvent['scheduleOccurrence'];
 }
 
 /**
@@ -176,7 +184,7 @@ export interface DoseFormPrefill {
  * time picker), then How much with a stepper and the route's own fields. A
  * footer sentence says exactly what will be saved.
  */
-const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDelete, templates = [], onSaveTemplate, onDeleteTemplate, isInline = false, hideHeader = false, quickDoses, onAddQuickDose, onDeleteQuickDose, events = [], titleId, prefill = null }) => {
+const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDelete, templates = [], onSaveTemplate, onDeleteTemplate, isInline = false, hideHeader = false, quickDoses, onAddQuickDose, onDeleteQuickDose, events = [], titleId, prefill = null, schedules = NO_SCHEDULES }) => {
     const { t, lang } = useTranslation();
     const { showDialog } = useDialog();
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -237,16 +245,18 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         [quickDoses, availableRoutes],
     );
 
-    // The person's routines, soonest due first, as the top rows of "What".
-    // Each one logs the same medicine, route and amount as its latest dose.
+    // The person's routines as the top rows of "What": explicit schedules
+    // first, then the routines inferred from the log that no schedule covers,
+    // each group soonest due first. A schedule row logs the schedule's dose;
+    // an inferred one repeats its latest dose.
     const nowMs = now.getTime();
     const regimens = useMemo<Regimen[]>(
         () => eventToEdit
             ? []
-            : usableRegimens(inferRegimens(events, nowMs))
+            : usableRegimens(regimensFor(events, schedules, nowMs))
                 .filter(r => availableRoutes.includes(r.last.route))
-                .sort((a, b) => a.nextDueMs - b.nextDueMs),
-        [eventToEdit, events, nowMs, availableRoutes],
+                .sort((a, b) => (a.schedule ? 0 : 1) - (b.schedule ? 0 : 1) || a.nextDueMs - b.nextDueMs),
+        [eventToEdit, events, schedules, nowMs, availableRoutes],
     );
     // Saved rows that repeat a routine are left out of the list (still shown
     // while editing the list, so they can be deleted).
@@ -644,13 +654,9 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             isSavingRef.current = false;
             setIsSaving(false);
         };
-        // "Now" is the moment of saving, to the minute, like the old default.
-        let timeH = whenMode === 'now'
-            ? Math.floor(Date.now() / 60000) * 60000 / 3600000
-            : new Date(dateStr).getTime() / 3600000;
-        if (isNaN(timeH)) {
-            timeH = new Date().getTime() / 3600000;
-        }
+        // An untouched minute keeps an edited record's original seconds, so
+        // it stays after any supply amount set moments before that dose.
+        const timeH = doseTimeForSave(whenMode, dateStr, eventToEdit?.timeH);
 
         let e2Equivalent = parseFloat(e2Dose);
         if (isNaN(e2Equivalent)) e2Equivalent = 0;
@@ -718,13 +724,15 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             }
         }
 
+        const scheduleOccurrence = retainedScheduleOccurrence(eventToEdit ?? prefill, route, savedEster);
         const newEvent: DoseEvent = {
             id: eventToEdit?.id || uuidv4(),
             route,
             ester: savedEster,
             timeH,
             doseMG: finalDose,
-            extras
+            extras,
+            ...(scheduleOccurrence ? { scheduleOccurrence } : {}),
         };
 
         onSave(newEvent);
@@ -1059,7 +1067,6 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                         : undefined}
                     drillIn
                     chevron={isDatePickerOpen ? <ChevronDown size={16} /> : chevronIcon}
-                    aria-haspopup="dialog"
                     aria-expanded={isDatePickerOpen}
                     onClick={() => {
                         if (whenMode === 'now') setDateStr(toLocalInput(new Date()));
