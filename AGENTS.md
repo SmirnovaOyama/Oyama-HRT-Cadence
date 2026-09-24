@@ -1,5 +1,8 @@
 # Oyama HRT Cadence
 
+Commit authorship and contributor credits belong to the owner only. Do not add AI assistants as authors,
+co-authors, or contributors, and do not add AI-generated attribution trailers to commits.
+
 Read `CLAUDE.md` and `design/cadence/README.md` before changing this app. Preserve the existing Cadence visual design.
 
 The owner's latest UI rules (2026-09-24) take precedence over older artboards:
