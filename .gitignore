@@ -30,10 +30,9 @@ src-tauri/target/release
 .wrangler
 .dev.vars
 
-# Docker runtime configuration
+# Local runtime configuration
 .env
 .env.*
-!.env.docker.example
 data/
 
 # Test Data

@@ -1,4 +1,4 @@
--- Reconcile a database that predates `wrangler d1 migrations apply`.
+-- Reconcile a Cloudflare D1 database that predates `wrangler d1 migrations apply`.
 --
 -- Older deployments got their schema from schema.sql plus DDL the worker ran
 -- lazily at request time, never from the numbered migrations — so wrangler's

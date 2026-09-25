@@ -419,7 +419,7 @@ async function consumeTOTP(env: Env, userId: string, secret: string, token: stri
 // every cold isolate, which left three sources of truth that had already
 // drifted from one another (rate_limits and users.totp_last_step existed only
 // here). `wrangler d1 migrations apply` is now the one thing that touches DDL;
-// the Docker entrypoint runs it on start.
+// apply migrations as part of deployment before starting the worker.
 
 // --- Sessions ---
 // Revoke sessions left idle beyond this window (seconds). Shorter than the
