@@ -72,7 +72,7 @@ const THEME_LABEL: Record<AppTheme, string> = {
 };
 
 const MODEL_ARTICLE = 'https://mahiro.uk/articles/estrogen-model-summary';
-const SOURCE_REPO = 'https://github.com/SmirnovaOyama/Oyama-s-HRT-recorder';
+const SOURCE_REPO = 'https://github.com/SmirnovaOyama/Oyama-HRT-Cadence';
 
 /** A row whose only control is a Switch. The row's title names the switch;
  *  any explanation belongs in the group footer (format_rules.md 7). */
