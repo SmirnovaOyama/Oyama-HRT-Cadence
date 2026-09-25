@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
-    Check, ChevronRight, Gel, Injection, Patch, Plus, Select, Share, Sublingual, Tablet,
+    Check, ChevronDown, ChevronRight, Gel, Injection, Patch, Plus, Select, Share, Sublingual, Tablet,
     type IconComponent,
 } from '../components/icons';
 import {
@@ -457,9 +457,17 @@ const History: React.FC<HistoryProps> = ({
                                 </div>
                             )}
 
-                            <Section title={t('timeline.rhythm')} className="order-3">
-                                <DoseHeatmap events={allEvents} isDarkMode={isDarkMode} />
-                            </Section>
+                            <details className="group order-3">
+                                <summary className="cursor-pointer list-none rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--c-accent)] [&::-webkit-details-marker]:hidden">
+                                    <h2 className="m-0 flex min-h-[44px] items-center justify-between gap-3 text-xl font-semibold text-[var(--c-ink)]">
+                                        {t('timeline.rhythm')}
+                                        <ChevronDown size={20} className="shrink-0 text-[var(--c-muted)] transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+                                    </h2>
+                                </summary>
+                                <div className="mt-3">
+                                    <DoseHeatmap events={allEvents} isDarkMode={isDarkMode} />
+                                </div>
+                            </details>
                         </div>
                     )}
 

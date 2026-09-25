@@ -81,12 +81,19 @@ export const Down = createIcon('down', <path d="M12 5V18.5M7 15L12 19L17 15" />)
 export const Attention = createIcon('attention', <>
     <path d="M14.19 5.46L20.45 16.79A2.5 2.5 0 0 1 18.26 20.5L5.74 20.5A2.5 2.5 0 0 1 3.55 16.79L9.81 5.46A2.5 2.5 0 0 1 14.19 5.46Z" fill="currentColor" fillOpacity="0.18" stroke="none" />
     <path d="M14.19 5.46L20.45 16.79A2.5 2.5 0 0 1 18.26 20.5L5.74 20.5A2.5 2.5 0 0 1 3.55 16.79L9.81 5.46A2.5 2.5 0 0 1 14.19 5.46Z" />
-    <path d="M12 9V15" />
+    <path d="M12 9V13" />
+    <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
 </>);
 
 export const Info = createIcon('info', <>
     <path d="M12 7.5A10 10 0 0 0 3.5 5.5V18A10 10 0 0 1 12 20Z" fill="currentColor" fillOpacity="0.18" stroke="none" />
     <path d="M12 7.5A10 10 0 0 0 3.5 5.5V18A10 10 0 0 1 12 20A10 10 0 0 1 20.5 18V5.5A10 10 0 0 0 12 7.5V20" />
+</>);
+
+export const Help = createIcon('help', <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 8.5A2.5 2.5 0 0 1 14.5 8.5A2.5 2.5 0 0 1 13 11L12 11.5V13" />
+    <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
 </>);
 
 export const Close = createIcon('close', <path d="M6.5 6.5L17.5 17.5M17.5 6.5L6.5 17.5" />);
@@ -544,6 +551,7 @@ export const cadenceIcons = {
     'down': Down,
     'attention': Attention,
     'info': Info,
+    'help': Help,
     'close': Close,
     'clock': Clock,
     'calendar': Calendar,

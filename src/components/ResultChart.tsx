@@ -162,12 +162,17 @@ const ResultChart = ({
     labResults = [],
     calibrationFn = (_t: number) => 1,
     onPointClick,
+    showEstimateLabel = true,
     isMono = false,
     mode,
     title,
+    className = '',
     timeZone,
     showTitle = true,
     headerClassName = '',
+    rangeClassName = 'w-full shrink-0 sm:w-[300px]',
+    rangeSize = 'md',
+    plotClassName = 'h-56 md:h-64',
     showCalibrationNote = true,
     projection = null,
 }: {
@@ -176,17 +181,27 @@ const ResultChart = ({
     labResults?: LabResult[];
     calibrationFn?: (timeH: number) => number;
     onPointClick?: (e: DoseEvent) => void;
+    /** False when a nearby visible caption already identifies model estimates. */
+    showEstimateLabel?: boolean;
     /** Kept for callers. Colours come from the Cadence tokens, which flip with
      *  the theme class on <html>, so the chart no longer needs to be told. */
     isDarkMode?: boolean;
     isMono?: boolean;
     mode?: HRTMode;
     title?: string;
+    /** Optional outer layout, for charts that grow to fill a desktop card. */
+    className?: string;
     timeZone?: string;
-    /** False when the page already heads the chart (Today's "This week"). */
+    /** False when the page already supplies the chart heading. */
     showTitle?: boolean;
-    /** Extra classes for the header row, e.g. to hide the range on a phone. */
+    /** Extra classes for the whole header row. */
     headerClassName?: string;
+    /** Layout classes for the range selector, including its width and visibility. */
+    rangeClassName?: string;
+    /** The shared selector's regular or compact capsule height. */
+    rangeSize?: 'md' | 'sm';
+    /** Plot height classes; the measured size also sizes the chart's SVG. */
+    plotClassName?: string;
     /** False when the page shows its own calibration note (Timeline). */
     showCalibrationNote?: boolean;
     /** The estimate with the planned doses added (useProjection). When given,
@@ -724,7 +739,7 @@ const ResultChart = ({
 
     if (!sim || sim.timeH.length === 0) {
         return (
-            <div className="h-56 md:h-64 flex flex-col items-center justify-center text-[var(--c-muted)]">
+            <div className={`h-56 md:h-64 flex flex-col items-center justify-center text-[var(--c-muted)] ${className}`}>
                 <Activity className="w-10 h-10 mb-3 opacity-40" />
                 <p className="m-0 text-sm">{t('timeline.empty')}</p>
             </div>
@@ -757,12 +772,15 @@ const ResultChart = ({
             : '';
     }
     if (!readMain && readP != null && Number.isFinite(readP)) {
-        const key = readT <= now ? 'chart.readout_est' : proj ? 'chart.readout_forecast' : 'chart.readout_no_more';
+        const key = readT <= now
+            ? showEstimateLabel ? 'chart.readout_est' : 'chart.readout_value'
+            : proj ? 'chart.readout_forecast' : 'chart.readout_no_more';
         readMain = fillIn(t(key), { value: fmtReading(readP, primaryIsCPA), unit });
     }
     const readSecond = hasSecondary && readS != null && Number.isFinite(readS)
         ? fillIn(t('chart.readout_second'), { series: t('chart.cpa'), value: fmtReading(readS, true), unit: 'ng/mL' })
         : '';
+    const readout = joinSentences(lang, [readMain, readSecond].filter(Boolean));
 
     const calPct = Math.round(Math.abs(calFactor - 1) * 100);
     const calNote = !isTransmasc && !primaryIsCPA && calPct >= 1
@@ -806,9 +824,9 @@ const ResultChart = ({
     let lastLabelX = -Infinity;
 
     return (
-        <div className="w-full">
+        <div className={`w-full ${className}`}>
             {/* Header: title, then the range as a segmented control */}
-            <div className={`mb-3 flex flex-col gap-3 sm:flex-row sm:items-center ${showTitle ? 'sm:justify-between' : 'sm:justify-end'} ${headerClassName}`}>
+            <div className={`mb-3 flex flex-wrap items-center gap-3 ${showTitle ? 'sm:justify-between' : 'sm:justify-end'} ${headerClassName}`}>
                 {showTitle && (
                     <h2 className="m-0 min-w-0 truncate text-xl font-semibold text-[var(--c-ink)]">
                         {title ?? t('chart.title')}
@@ -819,7 +837,8 @@ const ResultChart = ({
                     options={rangeOpts}
                     value={range}
                     onChange={selectRange}
-                    className="w-full shrink-0 sm:w-[300px]"
+                    size={rangeSize}
+                    className={rangeClassName}
                 />
             </div>
 
@@ -838,7 +857,7 @@ const ResultChart = ({
                 tabIndex={0}
                 onKeyDown={onKeyDown}
                 aria-describedby={`legend-${clipId}`}
-                className="relative h-56 md:h-64 select-none touch-pan-y rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--c-accent)]"
+                className={`relative select-none touch-pan-y rounded-lg outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--c-accent)] ${plotClassName}`}
             >
                 {width > 0 && (
                     <svg
@@ -1101,7 +1120,7 @@ const ResultChart = ({
                 <p className="m-0 text-sm font-semibold text-[var(--c-ink)] tabular-nums">{whenText(readT)}</p>
                 {(readMain || readSecond) && (
                     <p className="m-0 text-sm text-[var(--c-ink)] tabular-nums">
-                        {joinSentences(lang, [readMain, readSecond].filter(Boolean) as string[])}
+                        {readout}
                     </p>
                 )}
             </div>

@@ -302,7 +302,7 @@ export const log: AreaStrings = {
         'log.ester.TE': 'Testosterone enanthate',
         'log.ester.TU': 'Testosterone undecanoate',
         'log.now': 'Now',
-        'log.earlier': 'Earlier',
+        'log.earlier': 'Choose date and time',
         'log.less': 'Less',
         'log.more': 'More',
         'log.amount': 'Amount',

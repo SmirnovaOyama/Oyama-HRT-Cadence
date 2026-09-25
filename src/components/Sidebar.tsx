@@ -60,20 +60,22 @@ const Sidebar: React.FC<SidebarProps> = ({
     return (
         <aside
             aria-label={t('shell.nav.sidebar')}
+            // Keep icons proportional to this fixed-width rail and its local type sizes.
+            style={{ '--ui-scale': 1 } as React.CSSProperties}
             className="hidden md:flex w-[264px] h-full shrink-0 flex-col gap-6 overflow-y-auto scrollbar-hide px-4 py-6 bg-[var(--c-plate)] border-r border-[var(--c-hairline)]"
         >
             {/* Wordmark: the real pixel cat, then the app name. */}
-            <div className="flex min-h-11 items-center gap-2.5">
-                <PixelCat pose="donut" size={52} className="shrink-0" />
-                <span className="whitespace-nowrap text-[22px] leading-7 font-semibold text-[var(--c-ink)]">Oyama Tracker</span>
+            <div className="flex min-h-[44px] items-center gap-2.5">
+                <PixelCat pose="donut" size={44} className="shrink-0" />
+                <span className="whitespace-nowrap text-[20px] leading-7 font-medium text-[var(--c-ink)]">Oyama Tracker</span>
             </div>
 
             <div className="flex flex-col gap-3">
-                <Button variant="primary" compact block onClick={onLogDose} disabled={locked}>
-                    <Log size={20} />
+                <Button variant="primary" compact block className="text-[17px] leading-[24px]" onClick={onLogDose} disabled={locked}>
+                    <Log size={18} />
                     <span>{t('shell.rail.log_dose')}</span>
                 </Button>
-                <Button variant="secondary" compact block onTint onClick={onAddTest} disabled={locked}>
+                <Button variant="secondary" compact block onTint className="text-[17px] leading-[24px]" onClick={onAddTest} disabled={locked}>
                     {t('shell.rail.add_test')}
                 </Button>
             </div>
@@ -90,9 +92,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                             disabled={locked}
                             aria-current={isActive ? 'page' : undefined}
                             aria-label={attention ? t('shell.rail.supplies_attention') : undefined}
-                            className={`flex h-11 w-full items-center gap-3 rounded-full border px-4 text-left text-base ${isActive
-                                ? 'border-[var(--c-hairline)] bg-[var(--c-surface)] font-semibold text-[var(--c-ink)]'
-                                : 'border-transparent font-medium text-[var(--c-muted)] hover:text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]'
+                            className={`flex min-h-[44px] w-full items-center gap-3 rounded-full px-4 text-left text-[17px] leading-[24px] font-medium ${isActive
+                                ? 'bg-[var(--c-plate-strong)] text-[var(--c-ink)]'
+                                : 'text-[var(--c-muted)] hover:text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]'
                                 } disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                             <Icon size={20} className="shrink-0" />

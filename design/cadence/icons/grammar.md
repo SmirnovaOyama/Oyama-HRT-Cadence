@@ -29,7 +29,7 @@ In React: `strokeWidth = size >= 22 ? 1.75 : size >= 18 ? 2 : 2.25`. The geometr
 - **Curves:** built from circular or elliptical arcs and straight lines. Free cubic curves appear only for organic or data shapes (the level curve, the bell's flare, the patch curl). Each one has horizontal tangents at its extremes, so a peak reads as a smooth crest and never as a spike.
 - **Perspective:** only as a single ellipse used for thickness (tablet, sublingual tablet). There is no other 3D.
 - **Density:** at most 3 to 4 ideas per icon, and gaps of at least 1.5 units between parallel strokes so they don't fill in at 16px.
-- **Forbidden:** dots or anything bullet-like (clappers, holes and the tongue groove are open arcs or lines), three-dot "more" icons, sparkles, robot faces, letters and emoji.
+- **Forbidden:** decorative dots or anything bullet-like (clappers, holes and the tongue groove are open arcs or lines), three-dot "more" icons, sparkles, robot faces, letters and emoji. Owner update (2026-09-25): the warning icon must contain a complete exclamation mark, including its solid dot. Semantic punctuation dots are allowed in the warning and help icons.
 
 ## Signature trait: the level
 **Each icon has one flat tone at fill-opacity 0.18, and it fills only the part that has already happened or is already inside. It always stops at a stroke that works as a level:** a Now rule, a fill line, a stopper, a score line, a fold, or the icon's own base line.
@@ -51,7 +51,7 @@ This is the Cadence idea at icon scale. On the dial the elapsed part of the day 
 Rules:
 1. Use one toned area per icon. Tone is never a status signal on its own: status is still an icon plus words.
 2. The tone is drawn first, with no stroke, underneath the outline. Its level side always lands on a stroke. Its other edges follow the outline, except on the dial, where the sector's start and radius stay soft, like a sweep.
-3. Pure action glyphs (log / plus, and later chevrons, close and check) carry **no** tone. They sit on filled buttons or are too small to need one.
+3. Pure action glyphs (log / plus, and later chevrons, close, check and help) carry **no** tone. They sit on filled buttons or are too small to need one.
 4. Fill-opacity stays at 0.18, within the allowed 0.16 to 0.22. On an accent tile (#A34A28 on #F6DFD2) and in dark mode (#F1EBE2 on #16130F) it reads as the same "plate" step as the charts.
 
 ## Shared parts

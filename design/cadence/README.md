@@ -36,3 +36,8 @@ Current implementation and verification boundaries are recorded in [implementati
 - Pick-one and pick-many choices use grouped list views with a trailing check. Never use chip groups or 2-column option cards.
 - Rows stay light: one-line titles, a trailing value or a one-line state sub-line (never both), explanations only in group footers (`spec/format_rules.md`).
 - The pixel cat is the app's real sprite from `src/components/PixelCat.tsx`, with its colours from `src/index.css`. Never redraw it.
+
+Latest owner update (2026-09-25): simple option selectors use dropdowns that expand in place,
+not secondary pages. Selecting an option closes the dropdown and retains the form draft.
+This overrides the older requirement to put simple choices on secondary pages; keep substantial
+forms and confirmations on their existing pages.

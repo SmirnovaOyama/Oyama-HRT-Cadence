@@ -4,6 +4,7 @@ import {
     DoseEvent,
     SimulationResult,
     LabResult,
+    Route,
     getDoseAdvisory,
     getHormoneLevelAdvisory,
     interpolateConcentration_E2,
@@ -15,7 +16,7 @@ import EstimateInfoModal from '../components/EstimateInfoModal';
 import DoseAdvisoryNotice from '../components/DoseAdvisory';
 import PixelCat from '../components/PixelCat';
 import { Button, PageHeader, Section } from '../components/ui';
-import { BackedUp, CloudOff, Down, InTarget, Plus, Share, Sync, Up } from '../components/icons';
+import { BackedUp, CloudOff, Help, Plus, Share, Sync } from '../components/icons';
 import RhythmDial from '../components/today/RhythmDial';
 import RangeRuler, { TargetRange, rulerScale } from '../components/today/RangeRuler';
 import ComingUp, { LogDosePrefill, ROUTE_ICON, prefillFor } from '../components/today/ComingUp';
@@ -204,7 +205,7 @@ const Home: React.FC<HomeProps> = ({
     // Trend over the last 3 hours, then where it is heading before the next
     // dose of the level's own medicine (only when that dose follows a cycle).
     // Looking ahead reads the projection through levelAt.
-    const trendText = React.useMemo(() => {
+    const trend = React.useMemo(() => {
         if (!hasLevel || !simulation) return null;
         const past = levelAt(nowH - 3);
         const cur = levelAt(nowH);
@@ -212,7 +213,8 @@ const Home: React.FC<HomeProps> = ({
         const pctPerH = ((cur - past) / cur / 3) * 100;
         const dir = Math.abs(pctPerH) < 0.4 ? 'steady' : pctPerH < 0 ? 'falling' : 'rising';
         const words = dir === 'steady' ? 'steady' : Math.abs(pctPerH) < 2 ? `${dir}_slowly` : dir;
-        const parts = [t(`today.trend.${words}`)];
+        const summary = t(`today.trend.${words}`);
+        let outlook: string | null = null;
 
         const outer = cycle?.regimen;
         if (outer && isPrimaryHormone(outer.ester, isTransmasc) && cycle && cycle.nextDueMs > nowMs) {
@@ -225,53 +227,48 @@ const Home: React.FC<HomeProps> = ({
                     if (v > peak) { peak = v; peakH = h; }
                 }
                 if (peakH > nowH + 1) {
-                    parts.push(fmt(t('today.trend.high_at'), { when: dayAndTime(peakH * MS_H, nowMs, lang), value: Math.round(peak) }));
+                    outlook = fmt(t('today.trend.high_at'), { when: dayAndTime(peakH * MS_H, nowMs, lang), value: Math.round(peak) });
                 }
             } else {
                 const low = levelAt(dueH - 0.1);
                 if (low > 0) {
                     const key = outer.family === 'injection' ? 'today.trend.low_before_shot' : 'today.trend.low_before_dose';
-                    parts.push(fmt(t(key), { day: weekdayLong(cycle.nextDueMs, lang), value: Math.round(low) }));
+                    outlook = fmt(t(key), { day: weekdayLong(cycle.nextDueMs, lang), value: Math.round(low) });
                 }
             }
         }
-        return joinSentences(lang, parts);
+        return { summary, outlook };
     }, [hasLevel, simulation, levelAt, nowH, nowMs, cycle, isTransmasc, lang, t]);
 
-    const estimatedText =
-        modeLabs.length === 0 ? t('today.estimated_none')
-            : modeLabs.length === 1 ? t('today.estimated_one')
-                : fmt(t('today.estimated_many'), { n: modeLabs.length });
-
-    // "How this is worked out" sheet: model value, lab adjustment, last dose.
+    // Explain the calculation together, then give the latest dose its own paragraph.
     const explanation = React.useMemo(() => {
         if (!hasLevel || !simulation) return undefined;
-        const lines: string[] = [];
+        const modelDetails: string[] = [];
         const value = Math.round(level);
         if (!isTransmasc) {
             const raw = interpolateConcentration_E2(simulation, nowH) ?? 0;
             const factor = calibrationFn(nowH);
-            lines.push(fmt(t('today.info.model'), { value: Math.round(raw), unit }));
-            if (modeLabs.length === 0) lines.push(t('today.info.no_labs'));
-            else if (Math.abs(factor - 1) < 0.02) lines.push(fmt(t('today.info.adjusted_same'), { value }));
+            modelDetails.push(fmt(t('today.info.model'), { value: Math.round(raw), unit }));
+            if (modeLabs.length === 0) modelDetails.push(t('today.info.no_labs'));
+            else if (Math.abs(factor - 1) < 0.02) modelDetails.push(fmt(t('today.info.adjusted_same'), { value, unit }));
             else {
                 const pct = Math.round(Math.abs(factor - 1) * 100);
-                lines.push(fmt(t(factor > 1 ? 'today.info.adjusted_up' : 'today.info.adjusted_down'), { pct, value }));
+                modelDetails.push(fmt(t(factor > 1 ? 'today.info.adjusted_up' : 'today.info.adjusted_down'), { pct, value, unit }));
             }
         } else {
-            lines.push(fmt(t('today.info.model'), { value, unit }));
+            modelDetails.push(fmt(t('today.info.model'), { value, unit }));
         }
+        const paragraphs = [joinSentences(lang, modelDetails)];
         const lastPrimary = [...events]
-            .filter(e => isPrimaryHormone(e.ester, isTransmasc) && toMs(e.timeH) <= nowMs)
+            .filter(e => isPrimaryHormone(e.ester, isTransmasc) && e.route !== Route.patchRemove && toMs(e.timeH) <= nowMs)
             .sort((a, b) => b.timeH - a.timeH)[0];
         if (lastPrimary) {
-            lines.push(fmt(t('today.info.last_dose'), {
+            paragraphs.push(fmt(t('today.info.last_dose'), {
                 when: dayAndTime(toMs(lastPrimary.timeH), nowMs, lang),
                 dose: `${medInline(lastPrimary.ester, t, lang)} ${doseText(lastPrimary)}`,
             }));
         }
-        lines.push(t('today.info.only_test'));
-        return lines;
+        return paragraphs;
     }, [hasLevel, simulation, level, isTransmasc, nowH, calibrationFn, modeLabs.length, unit, events, nowMs, lang, t]);
 
     const openInfo = () => setIsEstimateInfoOpen(true);
@@ -327,10 +324,13 @@ const Home: React.FC<HomeProps> = ({
     );
     const modeName = t(isTransmasc ? 'mode.transmasc' : 'mode.transfem');
     const subtitle = (
-        <>
-            <span className="xl:hidden">{modeName}</span>
-            <span className="hidden xl:inline">{`${modeName}. ${fmt(t('today.updated'), { time: formatTime(nowMs, lang) })}`}</span>
-        </>
+        <span className="inline-flex flex-wrap items-center gap-x-1">
+            <span>{modeName}</span>
+            <Button variant="icon" onClick={openInfo} aria-label={t('today.how')} className="text-[var(--c-muted)]">
+                <Help size={18} />
+            </Button>
+            <span className="hidden xl:inline">{fmt(t('today.updated'), { time: formatTime(nowMs, lang) })}</span>
+        </span>
     );
 
     const share = () => {
@@ -389,13 +389,18 @@ const Home: React.FC<HomeProps> = ({
     );
 
     // ── Blocks ────────────────────────────────────────────────────────────
-    const centre = (
+    const levelValue = (
         <>
-            <PixelCat pose="donut" size={52} className="xl:h-[45px] xl:w-[78px]" />
             <span className="block text-[44px] font-semibold leading-[44px] tabular-nums xl:text-[64px] xl:leading-[64px]">
                 {shownLevel ?? '--'}
             </span>
-            <span className="block text-[15px] font-semibold leading-5 text-[var(--c-muted)] xl:text-lg">{unit}</span>
+            <span className="block text-[15px] font-normal leading-5 text-[var(--c-muted)] xl:text-lg">{unit}</span>
+        </>
+    );
+    const centre = (
+        <>
+            <PixelCat pose="donut" size={52} className="xl:h-[45px] xl:w-[78px]" />
+            {levelValue}
         </>
     );
     const centreAria = shownLevel != null
@@ -403,40 +408,35 @@ const Home: React.FC<HomeProps> = ({
         : t('today.how');
 
     const words = hasLevel ? levelWords(level, target) : null;
+    const statusText = words ? fmt(t(`today.status.${words}`), { low: target.low, high: target.high }) : null;
     const statusLine = words && (
-        <p className={`m-0 flex items-center gap-2 text-base font-semibold ${words === 'in' ? 'text-[var(--c-target)]' : 'text-[var(--c-attention)]'}`}>
-            {words === 'in' ? <InTarget size={20} /> : words.endsWith('above') ? <Up size={20} /> : <Down size={20} />}
-            <span>{fmt(t(`today.status.${words}`), { low: target.low, high: target.high })}</span>
+        <p className="m-0 text-center text-base font-medium text-[var(--c-ink)]">
+            {trend
+                ? fmt(t('today.status_and_trend'), { status: statusText!, trend: inline(trend.summary, lang) })
+                : statusText}
         </p>
     );
 
     const [scaleMin, scaleMax] = rulerScale(target);
     const levelDetails = (
         <>
-            {statusLine}
             {hasLevel && (
                 <RangeRuler
                     value={level}
                     target={target}
-                    targetLabel={fmt(t('today.ruler.target'), { low: target.low, high: target.high })}
+                    targetLabel={t('today.ruler.target')}
                     ariaLabel={fmt(t('today.ruler.aria'), {
                         value: Math.round(level), unit, min: scaleMin, max: scaleMax, low: target.low, high: target.high,
                     })}
                 />
             )}
-            {trendText && <p className="m-0 text-base text-[var(--c-ink)]">{trendText}</p>}
-            <div className="flex flex-col gap-0.5">
-                <p className="m-0 text-sm text-[var(--c-muted)]">{estimatedText}</p>
-                {isTransmasc && currentT > 0 && (
-                    <p className="m-0 text-sm text-[var(--c-muted)]">{fmt(t('today.t_nmol'), { value: (currentT / 28.842).toFixed(1) })}</p>
-                )}
-                {!isTransmasc && currentCPA > 0 && (
-                    <p className="m-0 text-sm text-[var(--c-muted)]">{fmt(t('today.cpa_level'), { value: currentCPA.toFixed(1) })}</p>
-                )}
-            </div>
-            <Button variant="plain" onClick={openInfo} className="-ml-3 self-start">
-                {t('today.how')}
-            </Button>
+            {trend?.outlook && <p className="m-0 text-sm text-[var(--c-muted)]">{trend.outlook}</p>}
+            {isTransmasc && currentT > 0 && (
+                <p className="m-0 text-center text-sm text-[var(--c-muted)]">{fmt(t('today.t_nmol'), { value: (currentT / 28.842).toFixed(1) })}</p>
+            )}
+            {!isTransmasc && currentCPA > 0 && (
+                <p className="m-0 text-center text-sm text-[var(--c-muted)]">{fmt(t('today.cpa_level'), { value: currentCPA.toFixed(1) })}</p>
+            )}
         </>
     );
 
@@ -463,22 +463,21 @@ const Home: React.FC<HomeProps> = ({
             >
                 {centre}
             </RhythmDial>
+            {statusLine}
             {levelDetails}
             {legendLine && <p className="m-0 text-sm text-[var(--c-muted)]">{legendLine}</p>}
         </section>
     ) : (
         // List-first fallback: no cycle to draw, so the level block stands alone.
         <section aria-label={hormone} className={plate}>
-            <button
-                type="button"
-                onClick={openInfo}
-                aria-label={centreAria}
-                className="flex flex-col items-center gap-0.5 self-center rounded-full px-6 py-2 text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]"
-            >
-                {centre}
-            </button>
+            <div className="flex flex-col gap-2 text-[var(--c-ink)]">
+                <div className="flex items-center justify-center gap-4">
+                    <PixelCat pose="donut" size={78} className="shrink-0" />
+                    <div className="flex flex-col items-start gap-1">{levelValue}</div>
+                </div>
+                {statusLine}
+            </div>
             {levelDetails}
-            {regimens.length === 0 && <p className="m-0 text-sm text-[var(--c-muted)]">{t('today.fallback.hint')}</p>}
         </section>
     );
 
@@ -498,9 +497,9 @@ const Home: React.FC<HomeProps> = ({
         </div>
     ) : null;
 
-    const logButton = (label: string, onClick: () => void) => (
-        <Button variant="primary" block onClick={onClick}>
-            <Plus size={20} />
+    const logButton = (label: string, onClick: () => void, className?: string) => (
+        <Button variant="primary" block className={className} onClick={onClick}>
+            <Plus size={18} />
             {label}
         </Button>
     );
@@ -511,7 +510,7 @@ const Home: React.FC<HomeProps> = ({
         const fraction = (nowMs - todayStart) / (addLocalDays(todayStart, 7) - todayStart);
         return (
             <div className="w-full max-w-2xl px-4 pb-32 md:px-8">
-                <EstimateInfoModal isOpen={isEstimateInfoOpen} onClose={() => setIsEstimateInfoOpen(false)} />
+                <EstimateInfoModal isOpen={isEstimateInfoOpen} onClose={() => setIsEstimateInfoOpen(false)} showEstradiolSource={!isTransmasc} />
                 <PageHeader title={title} subtitle={subtitle} trailing={backup} />
                 {dueCards}
                 <div className="flex flex-col gap-4">
@@ -538,19 +537,20 @@ const Home: React.FC<HomeProps> = ({
     }
 
     return (
-        <div className="w-full max-w-2xl px-4 pb-32 md:px-8 xl:max-w-[1120px]">
+        <div className="w-full max-w-2xl px-4 pb-32 md:px-8 xl:max-w-none">
             <EstimateInfoModal
                 isOpen={isEstimateInfoOpen}
                 onClose={() => setIsEstimateInfoOpen(false)}
                 explanation={explanation}
+                showEstradiolSource={!isTransmasc}
             />
 
             <PageHeader title={title} subtitle={subtitle} trailing={trailing} />
             {dueCards}
 
-            <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-start">
+            <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-stretch">
                 {/* Left: the dial plate, notices and the one main action */}
-                <div className="flex min-w-0 flex-col gap-4">
+                <div className="flex min-w-0 flex-col gap-4 xl:col-start-1 xl:row-start-1">
                     {dialPlate}
                     <DoseAdvisoryNotice
                         advisory={doseAdvisory}
@@ -558,23 +558,24 @@ const Home: React.FC<HomeProps> = ({
                         showCalibrate={showCalibrate}
                         onCalibrate={onNavigateToLab}
                         t={t}
+                        className={(doseAdvisory || hormoneAdvisory) && !nextLine ? 'xl:flex-1' : undefined}
                     />
                     {(nextLine || onLogDose) && (
-                        <div className="flex flex-col gap-2">
+                        <div className={`flex flex-col gap-2 ${nextLine ? '' : 'md:hidden'}`}>
                             {nextLine && (
                                 <p className={`m-0 text-base ${next?.overdue ? 'text-[var(--c-attention)]' : 'text-[var(--c-ink)]'}`}>{nextLine}</p>
                             )}
-                            {onLogDose && logButton(t('today.log_dose'), () => onLogDose())}
+                            {onLogDose && logButton(t('today.log_dose'), () => onLogDose(), 'md:hidden')}
                         </div>
                     )}
                 </div>
 
                 {/* Right on desktop: chart first, then Coming up. Phone order is Coming up, then the chart. */}
-                <div className="flex min-w-0 flex-col gap-8">
+                <div className="flex min-w-0 flex-col gap-8 xl:contents">
                     {(upcoming.length > 0 || suppliesAttention.length > 0) && (
                         <Section
                             title={t('today.coming_up')}
-                            className="xl:order-2"
+                            className="xl:col-start-2 xl:row-start-2"
                             action={onNavigateToReminders && (
                                 <Button variant="plain" onClick={onNavigateToReminders} className="-mr-3">
                                     {t('today.reminders_link')}
@@ -594,31 +595,30 @@ const Home: React.FC<HomeProps> = ({
                         </Section>
                     )}
 
-                    <Section
-                        title={t('today.this_week')}
-                        className="xl:order-1 xl:rounded-2xl xl:border xl:border-[var(--c-hairline)] xl:bg-[var(--c-surface)] xl:px-5 xl:pb-4 xl:pt-3"
-                        action={
-                            <Button variant="plain" onClick={onNavigateToHistory} className="-mr-3">
-                                {t('today.timeline')}
-                            </Button>
-                        }
+                    <section
+                        className="min-w-0 xl:col-start-2 xl:row-start-1 xl:flex xl:flex-col xl:rounded-2xl xl:border xl:border-[var(--c-hairline)] xl:bg-[var(--c-surface)] xl:px-5 xl:pb-4 xl:pt-3"
                     >
                         <ResultChart
                             sim={simulation}
                             projection={projection}
                             events={events}
                             onPointClick={onEditEvent}
+                            showEstimateLabel={false}
                             labResults={labResults}
                             calibrationFn={calibrationFn}
                             isDarkMode={isDarkMode}
                             isMono={isMono}
-                            showTitle={false}
-                            headerClassName="hidden xl:flex"
+                            title={t('today.this_week')}
+                            className="xl:flex xl:flex-1 xl:flex-col"
+                            headerClassName="xl:items-baseline"
+                            rangeClassName="hidden w-[200px] max-w-full shrink-0 xl:flex 2xl:w-[240px]"
+                            rangeSize="sm"
+                            plotClassName="h-56 md:h-64 xl:h-auto xl:min-h-80 xl:flex-1 xl:[&>svg]:absolute xl:[&>svg]:inset-0"
                         />
                         <p className="m-0 mt-2 text-sm text-[var(--c-muted)]">
                             {fmt(t(projection ? 'today.chart_caption' : 'today.chart_caption_logged'), { hormone: inline(hormone, lang) })}
                         </p>
-                    </Section>
+                    </section>
                 </div>
             </div>
         </div>

@@ -111,7 +111,7 @@ export interface SegmentedControlProps<T extends string> {
     value: T;
     onChange: (value: T) => void;
     'aria-label': string;
-    /** 'sm' is 36px tall, for units sitting inside a list row. */
+    /** 'sm' has a 36px track with a 44px tap area. */
     size?: 'md' | 'sm';
     /** A quiet 30px unit selector inside a 44px-tall interaction area. */
     variant?: 'default' | 'inline';
@@ -208,7 +208,7 @@ export function SegmentedControl<T extends string>({ options, value, onChange, s
                         onClick={() => onChange(opt.value)}
                         className={`relative z-[1] flex-1 rounded-full bg-transparent text-sm ${inline
                             ? "border-0 px-2 font-normal before:absolute before:inset-x-0 before:top-1/2 before:h-[44px] before:-translate-y-1/2 before:content-['']"
-                            : `border border-transparent ${size === 'sm' ? 'px-2' : 'px-3'} font-semibold`} ${selected
+                            : `border border-transparent ${size === 'sm' ? "px-2 before:absolute before:inset-x-0 before:top-1/2 before:h-[44px] before:-translate-y-1/2 before:content-['']" : 'px-3'} font-semibold`} ${selected
                             ? 'text-[var(--c-ink)]'
                             : 'text-[var(--c-muted)] hover:text-[var(--c-ink)]'}`}
                     >

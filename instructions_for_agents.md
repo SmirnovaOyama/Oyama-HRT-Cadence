@@ -36,3 +36,8 @@ Latest owner request (2026-09-24): the app is English-only, overriding the earli
 Use English UI copy and dates regardless of stored or browser language; do not restore language selectors or
 non-English fallbacks. Existing translation packs remain as source reference. New UI strings require English.
 See `design/cadence/implementation-status.md` for current coverage.
+
+Latest owner update (2026-09-25): simple option selectors use dropdowns that expand in place,
+not secondary pages. Selecting an option closes the dropdown and retains the form draft.
+This overrides the older requirement to put simple choices on secondary pages; keep substantial
+forms and confirmations on their existing pages.

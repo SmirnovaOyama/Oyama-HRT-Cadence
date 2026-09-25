@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { ChevronRight, Check } from './icons';
+import React, { useId, useRef, useState } from 'react';
+import { ChevronDown, Check } from './icons';
 import { ListGroup, ListRow } from './ui';
-import { SecondaryPage } from './ui/SecondaryPage';
 
 interface Option {
     value: string;
@@ -33,8 +32,8 @@ interface CustomSelectProps {
 
 /**
  * A pick-one list view (spec/listview_v3.md). Closed, it is a single row:
- * the label, the chosen value and a chevron. The row opens a secondary page
- * of grouped choices, with a trailing check on the chosen one.
+ * the label, the chosen value and a chevron. Choices expand below the row,
+ * with a trailing check on the chosen one.
  */
 const CustomSelect: React.FC<CustomSelectProps> = ({
     value,
@@ -48,6 +47,12 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     defaultOpen = false,
 }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
+    const trigger = useRef<HTMLButtonElement>(null);
+    const choicesId = useId();
+    const close = () => {
+        setIsOpen(false);
+        trigger.current?.focus();
+    };
     const selected = options.find(o => o.value === value);
     const leading = icon ?? selected?.icon;
     const hasIcons = options.some(o => o.icon != null);
@@ -61,9 +66,15 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const rows = (
         <>
             <button
+                ref={trigger}
                 type="button"
+                aria-expanded={isOpen}
+                aria-controls={isOpen ? choicesId : undefined}
                 className={`list-row ${leading != null ? 'list-row-tall' : ''} ${label != null ? 'list-row-has-value' : ''}`}
-                onClick={() => setIsOpen(true)}
+                onClick={() => setIsOpen(open => !open)}
+                onKeyDown={event => {
+                    if (event.key === 'Escape' && isOpen) { event.stopPropagation(); close(); }
+                }}
             >
                 {leading != null && <span className="list-row-leading">{leading}</span>}
                 <span className="list-row-text">
@@ -71,16 +82,18 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 </span>
                 {label != null && <span className="list-row-value">{summary}</span>}
                 <span className="list-row-chevron" aria-hidden="true">
-                    <ChevronRight size={16} />
+                    <ChevronDown size={16} className={isOpen ? 'rotate-180' : undefined} />
                 </span>
             </button>
             {isOpen && (
-                <SecondaryPage title={label ?? header ?? selected?.label ?? value} onBack={() => setIsOpen(false)}>
+                <div id={choicesId} onKeyDown={event => {
+                    if (event.key === 'Escape') { event.stopPropagation(); close(); }
+                }}>
                     <ListGroup
+                        className="[&>.list-group]:rounded-none [&>.list-group]:border-0 [&>.list-group]:bg-transparent"
                         selection="single"
                         aria-label={label ?? selected?.label ?? value}
                         checkIcon={<Check size={22} />}
-                        footer={footer}
                     >
                         {options.map(opt => (
                             <ListRow
@@ -91,12 +104,12 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 selected={opt.value === value}
                                 onClick={() => {
                                     onChange(opt.value);
-                                    setIsOpen(false);
+                                    close();
                                 }}
                             />
                         ))}
                     </ListGroup>
-                </SecondaryPage>
+                </div>
             )}
         </>
     );

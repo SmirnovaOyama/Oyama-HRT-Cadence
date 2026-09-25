@@ -795,7 +795,7 @@ export const TRANSLATIONS_BASE = {
         "advisory.cpa.body": "Your recent cyproterone dose looks a bit high. More doesn't block testosterone any better, and the risk builds up gradually. Please don't worry, this app's estimate could be off. A hormone blood test at a clinic can help calibrate the numbers, and it's worth keeping an eye on your recent dosing.",
         "advisory.e2_cpa.body": "Your recent estradiol and cyproterone doses both look a bit high. Estradiol mainly adds some clotting risk, while cyproterone's risk builds up over time. Please don't worry, this app's estimate could be off. A hormone blood test at a clinic can help calibrate the numbers, and it's worth keeping an eye on your recent dosing.",
         "advisory.calibrate.text": "This is a model estimate.",
-        "advisory.calibrate.cta": "Add a blood test to calibrate",
+        "advisory.calibrate.cta": "Blood tests",
         "advisory.hormone_both_low.body": "Your most recent estradiol and testosterone labs are both running low. Having both sex hormones low at once, over time, can affect bone density, mood, and vasomotor symptoms like hot flashes. This could just be draw timing, so it's worth discussing your recent dosing with a doctor.",
         "advisory.hormone_both_high.body": "Your most recent estradiol and testosterone labs are both running high at once, an unusual combination worth a second look. It could be draw timing or a unit mix-up, so it's worth confirming the results with a doctor.",
 

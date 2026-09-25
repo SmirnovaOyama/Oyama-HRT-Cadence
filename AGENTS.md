@@ -32,3 +32,8 @@ regardless of stored or browser language. Do not restore language selectors or n
 Older translation packs are retained as source reference; new UI strings require English. Do not add an icon library.
 
 Use a separate localhost port and synthetic records for browser checks; do not overwrite the user's existing browser data.
+
+Latest owner update (2026-09-25): simple option selectors use dropdowns that expand in place,
+not secondary pages. Selecting an option closes the dropdown and retains the form draft.
+This overrides the older requirement to put simple choices on secondary pages; keep substantial
+forms and confirmations on their existing pages.
