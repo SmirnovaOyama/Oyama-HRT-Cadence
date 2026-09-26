@@ -6,6 +6,8 @@ import { InlineTimePicker } from './ui/InlineTimePicker';
 import { useTranslation } from '../contexts/LanguageContext';
 import { LOCALE_MAP } from '../utils/helpers';
 import { dateTimePartValue, updateDateTimePart, type DateTimePart } from '../utils/dateTimeParts';
+import { Calendar, Clock, Check, Close } from './icons';
+import { LabelIcon } from './ui/LabelIcon';
 
 interface DateTimePickerProps {
     isOpen: boolean;
@@ -108,7 +110,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
                     triggerRef.current = event.currentTarget;
                     setActivePart(activePart === part ? null : part);
                 }}
-                className={`inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full border-0 px-3 text-[1.0625rem] leading-6 font-normal tabular-nums text-[var(--c-ink)] transition-colors motion-reduce:transition-none ${activePart === part ? 'bg-[var(--c-plate-strong)]' : 'bg-[var(--c-plate)] hover:bg-[var(--c-plate-strong)]'}`}
+                className={`date-time-trigger inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full border-0 px-3 text-[1.0625rem] leading-6 font-normal tabular-nums text-[var(--c-ink)] transition-colors motion-reduce:transition-none ${activePart === part ? 'bg-[var(--c-plate-strong)]' : 'bg-[var(--c-plate)] hover:bg-[var(--c-plate-strong)]'}`}
             >
                 {display}
             </button>
@@ -133,7 +135,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
             {showDate && (
                 <div className="list-row flex-wrap py-2">
                     <span className="list-row-text">
-                        <span className="list-row-title">{inline && mode === 'date' && title ? title : t('log.picker_date')}</span>
+                        <span className="list-row-title"><span className="field-label"><LabelIcon icon={Calendar} tone="blue" />{inline && mode === 'date' && title ? title : t('log.picker_date')}</span></span>
                     </span>
                     <span className="flex flex-wrap items-center justify-end gap-1.5">
                         {dateOrder.map(partButton)}
@@ -142,7 +144,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
                 </div>
             )}
             {showDate && datePart && (
-                <div id={panelId}>
+                <div id={panelId} className="inline-picker-enter">
                     <InlineDatePicker key={datePart} value={selectedDate} locale={locale} initialPart={datePart} onChange={applyDate} onClose={closePicker} />
                 </div>
             )}
@@ -150,7 +152,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
             {showTime && (
                 <div className="list-row py-2">
                     <span className="list-row-text">
-                        <span className="list-row-title">{inline && mode === 'time' && title ? title : t('log.picker_time')}</span>
+                        <span className="list-row-title"><span className="field-label"><LabelIcon icon={Clock} tone="purple" />{inline && mode === 'time' && title ? title : t('log.picker_time')}</span></span>
                     </span>
                     <span className="flex items-center gap-1 tabular-nums">
                         {partButton('hour')}
@@ -161,7 +163,7 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
                 </div>
             )}
             {showTime && timePart && (
-                <div id={panelId}>
+                <div id={panelId} className="inline-picker-enter">
                     <InlineTimePicker key={timePart} value={selectedDate} initialPart={timePart} onChange={setPart} onClose={closePicker} />
                 </div>
             )}
@@ -196,9 +198,11 @@ const DateTimePicker: React.FC<DateTimePickerProps> = ({
 
                 <div className="flex gap-3">
                     <Button variant="secondary" compact className="flex-1 basis-0" onClick={onClose}>
+                        <Close size={18} />
                         {t('btn.cancel')}
                     </Button>
                     <Button variant="primary" compact className="flex-1 basis-0" onClick={() => onConfirm(selectedDateRef.current)}>
+                        <Check size={18} />
                         {t('btn.ok')}
                     </Button>
                 </div>

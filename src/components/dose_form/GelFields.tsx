@@ -5,6 +5,8 @@ import { useHRTMode } from '../../contexts/HRTModeContext';
 import CustomSelect from '../CustomSelect';
 import DoseStepper from './DoseStepper';
 import { GroupHeader, formatApprox } from './shared';
+import { Gauge } from '../icons';
+import { DoseFieldLabel } from './DoseFieldIcon';
 
 interface GelFieldsProps {
     gelSite: number;
@@ -40,7 +42,7 @@ const GelFields: React.FC<GelFieldsProps> = ({
     return (
         <>
             <section>
-                <GroupHeader>{t('log.how_much')}</GroupHeader>
+                <GroupHeader><DoseFieldLabel icon={Gauge}>{t('log.how_much')}</DoseFieldLabel></GroupHeader>
                 <div className="list-group">
                     <DoseStepper
                         value={e2Dose}

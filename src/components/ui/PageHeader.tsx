@@ -46,7 +46,7 @@ export function BackHeader({ parentLabel, onBack, title, trailing, className }: 
                 <button
                     type="button"
                     onClick={onBack}
-                    className="-ml-3 inline-flex h-11 items-center gap-1 rounded-full pl-3 pr-4 text-base font-medium text-[var(--c-ink)] hover:bg-[var(--c-plate)]"
+                    className="back-action -ml-3 inline-flex h-11 items-center gap-1 rounded-full pl-3 pr-4 text-base font-medium text-[var(--c-ink)] hover:bg-[var(--c-plate)]"
                 >
                     <Back size={20} />
                     <span>{parentLabel}</span>
@@ -185,7 +185,7 @@ export function SegmentedControl<T extends string>({ options, value, onChange, s
             ref={trackRef}
             role="radiogroup"
             aria-label={rest['aria-label']}
-            className={`segmented-control relative isolate flex rounded-full ${inline ? 'h-[30px] w-full gap-0.5 p-0.5 bg-transparent' : `${size === 'sm' ? 'h-9 gap-0.5 p-0.5' : 'h-11 gap-1 p-1'} bg-[var(--c-plate)]`} ${inline ? '' : className ?? ''}`}
+            className={`segmented-control relative isolate flex rounded-full ${inline ? 'h-[30px] w-full gap-0.5 p-0.5 bg-transparent' : `${size === 'sm' ? 'h-[32px] gap-0.5 p-0.5' : 'h-[44px] gap-0.5 p-0.5'} bg-[var(--c-plate)]`} ${inline ? '' : className ?? ''}`}
         >
             <span
                 ref={indicatorRef}

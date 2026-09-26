@@ -2,6 +2,8 @@ import React, { useState, useEffect, useId } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useDialog } from '../contexts/DialogContext';
 import { BackHeader, Button } from '../components/ui';
+import { Save, Weight } from '../components/icons';
+import { LabelIcon } from '../components/ui/LabelIcon';
 import { YouPage } from './you/shared';
 
 interface WeightSettingsProps {
@@ -39,6 +41,7 @@ const WeightSettings: React.FC<WeightSettingsProps> = ({ weight, onSave, onBack 
             <form onSubmit={handleSave} className="mt-2 flex flex-col gap-6">
                 <div className="flex flex-col">
                     <div className="flex items-center gap-3">
+                        <LabelIcon icon={Weight} tone="teal" size={24} />
                         <input
                             id={inputId}
                             type="number"
@@ -61,6 +64,7 @@ const WeightSettings: React.FC<WeightSettingsProps> = ({ weight, onSave, onBack 
                 </div>
 
                 <Button type="submit" variant="primary" block>
+                    <Save size={20} />
                     {t('btn.save')}
                 </Button>
             </form>

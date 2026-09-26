@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/interactions.css";
 
 @variant dark (&:is(.dark *));
 
@@ -178,15 +179,10 @@
     display: none;
 }
 
-/* The layout is drawn for a ~1280 px column, which leaves it undersized on a
-   wide display: small type stranded in a lot of empty page. Everything is sized
-   in rem, so lifting the root size scales type, spacing and the content column
-   together, keeping the proportions and just rendering them larger. Phones and
-   tablets stay at 16px, where the layout is already full-width. */
+/* Keep desktop type at the Cadence 1.1 scale. Wider screens give content
+   more room instead of inflating type and spacing against fixed-size controls. */
 :root { --ui-scale: 1; }
 @media (min-width: 1280px) { :root { --ui-scale: 1.10; } }
-@media (min-width: 1600px) { :root { --ui-scale: 1.20; } }
-@media (min-width: 1920px) { :root { --ui-scale: 1.28; } }
 
 /* Icons carry their size as a px width/height attribute, so unlike everything
    else they do not follow the root font size. Zoom scales the whole glyph,
@@ -512,13 +508,13 @@ body {
 
 /* ── Mobile tab bar (boards Main / TodayDark, recipe C16) ─────────
    Docked, flat: white with a top hairline, no shadow. Five slots, the Log
-   button in a fixed 76px centre column. Height 76 plus the home indicator. */
+   button in the middle of five equal columns. Height 76 plus the home indicator. */
 /* In the components layer so `md:hidden` on the element wins. */
 @layer components {
     .tabbar {
         flex: none;
         display: grid;
-        grid-template-columns: 1fr 1fr 76px 1fr 1fr;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         align-items: start;
         box-sizing: border-box;
         min-height: calc(76px + env(safe-area-inset-bottom, 0px));
@@ -1007,6 +1003,48 @@ body {
         min-height: 64px;
     }
 
+    /* Route choices use their own vivid palette; navigation stays unchanged. */
+    .route-choice-icon {
+        position: relative;
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+        color: var(--route-ink);
+        background: var(--route-fill);
+    }
+    .route-choice-icon[data-route="injection"] { --route-ink: #1763CB; --route-fill: #DCECFF; }
+    .route-choice-icon[data-route="oral"] { --route-ink: #8A40BD; --route-fill: #F0DFFF; }
+    .route-choice-icon[data-route="sublingual"] { --route-ink: #BB337C; --route-fill: #FFDFEF; }
+    .route-choice-icon[data-route="gel"] { --route-ink: #087D85; --route-fill: #CFF4EE; }
+    .route-choice-icon[data-route="patchApply"] { --route-ink: #317D37; --route-fill: #DEF1C9; }
+    .route-choice-icon[data-route="patchRemove"] { --route-ink: #BC5123; --route-fill: #FFE4CF; }
+    .dark .route-choice-icon[data-route="injection"] { --route-ink: #8BBBFF; --route-fill: #1E3557; }
+    .dark .route-choice-icon[data-route="oral"] { --route-ink: #D4A2FF; --route-fill: #3E2854; }
+    .dark .route-choice-icon[data-route="sublingual"] { --route-ink: #FFA2D0; --route-fill: #50263D; }
+    .dark .route-choice-icon[data-route="gel"] { --route-ink: #71DED8; --route-fill: #183E40; }
+    .dark .route-choice-icon[data-route="patchApply"] { --route-ink: #AADF83; --route-fill: #2D4025; }
+    .dark .route-choice-icon[data-route="patchRemove"] { --route-ink: #FFB383; --route-fill: #4D3022; }
+    .route-choice-mark {
+        position: absolute;
+        right: -2px;
+        bottom: -2px;
+        display: grid;
+        place-items: center;
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--c-surface);
+        border-radius: 50%;
+        background: var(--route-ink);
+        color: var(--route-fill);
+    }
+    .route-choice-icon .cadence-icon { zoom: 1; }
+    .select-value-icon { display: inline-flex; flex: none; }
+    .select-value-icon > * { width: 28px; height: 28px; border-radius: 9px; }
+    .select-value-icon > * > svg { width: 19px; height: 19px; }
+
     .list-row-leading {
         display: inline-flex;
         flex: none;
@@ -1201,9 +1239,8 @@ body {
 }
 
 /* ── Ambient motion ───────────────────────────────────────────────
-   Deliberately narrow: colour, opacity and small transforms only. No scale,
-   no bounce, no spring, nothing that draws attention to itself — the point is
-   that state changes stop snapping, not that they perform.
+   Shared paint transitions; the owner's 2026-09-26 interaction update adds
+   small press responses and one-shot feedback in styles/interactions.css.
 
    The baseline below covers every interactive surface in the app at once
    (settings rows, range chips, nav items, links, form controls) so hover,

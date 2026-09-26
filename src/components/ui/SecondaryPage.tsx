@@ -105,7 +105,7 @@ export function SecondaryPage({ title, onBack, children, backLabel, wide = false
             ref={sectionRef}
             data-secondary-page={id}
             style={{ display: active ? undefined : 'none' }}
-            className={`mx-auto w-full ${wide ? 'max-w-[864px]' : 'max-w-[704px]'} px-4 pb-8 md:px-8`}
+            className={`mx-auto w-full ${wide ? 'max-w-[864px]' : 'max-w-[704px]'} px-4 pb-8 md:px-8 ${active ? 'secondary-page-enter' : ''}`}
         >
             <BackHeader
                 title={title}

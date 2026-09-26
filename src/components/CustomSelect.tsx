@@ -1,6 +1,7 @@
 import React, { useId, useRef, useState } from 'react';
 import { ChevronDown, Check } from './icons';
 import { ListGroup, ListRow } from './ui';
+import './CustomSelect.css';
 
 interface Option {
     value: string;
@@ -23,6 +24,10 @@ interface CustomSelectProps {
     icon?: React.ReactNode;
     /** Sentence-case heading above the group. */
     header?: React.ReactNode;
+    /** Keep compact labelled triggers text-only while decorating their options. */
+    showSelectedIcon?: boolean;
+    /** Place a chosen option's icon beside its trailing value instead of the label. */
+    selectedIconPosition?: 'leading' | 'value';
     /** Muted note under the group. */
     footer?: React.ReactNode;
     /** Render only the rows, for a caller that puts them in its own .list-group. */
@@ -33,7 +38,8 @@ interface CustomSelectProps {
 /**
  * A pick-one list view (spec/listview_v3.md). Closed, it is a single row:
  * the label, the chosen value and a chevron. Choices expand below the row,
- * with a trailing check on the chosen one.
+ * with a trailing check on the chosen one. Selection keeps the choices open;
+ * the trigger or Escape closes them.
  */
 const CustomSelect: React.FC<CustomSelectProps> = ({
     value,
@@ -45,8 +51,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     footer,
     bare = false,
     defaultOpen = false,
+    showSelectedIcon = true,
+    selectedIconPosition = 'leading',
 }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
+    const [lastPicked, setLastPicked] = useState<string | null>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const choicesId = useId();
     const close = () => {
@@ -54,7 +63,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         trigger.current?.focus();
     };
     const selected = options.find(o => o.value === value);
-    const leading = icon ?? selected?.icon;
+    const leading = icon ?? (showSelectedIcon && selectedIconPosition === 'leading' ? selected?.icon : undefined);
+    const valueIcon = showSelectedIcon && selectedIconPosition === 'value' ? selected?.icon : undefined;
     const hasIcons = options.some(o => o.icon != null);
 
     const summary = selected
@@ -69,26 +79,43 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 ref={trigger}
                 type="button"
                 aria-expanded={isOpen}
-                aria-controls={isOpen ? choicesId : undefined}
-                className={`list-row ${leading != null ? 'list-row-tall' : ''} ${label != null ? 'list-row-has-value' : ''}`}
+                data-escape-local={isOpen ? "true" : undefined}
+                aria-controls={choicesId}
+                className={`list-row cadence-select-trigger ${leading != null ? 'list-row-tall' : ''} ${label != null ? 'list-row-has-value' : ''}`}
                 onClick={() => setIsOpen(open => !open)}
                 onKeyDown={event => {
                     if (event.key === 'Escape' && isOpen) { event.stopPropagation(); close(); }
                 }}
             >
-                {leading != null && <span className="list-row-leading">{leading}</span>}
+                {leading != null && <span key={value} className={`list-row-leading ${lastPicked === value ? 'cadence-select-picked' : ''}`}>{leading}</span>}
                 <span className="list-row-text">
                     <span className="list-row-title">{label ?? summary}</span>
                 </span>
-                {label != null && <span className="list-row-value">{summary}</span>}
+                {label != null && (
+                    <span className={`list-row-value ${valueIcon != null ? 'flex items-center justify-end gap-2' : ''}`}>
+                        {valueIcon != null && <span key={value} aria-hidden="true" className={`select-value-icon ${lastPicked === value ? 'cadence-select-picked' : ''}`}>{valueIcon}</span>}
+                        <span className="min-w-0 truncate">{summary}</span>
+                    </span>
+                )}
                 <span className="list-row-chevron" aria-hidden="true">
-                    <ChevronDown size={16} className={isOpen ? 'rotate-180' : undefined} />
+                    <ChevronDown size={16} />
                 </span>
             </button>
-            {isOpen && (
-                <div id={choicesId} onKeyDown={event => {
-                    if (event.key === 'Escape') { event.stopPropagation(); close(); }
-                }}>
+            <div
+                id={choicesId}
+                className="cadence-select-choices"
+                data-open={isOpen}
+                data-escape-local={isOpen ? 'true' : undefined}
+                aria-hidden={!isOpen}
+                // React 18 does not forward a boolean inert attribute. Set it
+                // on the element while retaining the rows for the closing motion.
+                ref={element => { element?.toggleAttribute('inert', !isOpen); }}
+                onKeyDown={event => {
+                    if (event.key === 'Escape' && isOpen) { event.stopPropagation(); close(); }
+                }}
+            >
+                <div className="cadence-select-choices-inner">
+                    <div className={leading != null ? 'list-sep list-sep-icon' : 'list-sep'} aria-hidden="true" />
                     <ListGroup
                         className="[&>.list-group]:rounded-none [&>.list-group]:border-0 [&>.list-group]:bg-transparent"
                         selection="single"
@@ -102,15 +129,17 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 value={opt.description}
                                 leading={opt.icon ?? (hasIcons ? <span className="w-10" /> : undefined)}
                                 selected={opt.value === value}
+                                tabIndex={isOpen ? undefined : -1}
+                                className={lastPicked === opt.value ? 'cadence-select-choice-picked' : undefined}
                                 onClick={() => {
+                                    if (opt.value !== value) setLastPicked(opt.value);
                                     onChange(opt.value);
-                                    close();
                                 }}
                             />
                         ))}
                     </ListGroup>
                 </div>
-            )}
+            </div>
         </>
     );
 

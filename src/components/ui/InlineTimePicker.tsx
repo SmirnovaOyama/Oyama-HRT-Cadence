@@ -1,6 +1,7 @@
 import React, { useId, useLayoutEffect, useRef } from 'react';
 import { Button } from './Button';
 import { useTranslation } from '../../contexts/LanguageContext';
+import { Check } from '../icons';
 
 function TimeColumn({ label, value, count, autoFocus, onChange }: {
     label: string;
@@ -11,13 +12,17 @@ function TimeColumn({ label, value, count, autoFocus, onChange }: {
 }) {
     const id = useId();
     const listRef = useRef<HTMLDivElement>(null);
+    const hasPositioned = useRef(false);
     const optionRefs = useRef(new Map<number, HTMLButtonElement>());
 
     useLayoutEffect(() => {
         const list = listRef.current;
         const selected = optionRefs.current.get(value);
         if (!list || !selected) return;
-        list.scrollTop = selected.offsetTop - (list.clientHeight - selected.offsetHeight) / 2;
+        const top = selected.offsetTop - (list.clientHeight - selected.offsetHeight) / 2;
+        const animate = hasPositioned.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        list.scrollTo({ top, behavior: animate ? 'smooth' : 'instant' });
+        hasPositioned.current = true;
     }, [value]);
 
     useLayoutEffect(() => {
@@ -73,7 +78,7 @@ export function InlineTimePicker({ value, initialPart, onChange, onClose }: {
                 <TimeColumn label={t('time.hour')} value={value.getHours()} count={24} autoFocus={initialPart === 'hour'} onChange={hour => onChange('hour', hour)} />
                 <TimeColumn label={t('time.minute')} value={value.getMinutes()} count={60} autoFocus={initialPart === 'minute'} onChange={minute => onChange('minute', minute)} />
             </div>
-            <Button compact variant="secondary" className="self-end" onClick={onClose}>{t('btn.ok')}</Button>
+            <Button compact variant="secondary" className="self-end" onClick={onClose}><Check size={18} />{t('btn.ok')}</Button>
         </div>
     );
 }

@@ -3,8 +3,9 @@ import { useTranslation } from '../../contexts/LanguageContext';
 import { dateForTimeOfDay } from '../../utils/dateTimeParts';
 import { formatLocalDate } from '../../utils/reminders';
 import DateTimePicker from '../DateTimePicker';
-import { Minus } from '../icons';
+import { Minus, Plus } from '../icons';
 import { Button, ListGroup, ListRow } from '../ui';
+import { LabelIcon } from '../ui/LabelIcon';
 
 const toClock = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
@@ -54,7 +55,7 @@ export function ScheduleTimingFields({ kind, times, anchorDate, onTimesChange, o
                     onConfirm={date => onAnchorChange(formatLocalDate(date.getTime()))}
                 />
             ) : times.length < 6 ? (
-                <ListRow tone="accent" title={t('reminders.sheet.add_time')} onClick={addTime} />
+                <ListRow leading={<LabelIcon icon={Plus} tone="orange" />} tone="accent" title={t('reminders.sheet.add_time')} onClick={addTime} />
             ) : null}
         </ListGroup>
     );

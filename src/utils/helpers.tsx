@@ -1,4 +1,5 @@
-import { Syringe, Pill, Droplet, Sticker, X, FlaskConical, Atom, Shield, Hexagon, Orbit, Dna, Shell } from '../components/icons';
+import { EstradiolIcon } from '../components/icons/EstradiolIcon';
+import { Syringe, Pill, Droplet, Sticker, X, FlaskConical, Shield } from '../components/icons';
 import { Route, DoseEvent, Ester, getBioavailabilityMultiplier, getToE2Factor, ExtraKey } from '../../logic';
 import { Lang } from '../i18n/translations';
 
@@ -98,13 +99,13 @@ export const getRouteIcon = (route: Route) => {
 
 export const getEsterIcon = (ester: Ester) => {
     switch (ester) {
-        case Ester.E2: return <Atom className={iconMuted} />;
+        case Ester.E2:
+        case Ester.EB:
+        case Ester.EV:
+        case Ester.EC:
+        case Ester.EN:
+        case Ester.EU: return <EstradiolIcon size={20} />;
         case Ester.CPA: return <Shield className={iconMuted} />;
-        case Ester.EV: return <Shell className={iconMuted} />;
-        case Ester.EB: return <Hexagon className={iconMuted} />;
-        case Ester.EC: return <Orbit className={iconMuted} />;
-        case Ester.EN: return <Dna className={iconMuted} />;
-        case Ester.EU: return <FlaskConical className={iconMuted} />;
         default: return <FlaskConical className={iconMuted} />;
     }
 };

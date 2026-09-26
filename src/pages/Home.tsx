@@ -1,3 +1,4 @@
+import { ShareButton } from '../components/ui/ShareButton';
 import React from 'react';
 import { joinSentences } from '../i18n/listSeparator';
 import {
@@ -16,7 +17,7 @@ import EstimateInfoModal from '../components/EstimateInfoModal';
 import DoseAdvisoryNotice from '../components/DoseAdvisory';
 import PixelCat from '../components/PixelCat';
 import { Button, PageHeader, Section } from '../components/ui';
-import { BackedUp, CloudOff, Help, Plus, Share, Sync } from '../components/icons';
+import { BackedUp, CloudOff, Help, Plus, Sync, Tests } from '../components/icons';
 import RhythmDial from '../components/today/RhythmDial';
 import RangeRuler, { TargetRange, rulerScale } from '../components/today/RangeRuler';
 import ComingUp, { LogDosePrefill, ROUTE_ICON, prefillFor } from '../components/today/ComingUp';
@@ -364,27 +365,13 @@ const Home: React.FC<HomeProps> = ({
     const trailing = (
         <>
             {backup}
-            <Button
-                variant="icon"
-                className="xl:hidden"
-                aria-label={shareCopy.action}
+            <ShareButton
                 title={shareTitle}
                 disabled={!events.length}
                 onClick={share}
             >
-                <Share size={22} />
-            </Button>
-            <Button
-                variant="secondary"
-                compact
-                className="hidden xl:inline-flex"
-                title={shareTitle}
-                disabled={!events.length}
-                onClick={share}
-            >
-                <Share size={20} />
                 {shareCopy.action}
-            </Button>
+            </ShareButton>
         </>
     );
 
@@ -440,7 +427,7 @@ const Home: React.FC<HomeProps> = ({
         </>
     );
 
-    const plate = 'flex flex-col gap-3 rounded-[28px] bg-[var(--c-plate)] p-4 xl:p-6';
+    const plate = 'flex flex-col gap-3 rounded-[20px] bg-[var(--c-plate)] p-4 xl:p-5';
 
     const dialPlate = cycle ? (
         <section aria-label={cycleTitle ?? undefined} className={plate}>
@@ -509,7 +496,7 @@ const Home: React.FC<HomeProps> = ({
         const todayStart = startOfLocalDay(nowMs);
         const fraction = (nowMs - todayStart) / (addLocalDays(todayStart, 7) - todayStart);
         return (
-            <div className="w-full max-w-2xl px-4 pb-32 md:px-8">
+            <div className="mx-auto w-full max-w-2xl px-4 pb-32 md:px-8">
                 <EstimateInfoModal isOpen={isEstimateInfoOpen} onClose={() => setIsEstimateInfoOpen(false)} showEstradiolSource={!isTransmasc} />
                 <PageHeader title={title} subtitle={subtitle} trailing={backup} />
                 {dueCards}
@@ -548,30 +535,43 @@ const Home: React.FC<HomeProps> = ({
             <PageHeader title={title} subtitle={subtitle} trailing={trailing} />
             {dueCards}
 
-            <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-stretch">
+            <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-stretch">
                 {/* Left: the dial plate, notices and the one main action */}
                 <div className="flex min-w-0 flex-col gap-4 xl:col-start-1 xl:row-start-1">
                     {dialPlate}
                     <DoseAdvisoryNotice
                         advisory={doseAdvisory}
                         hormoneAdvisory={hormoneAdvisory}
-                        showCalibrate={showCalibrate}
+                        showCalibrate={false}
                         onCalibrate={onNavigateToLab}
                         t={t}
                         className={(doseAdvisory || hormoneAdvisory) && !nextLine ? 'xl:flex-1' : undefined}
                     />
-                    {(nextLine || onLogDose) && (
-                        <div className={`flex flex-col gap-2 ${nextLine ? '' : 'md:hidden'}`}>
+                    {(nextLine || onLogDose || showCalibrate) && (
+                        <div className={`flex flex-col gap-2 ${nextLine || showCalibrate ? '' : 'md:hidden'}`}>
                             {nextLine && (
                                 <p className={`m-0 text-base ${next?.overdue ? 'text-[var(--c-attention)]' : 'text-[var(--c-ink)]'}`}>{nextLine}</p>
                             )}
-                            {onLogDose && logButton(t('today.log_dose'), () => onLogDose(), 'md:hidden')}
+                            <div className={`flex items-center gap-2 ${showCalibrate ? '' : 'md:hidden'}`}>
+                                {onLogDose && (
+                                    <Button variant="primary" compact onClick={() => onLogDose()} className="min-w-0 flex-1 px-3 md:hidden">
+                                        <Plus size={18} />
+                                        {t('today.log_dose')}
+                                    </Button>
+                                )}
+                                {showCalibrate && (
+                                    <Button variant="secondary" compact onClick={onNavigateToLab} className="min-w-0 flex-1 px-3 md:flex-none md:px-4">
+                                        <Tests size={18} />
+                                        {t('advisory.calibrate.cta')}
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* Right on desktop: chart first, then Coming up. Phone order is Coming up, then the chart. */}
-                <div className="flex min-w-0 flex-col gap-8 xl:contents">
+                <div className="flex min-w-0 flex-col gap-6 xl:contents">
                     {(upcoming.length > 0 || suppliesAttention.length > 0) && (
                         <Section
                             title={t('today.coming_up')}

@@ -1,0 +1,100 @@
+.dose-field-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    vertical-align: middle;
+}
+
+.dose-field-label > svg {
+    flex: none;
+    color: var(--c-accent);
+}
+
+.dose-field-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    color: var(--dose-icon-ink);
+    background: var(--dose-icon-fill);
+}
+
+.dose-field-icon[data-tone="blue"] { --dose-icon-ink: #2365b5; --dose-icon-fill: #deedff; }
+.dose-field-icon[data-tone="violet"] { --dose-icon-ink: #8850b4; --dose-icon-fill: #eee0fb; }
+.dose-field-icon[data-tone="teal"] { --dose-icon-ink: #067c82; --dose-icon-fill: #cff3ef; }
+.dose-field-icon[data-tone="amber"] { --dose-icon-ink: #986211; --dose-icon-fill: #f9e9c8; }
+.dark .dose-field-icon[data-tone="blue"] { --dose-icon-ink: #8bc0fa; --dose-icon-fill: #203b59; }
+.dark .dose-field-icon[data-tone="violet"] { --dose-icon-ink: #d3a7f5; --dose-icon-fill: #493259; }
+.dark .dose-field-icon[data-tone="teal"] { --dose-icon-ink: #7dddd5; --dose-icon-fill: #194543; }
+.dark .dose-field-icon[data-tone="amber"] { --dose-icon-ink: #edc17c; --dose-icon-fill: #4b3820; }
+
+.dose-form-saved-choice,
+.dose-form-amounts .list-group {
+    transition: background-color 220ms ease, border-color 220ms ease;
+}
+
+.dose-form-saved-choice[data-fill-feedback] {
+    background-color: var(--c-accent-container);
+}
+
+.dose-form-amounts[data-fill-feedback] .list-group {
+    border-color: var(--c-accent);
+}
+
+.dose-form-amounts[data-fill-feedback] .dose-stepper {
+    background-color: color-mix(in srgb, var(--c-accent-container) 55%, transparent);
+}
+
+/* Alternate names let repeated taps replay without replacing live fields. */
+.dose-form-saved-choice[data-fill-feedback="a"] .list-row-check {
+    animation: dose-choice-confirm-a 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dose-form-saved-choice[data-fill-feedback="b"] .list-row-check {
+    animation: dose-choice-confirm-b 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes dose-choice-confirm-a {
+    0% { transform: scale(0.7); opacity: 0.5; }
+    65% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+@keyframes dose-choice-confirm-b {
+    0% { transform: scale(0.7); opacity: 0.5; }
+    65% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); }
+}
+
+.dose-form-save[aria-busy="true"] {
+    cursor: progress;
+}
+
+.dose-form-saving {
+    display: inline-block;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: dose-save-spin 700ms linear infinite;
+}
+
+@keyframes dose-save-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dose-form-saved-choice,
+    .dose-form-amounts .list-group {
+        transition: none;
+    }
+
+    .dose-form-saved-choice[data-fill-feedback] .list-row-check,
+    .dose-form-saving {
+        animation: none;
+    }
+}

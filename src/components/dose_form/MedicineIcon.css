@@ -1,0 +1,45 @@
+.medicine-choice-icon {
+    --medicine-ink: var(--medicine-ink-light);
+    --medicine-fill: var(--medicine-fill-light);
+    --medicine-accent: var(--medicine-accent-light);
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    color: var(--medicine-ink);
+    background: var(--medicine-fill);
+}
+
+.dark .medicine-choice-icon {
+    --medicine-ink: var(--medicine-ink-dark);
+    --medicine-fill: var(--medicine-fill-dark);
+    --medicine-accent: var(--medicine-accent-dark);
+}
+
+.medicine-choice-icon .cadence-icon {
+    zoom: 1;
+}
+
+.medicine-choice-icon circle {
+    fill: var(--medicine-fill);
+}
+
+.medicine-choice-icon circle:nth-of-type(2) {
+    fill: var(--medicine-accent);
+    stroke: var(--medicine-accent);
+}
+
+.select-value-icon .medicine-choice-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+}
+
+.medicine-choice-icon-estradiol img {
+    display: block;
+    width: 78%;
+    height: 78%;
+    object-fit: contain;
+}

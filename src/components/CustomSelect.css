@@ -1,0 +1,65 @@
+.cadence-select-trigger .list-row-chevron svg {
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.cadence-select-trigger[aria-expanded="true"] .list-row-chevron svg {
+    transform: rotate(180deg);
+}
+
+/* Keep the options mounted so both directions can follow their natural height. */
+.cadence-select-choices {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        grid-template-rows 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        opacity 160ms ease,
+        visibility 0s linear 240ms;
+}
+
+.cadence-select-choices[data-open="true"] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+}
+
+.cadence-select-choices-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.cadence-select-picked,
+.cadence-select-choice-picked[aria-checked="true"] .list-row-leading {
+    animation: cadence-select-pick 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.cadence-select-choice-picked[aria-checked="true"] .list-row-check path {
+    animation: cadence-select-check 220ms ease-out;
+    stroke-dasharray: 28;
+}
+
+@keyframes cadence-select-pick {
+    0% { transform: scale(0.9); }
+    55% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes cadence-select-check {
+    from { stroke-dashoffset: 28; }
+    to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cadence-select-trigger .list-row-chevron svg,
+    .cadence-select-choices {
+        transition: none;
+    }
+
+    .cadence-select-picked,
+    .cadence-select-choice-picked[aria-checked="true"] .list-row-leading,
+    .cadence-select-choice-picked[aria-checked="true"] .list-row-check path {
+        animation: none;
+    }
+}

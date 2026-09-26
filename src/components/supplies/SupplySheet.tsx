@@ -4,7 +4,10 @@ import { useTranslation } from '../../contexts/LanguageContext';
 import { useDialog } from '../../contexts/DialogContext';
 import type { Schedule, SupplyItem, SupplyKind, SupplyLink, SupplyUnit } from '../../types/routine';
 import { Button, ListGroup, ListRow, SegmentedControl } from '../ui';
-import { Check } from '../icons';
+import { Calendar, Check, Delete, Edit, Gauge, Link, Off, Supplies } from '../icons';
+import { LabelIcon } from '../ui/LabelIcon';
+import { MedicineIcon } from '../dose_form/MedicineIcon';
+import { RouteChoiceIcon } from '../dose_form/shared';
 import { SecondaryPage } from '../ui/SecondaryPage';
 import {
     DEFAULT_REORDER_LEAD_DAYS,
@@ -13,6 +16,7 @@ import {
     defaultUnit,
     supplyLinkKey,
     supplyLinkOptions,
+    supplyIcon,
     unitLabel,
 } from './shared';
 import { inline } from '../today/format';
@@ -47,6 +51,9 @@ const NAMED_PLACEHOLDER = new Set<SupplyKind>(['tablets', 'patches', 'gel', 'nee
 
 const LEAD_WEEKS = [1, 2, 3] as const;
 const CHECK = <Check size={22} />;
+const KIND_TONE = {
+    vial: 'blue', tablets: 'purple', patches: 'green', gel: 'teal', needles: 'orange', other: 'muted',
+} as const;
 
 const newId = (): string =>
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -138,7 +145,9 @@ export function SupplySheet({ mode, item, events, schedules, onSave, onDelete, o
 
     const amountField = (
         <div className="flex flex-col gap-2">
-            <label htmlFor={amountId} className="list-group-header">{t('supplies.amount')}</label>
+            <label htmlFor={amountId} className="list-group-header flex items-center gap-2">
+                <LabelIcon icon={Supplies} tone="teal" size={18} />{t('supplies.amount')}
+            </label>
             <div className="flex items-center gap-3">
                 <input
                     id={amountId}
@@ -177,12 +186,14 @@ export function SupplySheet({ mode, item, events, schedules, onSave, onDelete, o
                             <>
                                 <ListGroup header={t('supplies.kind')} selection="single" checkIcon={CHECK}>
                                     {SUPPLY_KINDS.map(k => (
-                                        <ListRow key={k} title={t(`supplies.kind.${k}`)} selected={kind === k} onClick={() => pickKind(k)} />
+                                        <ListRow key={k} leading={<LabelIcon icon={supplyIcon(k)} tone={KIND_TONE[k]} />} title={t(`supplies.kind.${k}`)} selected={kind === k} onClick={() => pickKind(k)} />
                                     ))}
                                 </ListGroup>
 
                                 <div className="flex flex-col gap-2">
-                                    <label htmlFor={nameId} className="list-group-header">{t('supplies.name')}</label>
+                                    <label htmlFor={nameId} className="list-group-header flex items-center gap-2">
+                                        <LabelIcon icon={Edit} tone="blue" size={18} />{t('supplies.name')}
+                                    </label>
                                     <input
                                         id={nameId}
                                         type="text"
@@ -199,7 +210,9 @@ export function SupplySheet({ mode, item, events, schedules, onSave, onDelete, o
 
                                 {strength && (
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor={strengthId} className="list-group-header">{t(strength.key)}</label>
+                                        <label htmlFor={strengthId} className="list-group-header flex items-center gap-2">
+                                            <LabelIcon icon={Gauge} tone="purple" size={18} />{t(strength.key)}
+                                        </label>
                                         <div className="flex items-center gap-3">
                                             <input
                                                 id={strengthId}
@@ -218,10 +231,15 @@ export function SupplySheet({ mode, item, events, schedules, onSave, onDelete, o
                                 )}
 
                                 <ListGroup header={t('supplies.link')} footer={t('supplies.link_footer')} selection="single" checkIcon={CHECK}>
-                                    <ListRow title={t('supplies.link.none')} selected={currentLinkKey === 'none'} onClick={() => setLink(null)} />
+                                    <ListRow leading={<span className="grid h-9 w-9 place-items-center"><LabelIcon icon={Off} tone="muted" /></span>} title={t('supplies.link.none')} selected={currentLinkKey === 'none'} onClick={() => setLink(null)} />
                                     {linkOptions.map(opt => (
                                         <ListRow
                                             key={opt.key}
+                                            leading={opt.link.ester
+                                                ? <MedicineIcon ester={opt.link.ester} />
+                                                : opt.link.route
+                                                    ? <RouteChoiceIcon route={opt.link.route} />
+                                                    : <span className="grid h-9 w-9 place-items-center"><LabelIcon icon={Link} tone="blue" /></span>}
                                             title={opt.label}
                                             selected={currentLinkKey === opt.key}
                                             onClick={() => setLink(opt.link)}
@@ -233,6 +251,7 @@ export function SupplySheet({ mode, item, events, schedules, onSave, onDelete, o
                                     {LEAD_WEEKS.map(w => (
                                         <ListRow
                                             key={w}
+                                            leading={<LabelIcon icon={Calendar} tone="orange" />}
                                             title={t(`supplies.reorder_lead.${w}`)}
                                             selected={leadDays === w * 7}
                                             onClick={() => setLeadDays(w * 7)}
@@ -243,11 +262,13 @@ export function SupplySheet({ mode, item, events, schedules, onSave, onDelete, o
                         )}
 
                         <Button type="submit" variant="primary" block>
+                            <Check size={20} />
                             {t('btn.save')}
                         </Button>
 
                         {mode === 'edit' && base && onDelete && (
                             <Button variant="destructive" block onClick={handleDelete}>
+                                <Delete size={20} />
                                 {t('supplies.delete')}
                             </Button>
                         )}

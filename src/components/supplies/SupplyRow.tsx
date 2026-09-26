@@ -3,7 +3,7 @@ import { useTranslation } from '../../contexts/LanguageContext';
 import type { Schedule, SupplyItem } from '../../types/routine';
 import type { SupplyForecast } from '../../utils/supplies';
 import { Button, ListRow } from '../ui';
-import { Attention } from '../icons';
+import { Attention, Reorder } from '../icons';
 import { fmt } from '../today/format';
 import { SupplyBar, SupplyTile, supplyDate, supplyFraction, supplySubLine, supplyTone } from './shared';
 
@@ -92,6 +92,7 @@ export function SupplyAttentionPanel({ item, forecast, onUpdateAmount, showBody 
             {onUpdateAmount && (
                 <div>
                     <Button variant="secondary" compact onTint onClick={() => onUpdateAmount(item)}>
+                        <Reorder size={20} />
                         {t('supplies.update_amount')}
                     </Button>
                 </div>

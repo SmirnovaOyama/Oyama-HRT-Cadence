@@ -1,5 +1,6 @@
 import React from 'react';
-import { Check } from '../components/icons';
+import { Check, Sliders, Timeline, ActivityLog, Off, Rewind } from '../components/icons';
+import { LabelIcon } from '../components/ui/LabelIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 import { CalibrationMethod, CalibrationHistoryMode, CalibrationResult } from '../../logic';
 import { BackHeader, ListGroup, ListRow, Switch } from '../components/ui';
@@ -79,6 +80,7 @@ export const CalibrationChoices: React.FC<{
                 {METHOD_ORDER.map(m => (
                     <ListRow
                         key={m}
+                        leading={<LabelIcon icon={m === 'mipd' ? Sliders : m === 'ou_kalman' ? Timeline : m === 'ekf' ? ActivityLog : Off} tone={m === 'off' ? 'muted' : m === 'mipd' ? 'teal' : m === 'ou_kalman' ? 'blue' : 'purple'} />}
                         title={<span className="block truncate">{methodName(m, t)}</span>}
                         sub={
                             <span className="block truncate">
@@ -99,6 +101,7 @@ export const CalibrationChoices: React.FC<{
             {method !== 'off' && (
                 <ListGroup footer={<span id="cal-past-footer">{t('tests.past_footer')}</span>}>
                     <ListRow
+                        leading={<LabelIcon icon={Rewind} tone="blue" />}
                         title={<span id="cal-past-title" className="block truncate">{t('tests.past')}</span>}
                         trailing={
                             <Switch

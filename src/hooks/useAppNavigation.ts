@@ -60,7 +60,7 @@ export const useAppNavigation = () => {
     // Reset scroll when switching views
     useEffect(() => {
         const el = mainScrollRef.current;
-        if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+        if (el) el.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
     }, [currentView]);
 
     return {

@@ -3,6 +3,8 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { DoseEvent, LabResult } from '../../logic';
 import { exportToCSV, exportToPDF } from '../services/export';
 import { Button, ListGroup, ListRow, Switch } from './ui';
+import { Check, Copy, Export, Lock, Summary, Timeline } from './icons';
+import { LabelIcon } from './ui/LabelIcon';
 import { Field, Note, Panel, PasswordInput } from '../pages/account/shared';
 
 interface ExportSectionProps {
@@ -73,13 +75,15 @@ const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, hasBa
     }
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 [&_.list-sep-icon]:ms-[48px]">
             <section className="flex flex-col gap-6">
                 <ListGroup
                     header={t('account.export.backup_header')}
                     footer={encrypt ? t('account.export.encrypt_sub') : undefined}
                 >
                     <ListRow
+                        className="min-h-[52px]"
+                        leading={<LabelIcon icon={Lock} tone="teal" />}
                         title={<span id={encryptLabelId}>{t('account.export.encrypt')}</span>}
                         trailing={
                             <Switch
@@ -108,6 +112,7 @@ const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, hasBa
                 )}
 
                 <Button variant="primary" block onClick={handleSave}>
+                    <Export size={20} />
                     {t('account.export.save')}
                 </Button>
 
@@ -122,9 +127,11 @@ const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, hasBa
                         </p>
                         <div className="flex items-center gap-3">
                             <Button variant="secondary" compact onTint onClick={handleCopyPassword}>
+                                {copied ? <Check size={20} /> : <Copy size={20} />}
                                 {copied ? t('account.copied') : t('btn.copy')}
                             </Button>
                             <Button variant="plain" onClick={() => setGeneratedPassword(null)}>
+                                <Check size={20} />
                                 {t('account.done')}
                             </Button>
                         </div>
@@ -135,17 +142,23 @@ const ExportSection: React.FC<ExportSectionProps> = ({ events, labResults, hasBa
             <ListGroup header={t('account.export.other')}>
                 {onQuickExport && (
                     <ListRow
+                        className="min-h-[52px]"
+                        leading={<LabelIcon icon={jsonCopied ? Check : Copy} tone={jsonCopied ? 'green' : 'blue'} />}
                         title={t('account.export.copy')}
                         value={jsonCopied ? t('account.copied') : undefined}
                         onClick={handleCopyJson}
                     />
                 )}
                 <ListRow
+                    className="min-h-[52px]"
+                    leading={<LabelIcon icon={Timeline} tone="green" />}
                     title={t('account.export.csv')}
                     disabled={!hasReportData}
                     onClick={handleCsvExport}
                 />
                 <ListRow
+                    className="min-h-[52px]"
+                    leading={<LabelIcon icon={Summary} tone="purple" />}
                     title={t('account.export.pdf')}
                     disabled={!hasReportData}
                     onClick={() => exportToPDF({ events, labResults, weight, lang, t })}

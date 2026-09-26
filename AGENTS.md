@@ -34,6 +34,10 @@ Older translation packs are retained as source reference; new UI strings require
 Use a separate localhost port and synthetic records for browser checks; do not overwrite the user's existing browser data.
 
 Latest owner update (2026-09-25): simple option selectors use dropdowns that expand in place,
-not secondary pages. Selecting an option closes the dropdown and retains the form draft.
+not secondary pages. Selecting an option retains the form draft. Latest owner update (2026-09-26): keep the
+dropdown open after selection; close it only with its trigger or Escape.
 This overrides the older requirement to put simple choices on secondary pages; keep substantial
 forms and confirmations on their existing pages.
+
+Latest owner icon update (2026-09-25): use simpler original outline glyphs across the app,
+keeping Today exactly as approved. Follow the revised `design/cadence/icons/grammar.md`.

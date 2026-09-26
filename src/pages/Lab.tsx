@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BloodDrop, ChevronRight } from '../components/icons';
+import { BloodDrop, ChevronRight, Plus, Delete, Sliders } from '../components/icons';
+import { LabelIcon } from '../components/ui/LabelIcon';
 import {
     CalibrationHistoryMode, CalibrationMethod, CalibrationPoint, CalibrationResult, DoseEvent, LabResult, Route,
     convertToNgDl, convertToPgMl, getHormoneLevelAdvisory, isTestosteroneEster, isT_LabUnit,
@@ -338,19 +339,20 @@ const Lab: React.FC<LabProps> = ({
        `display: contents` below xl so their children join one flex column. */
     return (
         <div className="relative pb-32">
-            <div className="w-full max-w-2xl px-4 md:px-8 xl:max-w-[1120px]">
+            <div className="w-full max-w-2xl px-4 md:px-8 xl:max-w-none">
                 <PageHeader
                     title={t('tests.page_title')}
                     trailing={
                         <Button variant="secondary" compact onClick={() => setIsQuickAddLabOpen(true)}>
+                            <Plus size={18} />
                             {t('tests.add')}
                         </Button>
                     }
                 />
 
-                <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-start xl:gap-x-12">
+                <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-start xl:gap-x-6">
                     {/* Left column: lead, chart, how the curve is adjusted. */}
-                    <div className="contents xl:flex xl:flex-col xl:gap-8">
+                    <div className="contents xl:flex xl:flex-col xl:gap-6">
                         {(lead || hormoneAdvisory) && (
                             <div className="order-1 flex flex-col gap-3">
                                 {lead && <Lead detail={lead.second}>{lead.first}</Lead>}
@@ -385,6 +387,7 @@ const Lab: React.FC<LabProps> = ({
                                     <ListGroup chevronIcon={<ChevronRight size={16} />}>
                                         <ListRow
                                             title={t('tests.cal_title')}
+                                            leading={<LabelIcon icon={Sliders} tone="teal" />}
                                             value={methodName(calibrationMethod, t)}
                                             drillIn
                                             onClick={onOpenCalibrationSettings}
@@ -397,7 +400,7 @@ const Lab: React.FC<LabProps> = ({
 
                     {/* Right column: results, then the settings rows and the
                         destructive group at the very bottom. */}
-                    <div className="contents xl:flex xl:flex-col xl:gap-8">
+                    <div className="contents xl:flex xl:flex-col xl:gap-6">
                         {sorted.length > 0 && (
                             <Section title={t('tests.results')} className="order-3">
                                 <ListGroup>
@@ -454,6 +457,7 @@ const Lab: React.FC<LabProps> = ({
                             >
                                 <ListRow
                                     title={t('tests.advanced')}
+                                    leading={<LabelIcon icon={Sliders} tone="teal" />}
                                     sub={t(pkCustomized ? 'tests.advanced_sub_custom' : 'tests.advanced_sub')}
                                     drillIn
                                     onClick={onOpenPKParams}
@@ -468,7 +472,7 @@ const Lab: React.FC<LabProps> = ({
                                     ? t('tests.delete_all_note_one')
                                     : t('tests.delete_all_note').replace('{n}', String(labResults.length))}
                             >
-                                <ListRow tone="destructive" title={t('tests.delete_all')} onClick={onClearLabResults} />
+                                <ListRow tone="destructive" title={<span className="field-label"><Delete size={20} />{t('tests.delete_all')}</span>} onClick={onClearLabResults} />
                             </ListGroup>
                         )}
                     </div>

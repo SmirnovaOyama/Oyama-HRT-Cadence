@@ -1,3 +1,15 @@
+.dose-stepper {
+    transition: background-color 220ms ease;
+}
+
+.dose-stepper[data-adjusting="true"] {
+    background-color: color-mix(in srgb, var(--c-accent-container) 45%, transparent);
+}
+
+.dose-stepper[data-adjusting="true"] .dose-stepper-number-new {
+    color: var(--c-accent);
+}
+
 .dose-stepper .stepper-action > span {
     transition: background-color var(--duration-quick) var(--ease-standard),
                 transform 120ms ease-out;
@@ -51,6 +63,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .dose-stepper {
+        transition: none;
+    }
     .dose-stepper .stepper-action > span {
         transition: none;
     }

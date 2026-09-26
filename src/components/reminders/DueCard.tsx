@@ -4,6 +4,7 @@ import { useHRTMode } from '../../contexts/HRTModeContext';
 import type { DueItem } from '../../utils/reminders';
 import type { LogDosePrefill } from '../today/ComingUp';
 import { Button } from '../ui';
+import { Log, Skip, Snooze } from '../icons';
 import { fmt, formatTime, relativeTime } from '../today/format';
 import { ScheduleTile, scheduleTitle } from './format';
 
@@ -59,17 +60,21 @@ export const DueCard: React.FC<DueCardProps> = ({ item, nowMs, onLog, onSnooze, 
                 From md: one row, buttons at their natural width on the right. */}
             <div className="mt-4 flex gap-3 md:mt-0 md:flex-none md:items-center">
                 <Button compact className="flex-1 basis-0 md:flex-none md:basis-auto" onClick={log}>
+                    <Log size={20} />
                     {t('reminders.due.log')}
                 </Button>
                 <Button variant="secondary" compact className="flex-1 basis-0 md:flex-none md:basis-auto" onClick={() => onSnooze(item, 60)}>
+                    <Snooze size={20} />
                     {t('reminders.due.snooze')}
                 </Button>
                 <Button variant="plain" compact className="hidden md:inline-flex" onClick={() => onSkip(item)}>
+                    <Skip size={20} />
                     {t('reminders.due.skip')}
                 </Button>
             </div>
             <div className="mt-1 flex justify-center md:hidden">
                 <Button variant="plain" compact onClick={() => onSkip(item)}>
+                    <Skip size={20} />
                     {t('reminders.due.skip')}
                 </Button>
             </div>

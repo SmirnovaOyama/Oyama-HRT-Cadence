@@ -1,6 +1,6 @@
 import React from 'react';
 import { Route, Ester, ExtraKey } from '../../../logic';
-import { Injection, Tablet, Sublingual, Gel, Patch } from '../icons';
+import { Injection, Tablet, Sublingual, Gel, Patch, Plus, Minus } from '../icons';
 import type { Lang } from '../../i18n/translations';
 import { joinList } from '../../i18n/listSeparator';
 import { LOCALE_MAP } from '../../utils/helpers';
@@ -40,6 +40,18 @@ export const RouteIcon: React.FC<{ route: Route; size?: number }> = ({ route, si
     const Icon = ROUTE_ICON[route] ?? Injection;
     return <Icon size={size} />;
 };
+
+/** Color-coded route choices, with explicit on/off marks for patches. */
+export const RouteChoiceIcon: React.FC<{ route: Route }> = ({ route }) => (
+    <span aria-hidden="true" data-route={route} className="route-choice-icon">
+        <RouteIcon route={route} size={23} />
+        {(route === Route.patchApply || route === Route.patchRemove) && (
+            <span className="route-choice-mark">
+                {route === Route.patchApply ? <Plus size={11} /> : <Minus size={11} />}
+            </span>
+        )}
+    </span>
+);
 
 /** 40px icon tile for list rows: hormones in the accent tint, the
  *  anti-androgen in the second (purple) tint, like the board. */

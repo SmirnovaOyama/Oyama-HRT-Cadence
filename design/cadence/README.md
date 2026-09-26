@@ -10,7 +10,7 @@ Current implementation and verification boundaries are recorded in [implementati
 
 0. `spec/format_rules.md`: row density and page structure, including the owner's 2026-09-24 preference to minimise small section headings. It overrides the boards' row layouts: one-line titles, a value OR a short sub-line (never both), explanations in group footers, no icon tiles in settings lists, destructive actions in their own group, and no redundant group headers.
 1. `boards/*.dc.html`: the final artboards. When a spec disagrees with a board, the board wins unless a later owner rule below overrides it. The boards are self-contained HTML with inline styles, so exact values can be read straight from them.
-2. `icons/icons.json` and `icons/grammar.md`: the original icon set (61 icons) and its construction rules. Each value in `icons.json` is the inner markup of `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">`. The stroke width follows optical sizing: 1.75 at 22px and up, 2 at 18–21px, 2.25 below 18px.
+2. `icons/icons.json` and `icons/grammar.md`: the original icon set (104 icons) and its construction rules. Each value in `icons.json` is the inner markup of `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">`. The stroke width follows optical sizing: 1.75 at 22px and up, 2 at 18–21px, 2.25 below 18px.
 3. `spec/typescale.md`: type sizes (revision 2). Mobile uses Apple HIG sizes (body 17, secondary 15, 13 only for chart ticks and tab labels). Desktop is about 1.1× that.
 4. `spec/fonts_buttons_v2.md`: Apple system fonts and the control system. Revision 6 records the owner's capsule-control update and lighter treatment, overriding older control shapes and weights.
 5. `spec/listview_v3.md`: choosers are iOS-style inset grouped lists.
@@ -38,6 +38,17 @@ Current implementation and verification boundaries are recorded in [implementati
 - The pixel cat is the app's real sprite from `src/components/PixelCat.tsx`, with its colours from `src/index.css`. Never redraw it.
 
 Latest owner update (2026-09-25): simple option selectors use dropdowns that expand in place,
-not secondary pages. Selecting an option closes the dropdown and retains the form draft.
+not secondary pages. Selecting an option retains the form draft. Latest owner update (2026-09-26): keep the
+dropdown open after selection; close it only with its trigger or Escape.
 This overrides the older requirement to put simple choices on secondary pages; keep substantial
 forms and confirmations on their existing pages.
+
+Latest owner update (2026-09-25): use the revised simple outline icon set; preserve Today exactly.
+The current drawing rules are in `icons/grammar.md`.
+
+Latest owner update (2026-09-26): make interactions more colorful and fluid. Use brief press responses,
+smooth inline expansion and selection feedback, and clear save confirmations. Keep motion tied to actions,
+respect reduced motion, preserve drafts and immediate data updates, and retain the no-shadow/no-gradient rule.
+The same update requests icons throughout forms, actions, settings, reminders, supplies and sharing.
+Use the existing original glyphs with visible labels, colorful medicine/route tiles, and compact colored
+outline glyphs for ordinary settings and field labels. Preserve the approved Today glyph and pixel cat.

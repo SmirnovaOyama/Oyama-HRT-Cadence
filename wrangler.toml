@@ -1,4 +1,6 @@
-name = "hrt-tracker"
+name = "oyama-cadence"
+account_id = "2a8b6ee5071959802fb468c90929e518"
+workers_dev = true
 main = "worker.ts"
 compatibility_date = "2025-12-04"
 compatibility_flags = ["nodejs_compat"]
@@ -20,12 +22,12 @@ head_sampling_rate = 1
 
 [[d1_databases]]
 binding = "DB"
-database_name = "hrt-tracker-prod"
-database_id = "916011c6-3b95-4116-a10e-76af94496170"
+database_name = "oyama-cadence-db"
+database_id = "13fabbb3-8b1f-4453-abc7-f6b9e6701f26"
 
 [[r2_buckets]]
 binding = "AVATAR_BUCKET"
-bucket_name = "mahiro-contents"
+bucket_name = "oyama-cadence-avatars"
 
 # Housekeeping (dead sessions, expired share payloads) — see `scheduled()` in worker.ts.
 [triggers]
@@ -36,25 +38,25 @@ crons = ["17 */6 * * *"]
 # share a bucket. `namespace_id` only has to be unique within this account.
 [[ratelimits]]
 name = "RL_PER_MINUTE_10"
-namespace_id = "1010"
+namespace_id = "251010"
 simple = { limit = 10, period = 60 }
 
 [[ratelimits]]
 name = "RL_PER_MINUTE_20"
-namespace_id = "1020"
+namespace_id = "251020"
 simple = { limit = 20, period = 60 }
 
 [[ratelimits]]
 name = "RL_PER_MINUTE_30"
-namespace_id = "1030"
+namespace_id = "251030"
 simple = { limit = 30, period = 60 }
 
 [[ratelimits]]
 name = "RL_PER_MINUTE_60"
-namespace_id = "1060"
+namespace_id = "251060"
 simple = { limit = 60, period = 60 }
 
 [[ratelimits]]
 name = "RL_PER_MINUTE_300"
-namespace_id = "1300"
+namespace_id = "251300"
 simple = { limit = 300, period = 60 }

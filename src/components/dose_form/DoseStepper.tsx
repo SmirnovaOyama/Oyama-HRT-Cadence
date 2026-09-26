@@ -78,7 +78,7 @@ const DoseStepper: React.FC<DoseStepperProps> = ({ value, onChange, step, min = 
     const width = `calc(${Math.max(2, shown.length)}ch + 6px)`;
 
     return (
-        <div role="group" aria-label={label} className="dose-stepper flex items-center gap-3 px-4 py-3">
+        <div role="group" aria-label={label} className="dose-stepper flex items-center gap-3 px-4 py-3" data-adjusting={motion ? 'true' : undefined}>
             <Button
                 variant="icon"
                 aria-label={t('log.less')}

@@ -6,6 +6,8 @@ import { Switch } from '../ui';
 import AmountSection, { AmountBasis } from './AmountSection';
 import DoseStepper from './DoseStepper';
 import { GroupHeader, ListSep } from './shared';
+import { Clock } from '../icons';
+import { DoseFieldLabel } from './DoseFieldIcon';
 
 interface SublingualFieldsProps {
     ester: Ester;
@@ -80,7 +82,7 @@ const SublingualFields: React.FC<SublingualFieldsProps> = ({
             />
 
             <section>
-                <GroupHeader>{t('log.sl_header')}</GroupHeader>
+                <GroupHeader><DoseFieldLabel icon={Clock}>{t('log.sl_header')}</DoseFieldLabel></GroupHeader>
                 <div className="list-group">
                     {useCustomTheta ? (
                         <DoseStepper

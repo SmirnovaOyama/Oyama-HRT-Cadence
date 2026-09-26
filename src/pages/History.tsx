@@ -1,7 +1,10 @@
+import type { QuickDose } from '../components/dose_form/QuickDoseButtons';
+import { ShareButton } from '../components/ui/ShareButton';
+import { LabelIcon } from '../components/ui/LabelIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
-    Check, ChevronDown, ChevronRight, Gel, Injection, Patch, Plus, Select, Share, Sublingual, Tablet,
+    Check, ChevronDown, ChevronRight, Close, Delete, Gel, Injection, Patch, Plus, Repeat, Select, Sublingual, Tablet,
     type IconComponent,
 } from '../components/icons';
 import {
@@ -16,6 +19,7 @@ import { joinList } from '../i18n/listSeparator';
 import type { Lang } from '../i18n/translations';
 import type { AppTheme } from '../constants';
 import DoseForm from '../components/DoseForm';
+import CustomSelect from '../components/CustomSelect';
 import DoseHeatmap, { makeDayFormatter } from '../components/DoseHeatmap';
 import ResultChart from '../components/ResultChart';
 import PixelCat from '../components/PixelCat';
@@ -149,6 +153,9 @@ interface HistoryProps {
     isQuickAddOpen: boolean;
     setIsQuickAddOpen: (isOpen: boolean) => void;
     doseTemplates: DoseTemplate[];
+    quickDoses: QuickDose[];
+    onAddQuickDose: (dose: QuickDose) => void;
+    onDeleteQuickDose: (id: string) => void;
     onSaveEvent: (e: DoseEvent) => void;
     onDeleteEvent: (id: string) => void;
     onAddEvents: (events: DoseEvent[]) => void;
@@ -178,6 +185,9 @@ const History: React.FC<HistoryProps> = ({
     isQuickAddOpen,
     setIsQuickAddOpen,
     doseTemplates,
+    quickDoses,
+    onAddQuickDose,
+    onDeleteQuickDose,
     onSaveEvent,
     onDeleteEvent,
     onAddEvents,
@@ -206,7 +216,6 @@ const History: React.FC<HistoryProps> = ({
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [filter, setFilter] = useState<Filter>('all');
-    const [filterOpen, setFilterOpen] = useState(false);
     const [dayLimit, setDayLimit] = useState(DAYS_PER_PAGE);
 
     // Batch add: repeat the quick-add dose at a fixed interval.
@@ -380,18 +389,19 @@ const History: React.FC<HistoryProps> = ({
        one flex column. */
     return (
         <div className="relative pb-32">
-            <div className="w-full max-w-2xl px-4 md:px-8 xl:max-w-[1120px]">
+            <div className="w-full max-w-2xl px-4 md:px-8 xl:max-w-none">
                 <PageHeader
                     title={t('timeline.page_title')}
                     subtitle={selectMode ? t('timeline.selected_n').replace('{n}', String(selectedIds.size)) : undefined}
+                    className={selectMode ? undefined : `items-center flex-wrap gap-y-2 [&>div:last-child]:gap-2 ${totalRecords > 0 || onNavigateToShare ? '[&>div:last-child]:w-full [&>div:last-child]:justify-start sm:[&>div:last-child]:w-auto' : ''}`}
                     trailing={selectMode ? (
-                        <Button variant="plain" onClick={exitSelectMode}>{t('btn.cancel')}</Button>
+                        <Button variant="plain" onClick={exitSelectMode}><Close size={18} />{t('btn.cancel')}</Button>
                     ) : (
                         <>
                             {onNavigateToShare && (
-                                <Button variant="icon" aria-label={t('timeline.share')} onClick={onNavigateToShare}>
-                                    <Share size={22} />
-                                </Button>
+                                <ShareButton onClick={onNavigateToShare}>
+                                    {t('timeline.share')}
+                                </ShareButton>
                             )}
                             {totalRecords > 0 && (
                                 <Button variant="icon" aria-label={t('timeline.select')} onClick={enterSelectMode}>
@@ -401,10 +411,11 @@ const History: React.FC<HistoryProps> = ({
                             <Button
                                 variant="secondary"
                                 compact
+                                className="px-4 text-sm sm:text-base"
                                 aria-expanded={isQuickAddOpen}
                                 onClick={() => setIsQuickAddOpen(!isQuickAddOpen)}
                             >
-                                {isQuickAddOpen ? t('btn.cancel') : (<><Plus size={20} />{t('timeline.add_dose')}</>)}
+                                {isQuickAddOpen ? <><Close size={18} />{t('btn.cancel')}</> : (<><Plus size={18} />{t('timeline.add_dose')}</>)}
                             </Button>
                         </>
                     )}
@@ -414,22 +425,24 @@ const History: React.FC<HistoryProps> = ({
             {/* Select mode actions stay in reach while the list scrolls. */}
             {selectMode && (
                 <div className="sticky top-0 z-20 border-b border-[var(--c-hairline)] bg-[var(--c-paper)]">
-                    <div className="flex w-full max-w-2xl items-center justify-between gap-3 px-4 py-1 md:px-8 xl:max-w-[1120px]">
+                    <div className="flex w-full max-w-2xl items-center justify-between gap-3 px-4 py-1 md:px-8 xl:max-w-none">
                         <Button variant="plain" onClick={toggleSelectAll} disabled={filteredEvents.length === 0}>
+                            <Select size={18} />
                             {t('timeline.select_all')}
                         </Button>
                         <Button variant="destructive" onClick={handleDeleteSelected} disabled={!selectedIds.size}>
+                            <Delete size={18} />
                             {selectedIds.size ? t('timeline.delete_n').replace('{n}', String(selectedIds.size)) : t('btn.delete')}
                         </Button>
                     </div>
                 </div>
             )}
 
-            <div className="w-full max-w-2xl px-4 md:px-8 xl:max-w-[1120px]">
-                <div className={`flex flex-col gap-8 ${totalRecords > 0 ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_440px] xl:items-start xl:gap-x-12' : ''}`}>
+            <div className="w-full max-w-2xl px-4 md:px-8 xl:max-w-none">
+                <div className={`flex flex-col gap-6 ${totalRecords > 0 ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start xl:gap-x-6' : ''}`}>
                     {/* Left column: the chart with its note, then the rhythm. */}
                     {totalRecords > 0 && (
-                        <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-8">
+                        <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-6">
                             {simulation !== undefined && (
                                 <div className="order-2 flex min-w-0 flex-col gap-2">
                                     <ResultChart
@@ -442,6 +455,8 @@ const History: React.FC<HistoryProps> = ({
                                         isDarkMode={isDarkMode}
                                         isMono={isMono}
                                         showTitle={false}
+                                        rangeSize="sm"
+                                        rangeClassName="w-full shrink-0 sm:w-[240px]"
                                         showCalibrationNote={false}
                                     />
                                     {adjustNote && (
@@ -472,13 +487,13 @@ const History: React.FC<HistoryProps> = ({
                     )}
 
                     {/* Right column: quick add, then the history. */}
-                    <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-8">
+                    <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-6">
                         {/* Quick add: the dose form, with batch add above it. */}
                         {isQuickAddOpen && (
                             <div className="order-1 mt-2 flex flex-col gap-4 xl:mt-0">
                                 <ListGroup footer={batchOn ? batchHint : t('timeline.batch_desc')}>
                                     <ListRow
-                                        title={<span id="timeline-batch-title" className="block truncate">{t('timeline.batch')}</span>}
+                                        title={<span id="timeline-batch-title" className="field-label"><Repeat size={20} />{t('timeline.batch')}</span>}
                                         trailing={<Switch checked={batchOn} onChange={setBatchOn} aria-labelledby="timeline-batch-title" />}
                                     />
                                     {batchOn && (
@@ -525,6 +540,9 @@ const History: React.FC<HistoryProps> = ({
                                     templates={doseTemplates}
                                     onSaveTemplate={onSaveTemplate}
                                     onDeleteTemplate={onDeleteTemplate}
+                                    quickDoses={quickDoses}
+                                    onAddQuickDose={onAddQuickDose}
+                                    onDeleteQuickDose={onDeleteQuickDose}
                                     isInline={true}
                                     events={allEvents}
                                 />
@@ -539,38 +557,16 @@ const History: React.FC<HistoryProps> = ({
                         ) : (
                             <Section title={t('timeline.history')} className="order-4">
                                 <div className="flex flex-col gap-6">
-                                    {/* Filter: a drill-in row that opens its choices in place. */}
-                                    <div className="flex flex-col gap-2">
-                                        <ListGroup chevronIcon={<ChevronRight size={16} />}>
-                                            <ListRow
-                                                title={t('timeline.filter_label')}
-                                                value={t(`timeline.filter.${filter}`)}
-                                                drillIn
-                                                aria-expanded={filterOpen}
-                                                onClick={() => setFilterOpen(o => !o)}
-                                            />
-                                        </ListGroup>
-                                        {filterOpen && (
-                                            <ListGroup
-                                                selection="single"
-                                                aria-label={t('timeline.filter_label')}
-                                                checkIcon={<Check size={22} />}
-                                            >
-                                                {FILTERS.map(f => (
-                                                    <ListRow
-                                                        key={f}
-                                                        title={t(`timeline.filter.${f}`)}
-                                                        selected={filter === f}
-                                                        onClick={() => {
-                                                            setFilter(f);
-                                                            setFilterOpen(false);
-                                                            setDayLimit(DAYS_PER_PAGE);
-                                                        }}
-                                                    />
-                                                ))}
-                                            </ListGroup>
-                                        )}
-                                    </div>
+                                    <CustomSelect
+                                        label={t('timeline.filter_label')}
+                                        value={filter}
+                                        selectedIconPosition="value"
+                                        options={FILTERS.map(value => ({ value, label: t(`timeline.filter.${value}`), icon: <LabelIcon icon={value === 'injections' ? Injection : value === 'tablets' ? Tablet : value === 'gels' ? Gel : Select} tone={value === 'injections' ? 'blue' : value === 'tablets' ? 'purple' : value === 'gels' ? 'teal' : 'muted'} /> }))}
+                                        onChange={value => {
+                                            setFilter(value as Filter);
+                                            setDayLimit(DAYS_PER_PAGE);
+                                        }}
+                                    />
 
                                     {showTodayPlaceholder && (
                                         <ListGroup header={<h3 className="m-0 truncate">{dayHeading(todayKey)}</h3>}>
@@ -615,6 +611,9 @@ const History: React.FC<HistoryProps> = ({
                                                             templates={doseTemplates}
                                                             onSaveTemplate={onSaveTemplate}
                                                             onDeleteTemplate={onDeleteTemplate}
+                                                            quickDoses={quickDoses}
+                                                            onAddQuickDose={onAddQuickDose}
+                                                            onDeleteQuickDose={onDeleteQuickDose}
                                                             isInline={true}
                                                             hideHeader={true}
                                                             events={allEvents}

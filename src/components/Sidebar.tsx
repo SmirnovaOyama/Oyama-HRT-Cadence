@@ -76,6 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <span>{t('shell.rail.log_dose')}</span>
                 </Button>
                 <Button variant="secondary" compact block onTint className="text-[17px] leading-[24px]" onClick={onAddTest} disabled={locked}>
+                    <Tests size={18} />
                     {t('shell.rail.add_test')}
                 </Button>
             </div>
@@ -92,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             disabled={locked}
                             aria-current={isActive ? 'page' : undefined}
                             aria-label={attention ? t('shell.rail.supplies_attention') : undefined}
-                            className={`flex min-h-[44px] w-full items-center gap-3 rounded-full px-4 text-left text-[17px] leading-[24px] font-medium ${isActive
+                            className={`rail-item flex min-h-[44px] w-full items-center gap-3 rounded-full px-4 text-left text-[17px] leading-[24px] font-medium ${isActive
                                 ? 'bg-[var(--c-plate-strong)] text-[var(--c-ink)]'
                                 : 'text-[var(--c-muted)] hover:text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]'
                                 } disabled:cursor-not-allowed disabled:opacity-50`}

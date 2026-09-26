@@ -3,6 +3,9 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { usePixelCats, CatStyle } from '../contexts/PixelCatContext';
 import { AppTheme } from '../constants';
 import { BackHeader, ListGroup, ListRow, Switch } from '../components/ui';
+import { Appearance, Desktop, Moon } from '../components/icons';
+import { LabelIcon } from '../components/ui/LabelIcon';
+import PixelCat from '../components/PixelCat';
 import { LIST_CHECK, YouPage } from './you/shared';
 
 interface AppearanceSettingsProps {
@@ -36,18 +39,24 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({ theme, setTheme
     const catsId = useId();
 
     return (
-        <YouPage>
+        <YouPage className="[&_.list-row-tall]:min-h-[52px]">
             <BackHeader parentLabel={t('you.title')} onBack={onBack} title={t('settings.theme')} />
 
             <div className="mt-2 flex flex-col gap-6">
-                <ListGroup selection="single" checkIcon={LIST_CHECK} aria-label={t('settings.theme')}>
+                <ListGroup className="[&_.list-sep-icon]:ms-[48px]" selection="single" checkIcon={LIST_CHECK} aria-label={t('settings.theme')}>
                     {OPTIONS.map(({ value, labelKey }) => (
-                        <ListRow key={value} title={t(labelKey)} selected={theme === value} onClick={() => setTheme(value)} />
+                        <ListRow
+                            key={value}
+                            leading={<LabelIcon icon={value === 'dark' ? Moon : value === 'system' ? Desktop : Appearance}
+                                tone={value === 'light' ? 'orange' : value === 'dark' ? 'purple' : value === 'system' ? 'blue' : 'muted'} />}
+                            title={t(labelKey)} selected={theme === value} onClick={() => setTheme(value)}
+                        />
                     ))}
                 </ListGroup>
 
                 <ListGroup footer={t('you.pixel_cats_sub')}>
                     <ListRow
+                        leading={<PixelCat size={24} force />}
                         title={<span id={catsId}>{t('settings.pixel_cats')}</span>}
                         trailing={<Switch checked={showCats} onChange={setShowCats} aria-labelledby={catsId} />}
                     />

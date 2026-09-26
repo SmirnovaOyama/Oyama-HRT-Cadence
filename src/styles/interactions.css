@@ -1,0 +1,109 @@
+/* Brief responses to deliberate actions. Never animate clinical values toward
+   their actual number, delay a save, or keep decorative motion running. */
+:root {
+    --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+    --icon-blue: #2467D2;
+    --icon-purple: #843CCA;
+    --icon-pink: #BE2877;
+    --icon-teal: #007B8C;
+    --icon-green: #347F36;
+    --icon-orange: #B75514;
+}
+
+.dark {
+    --icon-blue: #98BFFF;
+    --icon-purple: #CEAAFF;
+    --icon-pink: #FFA1D0;
+    --icon-teal: #72DCE8;
+    --icon-green: #B1DC88;
+    --icon-orange: #FFB977;
+}
+
+.label-icon { display: inline-flex; align-items: center; flex: none; color: var(--c-muted); }
+.label-icon[data-tone="blue"] { color: var(--icon-blue); }
+.label-icon[data-tone="purple"] { color: var(--icon-purple); }
+.label-icon[data-tone="pink"] { color: var(--icon-pink); }
+.label-icon[data-tone="teal"] { color: var(--icon-teal); }
+.label-icon[data-tone="green"] { color: var(--icon-green); }
+.label-icon[data-tone="orange"] { color: var(--icon-orange); }
+.label-icon .cadence-icon { zoom: 1; }
+.field-label { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Plain label glyphs keep the original compact settings density. Larger
+   medicine/route tiles and rows with subtitles retain their existing height. */
+.list-row:has(> .list-row-leading > .label-icon):not(:has(.list-row-sub)) {
+    min-height: 52px;
+}
+.list-row:has(> .list-row-leading > .label-icon) + .list-sep-icon {
+    margin-inline-start: 48px;
+}
+.list-row-has-value:has(> .list-row-leading > .label-icon) { gap: 10px; }
+.list-row-has-value:has(> .list-row-leading > .label-icon) .list-row-value {
+    min-width: min(3.5em, 35%);
+}
+
+@keyframes control-land {
+    from { scale: 0.9; }
+    65% { scale: 1.035; }
+    to { scale: 1; }
+}
+
+@keyframes feedback-check-in {
+    from { opacity: 0; transform: translateY(3px) scale(0.75); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes secondary-page-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* Opt in to motion so reduced motion is instant even on first paint. */
+@media (prefers-reduced-motion: no-preference) {
+    :is(.btn-primary, .btn-secondary, .btn-plain, .btn-destructive, .btn-icon,
+        .back-action, .date-time-trigger, .rail-item):not(.stepper-action) {
+        transition: scale 220ms var(--ease-settle),
+                    background-color 180ms var(--ease-standard),
+                    color 180ms var(--ease-standard),
+                    opacity 180ms var(--ease-standard);
+    }
+
+    :is(.btn-primary, .btn-secondary, .btn-plain, .btn-destructive,
+        .back-action, .date-time-trigger, .rail-item):active:not(:disabled):not([aria-disabled="true"]) {
+        scale: 0.975;
+        opacity: 0.94;
+        transition-duration: 80ms;
+    }
+
+    .btn-icon:not(.stepper-action):active:not(:disabled):not([aria-disabled="true"]) {
+        scale: 0.92;
+        opacity: 0.94;
+        transition-duration: 80ms;
+    }
+
+    .tabbar-pill {
+        transition: scale 240ms var(--ease-settle),
+                    background-color 200ms var(--ease-standard),
+                    color 200ms var(--ease-standard);
+    }
+    .tabbar-item:active:not(:disabled) .tabbar-pill { scale: 0.9; }
+    .tabbar-item[aria-current="page"] .tabbar-pill {
+        animation: control-land 300ms var(--ease-settle);
+    }
+
+    .list-row-check { animation: feedback-check-in 240ms var(--ease-settle); }
+
+    .secondary-page-enter { animation: secondary-page-in 300ms var(--ease-settle); }
+    .inline-picker-enter { animation: secondary-page-in 220ms var(--ease-settle); }
+    .view-enter-forward:not([hidden]), .view-enter-backward:not([hidden]) {
+        animation-duration: 280ms;
+        animation-timing-function: var(--ease-settle);
+    }
+    .disclosure:not([hidden]) { transition-duration: 280ms; transition-timing-function: var(--ease-settle); }
+
+    .switch .switch-thumb {
+        transition: transform 260ms var(--ease-settle),
+                    background-color 180ms var(--ease-standard),
+                    border-color 180ms var(--ease-standard);
+    }
+}

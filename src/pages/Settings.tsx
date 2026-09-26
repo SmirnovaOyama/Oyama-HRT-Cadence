@@ -1,6 +1,8 @@
 import React, { useId, useState } from 'react';
-import { Attention, External } from '../components/icons';
+import { Appearance, Attention, Delete, Export, External, Flask, Helix, Help, Import, Info, Link, Reminder, Share, Shield, SignIn, SignOut, Sliders, Supplies, Sync, Terminal, Weight } from '../components/icons';
 import { Button, ListGroup, ListRow, PageHeader, Switch } from '../components/ui';
+import { LabelIcon } from '../components/ui/LabelIcon';
+import PixelCat from '../components/PixelCat';
 import { Lang } from '../i18n/translations';
 import { AppTheme } from '../constants';
 import { DoseEvent, PKCustomParams } from '../../logic';
@@ -76,14 +78,16 @@ const SOURCE_REPO = 'https://github.com/SmirnovaOyama/Oyama-HRT-Cadence';
 
 /** A row whose only control is a Switch. The row's title names the switch;
  *  any explanation belongs in the group footer (format_rules.md 7). */
-function SwitchRow({ title, checked, onChange }: {
+function SwitchRow({ title, checked, onChange, icon }: {
     title: string;
     checked: boolean;
     onChange: (v: boolean) => void;
+    icon: React.ReactNode;
 }) {
     const id = useId();
     return (
         <ListRow
+            leading={icon}
             title={<span id={id}>{title}</span>}
             trailing={<Switch checked={checked} onChange={onChange} aria-labelledby={id} />}
         />
@@ -138,7 +142,7 @@ const Settings: React.FC<SettingsProps> = ({
     const danger = (text: string) => <span className="text-[var(--c-danger)]">{text}</span>;
 
     return (
-        <YouPage>
+        <YouPage className="[&_.list-row-tall]:min-h-[52px] [&_.list-sep-icon]:ms-[48px]">
             <PageHeader title={t('you.title')} />
 
             <div className="flex flex-col gap-6">
@@ -165,6 +169,7 @@ const Settings: React.FC<SettingsProps> = ({
                     <section className="flex flex-col gap-4 rounded-2xl bg-[var(--c-plate)] p-4">
                         <p className="m-0 text-base font-semibold text-[var(--c-ink)]">{t('you.signed_out_title')}</p>
                         <Button variant="primary" block onClick={signIn}>
+                            <SignIn size={20} />
                             {t('you.sign_in')}
                         </Button>
                     </section>
@@ -172,12 +177,14 @@ const Settings: React.FC<SettingsProps> = ({
 
                 <ListGroup chevronIcon={LIST_CHEVRON}>
                     <ListRow
+                        leading={<LabelIcon icon={Helix} tone="pink" />}
                         title={t('you.hrt_mode')}
                         value={t(mode === 'transfem' ? 'mode.transfem' : 'mode.transmasc')}
                         drillIn
                         onClick={onNavigateToHRTMode}
                     />
                     <ListRow
+                        leading={<LabelIcon icon={Weight} tone="teal" />}
                         title={t('you.weight')}
                         value={`${weight}\u00a0kg`}
                         drillIn
@@ -185,6 +192,7 @@ const Settings: React.FC<SettingsProps> = ({
                     />
                     {onNavigate && (
                         <ListRow
+                            leading={<LabelIcon icon={Reminder} tone="orange" />}
                             title={t('reminders.title')}
                             value={remindersValue}
                             drillIn
@@ -193,6 +201,7 @@ const Settings: React.FC<SettingsProps> = ({
                     )}
                     {onNavigate && (
                         <ListRow
+                            leading={<LabelIcon icon={Supplies} tone="green" />}
                             title={t('supplies.title')}
                             value={suppliesAttention
                                 ? (
@@ -209,29 +218,31 @@ const Settings: React.FC<SettingsProps> = ({
                 </ListGroup>
 
                 <ListGroup chevronIcon={LIST_CHEVRON}>
-                    <ListRow title={t('settings.theme')} value={t(THEME_LABEL[theme])} drillIn onClick={onNavigateToAppearance} />
+                    <ListRow leading={<LabelIcon icon={Appearance} tone="purple" />} title={t('settings.theme')} value={t(THEME_LABEL[theme])} drillIn onClick={onNavigateToAppearance} />
                 </ListGroup>
 
                 <ListGroup chevronIcon={LIST_CHEVRON}>
                     {signedIn && (
-                        <SwitchRow title={t('you.sync.switch')} checked={autoSync} onChange={setAutoSync} />
+                        <SwitchRow icon={<LabelIcon icon={Sync} tone="blue" />} title={t('you.sync.switch')} checked={autoSync} onChange={setAutoSync} />
                     )}
-                    <ListRow title={t('you.export')} drillIn onClick={onNavigateToExport} />
-                    <ListRow title={t('you.import')} drillIn onClick={onNavigateToImport} />
+                    <ListRow leading={<LabelIcon icon={Export} tone="teal" />} title={t('you.export')} drillIn onClick={onNavigateToExport} />
+                    <ListRow leading={<LabelIcon icon={Import} tone="blue" />} title={t('you.import')} drillIn onClick={onNavigateToImport} />
                     {signedIn && onNavigate && (
-                        <ListRow title={t('you.share')} drillIn onClick={() => onNavigate('share')} />
+                        <ListRow leading={<LabelIcon icon={Share} tone="purple" />} title={t('you.share')} drillIn onClick={() => onNavigate('share')} />
                     )}
                 </ListGroup>
 
                 <ListGroup footer={t('you.model_footer')} chevronIcon={LIST_CHEVRON}>
                     <ListRow
+                        leading={<LabelIcon icon={Sliders} tone="teal" />}
                         title={t('you.pk_params')}
                         value={t(pkParams ? 'pk.customized' : 'pk.default')}
                         drillIn
                         onClick={onNavigateToPKParams}
                     />
-                    <ListRow title={t('transparency.title')} drillIn onClick={onNavigateToTransparency} />
+                    <ListRow leading={<LabelIcon icon={Flask} tone="purple" />} title={t('transparency.title')} drillIn onClick={onNavigateToTransparency} />
                     <ListRow
+                        leading={<LabelIcon icon={Help} tone="blue" />}
                         title={t('you.model_explainer')}
                         trailing={<ExternalMark />}
                         onClick={() => openExternal('drawer.model_confirm', MODEL_ARTICLE)}
@@ -239,12 +250,13 @@ const Settings: React.FC<SettingsProps> = ({
                 </ListGroup>
 
                 <ListGroup chevronIcon={LIST_CHEVRON}>
-                    <ListRow title={t('settings.version')} value={appVersion} />
-                    <ListRow title={t('drawer.disclaimer')} drillIn onClick={() => setIsDisclaimerOpen(true)} />
+                    <ListRow leading={<LabelIcon icon={Info} tone="blue" />} title={t('settings.version')} value={appVersion} />
+                    <ListRow leading={<LabelIcon icon={Shield} tone="green" />} title={t('drawer.disclaimer')} drillIn onClick={() => setIsDisclaimerOpen(true)} />
                     {/* The intro only ever shows itself once, so this is the only way back
                         to it, and the only way anyone who skipped it can read it. */}
-                    <ListRow title={t('settings.show_intro')} drillIn onClick={onShowIntro} />
+                    <ListRow leading={<LabelIcon icon={Help} tone="purple" />} title={t('settings.show_intro')} drillIn onClick={onShowIntro} />
                     <ListRow
+                        leading={<LabelIcon icon={Link} tone="muted" />}
                         title={t('you.source_code')}
                         trailing={<ExternalMark />}
                         onClick={() => openExternal('drawer.github_confirm', SOURCE_REPO)}
@@ -252,12 +264,12 @@ const Settings: React.FC<SettingsProps> = ({
                 </ListGroup>
 
                 <ListGroup footer={t('you.dev_mode_footer')} chevronIcon={LIST_CHEVRON}>
-                    <SwitchRow title={t('you.dev_mode')} checked={devMode} onChange={setDevMode} />
+                    <SwitchRow icon={<LabelIcon icon={Terminal} tone="teal" />} title={t('you.dev_mode')} checked={devMode} onChange={setDevMode} />
                     {devMode && (
-                        <ListRow title={t('settings.cat_states')} drillIn onClick={onNavigateToCatStates} />
+                        <ListRow leading={<span className="inline-flex w-5 justify-center"><PixelCat size={24} force /></span>} title={t('settings.cat_states')} drillIn onClick={onNavigateToCatStates} />
                     )}
                     {devMode && (
-                        <ListRow title={t('settings.milk_tea_egg')} drillIn onClick={onNavigateToMilkTea} />
+                        <ListRow leading={<LabelIcon icon={Flask} tone="orange" />} title={t('settings.milk_tea_egg')} drillIn onClick={onNavigateToMilkTea} />
                     )}
                 </ListGroup>
 
@@ -265,23 +277,24 @@ const Settings: React.FC<SettingsProps> = ({
                     this row is the way in. */}
                 {isAdmin && (
                     <ListGroup chevronIcon={LIST_CHEVRON}>
-                        <ListRow title={t('nav.admin')} drillIn onClick={onNavigateToAdmin} />
+                        <ListRow leading={<LabelIcon icon={Shield} tone="purple" />} title={t('nav.admin')} drillIn onClick={onNavigateToAdmin} />
                     </ListGroup>
                 )}
 
                 {/* Destructive actions, each set in its own group at the bottom. */}
                 <ListGroup footer={t('you.clear_footer')}>
-                    <ListRow title={danger(t('you.clear'))} disabled={!events.length} onClick={onClearAllEvents} />
+                    <ListRow leading={<Delete size={20} className="text-[var(--c-danger)]" />} title={danger(t('you.clear'))} disabled={!events.length} onClick={onClearAllEvents} />
                 </ListGroup>
 
                 {signedIn && (
                     <ListGroup footer={onNavigate ? t('you.account.delete_footer') : undefined}>
                         <ListRow
+                            leading={<LabelIcon icon={SignOut} tone="muted" />}
                             title={<span className="text-[var(--c-ink)]">{t('you.sign_out')}</span>}
                             onClick={() => { void logout(); }}
                         />
                         {onNavigate && (
-                            <ListRow title={danger(t('you.delete_account'))} onClick={() => onNavigate('delete-account')} />
+                            <ListRow leading={<Delete size={20} className="text-[var(--c-danger)]" />} title={danger(t('you.delete_account'))} onClick={() => onNavigate('delete-account')} />
                         )}
                     </ListGroup>
                 )}

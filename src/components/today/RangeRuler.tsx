@@ -48,7 +48,7 @@ const RangeRuler: React.FC<RangeRulerProps> = ({ value, target, targetLabel, ari
             const gap = 6;
             const rightmost = Math.max(inset, w - inset - labelWidth);
             const start = (lo / 100) * w;
-            const x = Math.max(inset, Math.min(w - inset, (at / 100) * w));
+            const x = Math.max(6, Math.min(w - 6, (at / 100) * w));
             const fits = (left: number) => left >= inset && left <= rightmost &&
                 (left + labelWidth <= x - gap || left >= x + gap);
             const candidates = [start, (hi / 100) * w, x + gap, x - gap - labelWidth, inset, rightmost];
@@ -77,8 +77,8 @@ const RangeRuler: React.FC<RangeRulerProps> = ({ value, target, targetLabel, ari
                 </span>
                 <span
                     aria-hidden="true"
-                    className="absolute inset-y-[3px] w-0.5 -translate-x-1/2 rounded-full bg-[var(--c-ink)]"
-                    style={{ left: `clamp(3px, ${at}%, calc(100% - 3px))` }}
+                    className="absolute inset-y-[5px] w-0.5 -translate-x-1/2 rounded-full bg-[var(--c-ink)]"
+                    style={{ left: `clamp(6px, ${at}%, calc(100% - 6px))` }}
                 />
             </div>
             {[target.low, target.high].map((v, i) => (

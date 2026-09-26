@@ -5,7 +5,7 @@ import { useDialog } from '../contexts/DialogContext';
 import CustomSelect from './CustomSelect';
 import DateTimePicker from './DateTimePicker';
 import { Route, Ester, ExtraKey, DoseEvent, SL_TIER_ORDER, SublingualTierParams, getBioavailabilityMultiplier, getToE2Factor, getDoseAdvisory } from '../../logic';
-import { Check, ChevronRight, ChevronDown, Close, Plus, Delete, External } from './icons';
+import { Check, ChevronRight, ChevronDown, Close, Plus, Delete, External, Clock, Calendar, TemplateAdd, Repeat, Edit, Save, Gauge, Help, Tablet } from './icons';
 import { Button, ListGroup, ListRow } from './ui';
 import { DoseAdvisoryLine } from './DoseAdvisory';
 import { joinList } from '../i18n/listSeparator';
@@ -15,11 +15,13 @@ import SublingualFields from './dose_form/SublingualFields';
 import GelFields from './dose_form/GelFields';
 import PatchFields from './dose_form/PatchFields';
 import type { QuickDose } from './dose_form/QuickDoseButtons';
+import { MedicineIcon } from './dose_form/MedicineIcon';
 import type { AmountBasis } from './dose_form/AmountSection';
 import {
     GroupHeader,
     ListSep,
     RouteTile,
+    RouteChoiceIcon,
     describeAmount,
     describeDose,
     describeWhen,
@@ -35,6 +37,8 @@ import type { Schedule } from '../types/routine';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import { doseTimeForSave, toLocalMinuteString as toLocalInput } from '../utils/doseEventTime';
 import { retainedScheduleOccurrence } from '../utils/doseScheduleLink';
+import './dose_form/DoseForm.css';
+import { DoseFieldIcon, DoseFieldLabel } from './dose_form/DoseFieldIcon';
 
 export interface DoseTemplate {
     id: string;
@@ -198,6 +202,21 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     const [amountBasis, setAmountBasis] = useState<AmountBasis>('raw');
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [isDoseGuideOpen, setIsDoseGuideOpen] = useState(false);
+    const [fillFeedback, setFillFeedback] = useState<{ id: number; choice: WhatChoice } | null>(null);
+    const fillSequence = useRef(0);
+
+    // A short highlight connects a saved row with the amount it just filled.
+    // It never delays the fill or remounts the fields (and their draft state).
+    const noteSavedChoice = (choice: WhatChoice) => {
+        setWhatChoice(choice);
+        setFillFeedback({ id: ++fillSequence.current, choice });
+    };
+
+    useEffect(() => {
+        if (!fillFeedback) return;
+        const timer = window.setTimeout(() => setFillFeedback(null), 480);
+        return () => window.clearTimeout(timer);
+    }, [fillFeedback]);
 
     // Form State
     const [dateStr, setDateStr] = useState("");
@@ -550,6 +569,11 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
 
     const [isSaving, setIsSaving] = useState(false);
     const isSavingRef = useRef(false);
+    const saveRearmTimer = useRef<number | null>(null);
+
+    useEffect(() => () => {
+        if (saveRearmTimer.current !== null) window.clearTimeout(saveRearmTimer.current);
+    }, []);
 
     const handleSaveAsTemplate = () => {
         if (!templateName.trim()) {
@@ -735,13 +759,20 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             ...(scheduleOccurrence ? { scheduleOccurrence } : {}),
         };
 
-        onSave(newEvent);
+        try {
+            onSave(newEvent);
+        } catch {
+            // A rejected local save must leave the draft editable and retryable.
+            failSave(t('error.generic'));
+            return;
+        }
         // Every current mount point unmounts this form after a successful save;
         // the delayed re-arm is a safety net for any future persistent mount,
         // while still swallowing the double-click window.
-        window.setTimeout(() => {
+        saveRearmTimer.current = window.setTimeout(() => {
             isSavingRef.current = false;
             setIsSaving(false);
+            saveRearmTimer.current = null;
         }, 800);
     };
 
@@ -870,19 +901,26 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     const unitRate = t('dose.guide.unit.ug_day');
     /** One line, never wrapping next to the check: long text ends in an ellipsis. */
     const oneLine = (text: React.ReactNode) => <span className="block truncate">{text}</span>;
+    const feedbackPhase = fillFeedback ? (fillFeedback.id % 2 ? 'a' : 'b') : undefined;
+    const savedChoiceFeedback = (choice: WhatChoice) => ({
+        className: 'dose-form-saved-choice',
+        'data-fill-feedback': fillFeedback?.choice === choice ? feedbackPhase : undefined,
+    });
 
     // ── Sections ──────────────────────────────────────────────────────
-    // Route and medicine, with no tiles: the rows of this group are plain.
+    // Route and medicine choices show their glyph beside the selected value.
     const choosers = (
         <div className="list-group">
             <CustomSelect
                 bare
                 label={t('log.route_label')}
+                selectedIconPosition="value"
                 value={route}
                 onChange={(val) => setRoute(val as Route)}
                 options={ROUTE_ORDER.filter(r => availableRoutes.includes(r)).map(r => ({
                     value: r,
                     label: routeName(t, r),
+                    icon: <RouteChoiceIcon route={r} />,
                 }))}
             />
             {route !== Route.patchRemove && availableEsters.length > 1 && (
@@ -891,11 +929,13 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                     <CustomSelect
                         bare
                         label={t('log.ester_label')}
+                        selectedIconPosition="value"
                         value={ester}
                         onChange={(val) => setEster(val as Ester)}
                         options={availableEsters.map(e => ({
                             value: e,
                             label: esterName(t, e),
+                            icon: <MedicineIcon ester={e} />,
                         }))}
                     />
                 </>
@@ -936,11 +976,12 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 <GroupHeader
                     trailing={hasSavedRows || isEditingList ? (
                         <Button variant="plain" onClick={() => setIsEditingList(v => !v)}>
+                            {isEditingList ? <Check size={18} /> : <Edit size={18} />}
                             {isEditingList ? t('log.done') : t('log.edit_list')}
                         </Button>
                     ) : undefined}
                 >
-                    {t('log.what')}
+                    <DoseFieldLabel icon={Tablet}>{t('log.what')}</DoseFieldLabel>
                 </GroupHeader>
                 <ListGroup
                     selection={isEditingList ? undefined : 'single'}
@@ -957,6 +998,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                         return (
                             <ListRow
                                 key={key}
+                                {...savedChoiceFeedback(key)}
                                 aria-label={joinList(lang, [describeDose(t, lang, regimen.last, { unitRate }), sub])}
                                 title={oneLine(regimenTitle(regimen))}
                                 sub={oneLine(
@@ -966,7 +1008,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                                 selected={whatChoice === key}
                                 onClick={() => {
                                     applyRegimen(regimen);
-                                    setWhatChoice(key);
+                                    noteSavedChoice(key);
                                 }}
                             />
                         );
@@ -988,10 +1030,11 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                             <ListRow
                                 key={key}
                                 {...common}
+                                {...savedChoiceFeedback(key)}
                                 selected={whatChoice === key}
                                 onClick={() => {
                                     applyTemplate(tpl);
-                                    setWhatChoice(key);
+                                    noteSavedChoice(key);
                                 }}
                             />
                         );
@@ -1019,10 +1062,11 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                             <ListRow
                                 key={key}
                                 {...common}
+                                {...savedChoiceFeedback(key)}
                                 selected={whatChoice === key}
                                 onClick={() => {
                                     applyQuickDose(dose);
-                                    setWhatChoice(key);
+                                    noteSavedChoice(key);
                                 }}
                             />
                         );
@@ -1043,16 +1087,17 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         </section>
     ) : (
         <section>
-            <GroupHeader>{t('log.what')}</GroupHeader>
+            <GroupHeader><DoseFieldLabel icon={Tablet}>{t('log.what')}</DoseFieldLabel></GroupHeader>
             {choosers}
         </section>
     );
 
     const whenSection = (
         <section>
-            <ListGroup header={t('log.when')} selection="single" checkIcon={checkIcon} chevronIcon={chevronIcon}>
+            <ListGroup header={<DoseFieldLabel icon={Clock}>{t('log.when')}</DoseFieldLabel>} selection="single" checkIcon={checkIcon} chevronIcon={chevronIcon}>
                 <ListRow
                     title={t('log.now')}
+                    leading={<DoseFieldIcon icon={Clock} />}
                     value={formatTime(lang, now)}
                     selected={whenMode === 'now'}
                     onClick={() => {
@@ -1062,6 +1107,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 />
                 <ListRow
                     title={t('log.earlier')}
+                    leading={<DoseFieldIcon icon={Calendar} tone="teal" />}
                     value={whenMode === 'earlier'
                         ? (sameLocalDay(chosenDate.getTime(), nowMs) ? formatTime(lang, chosenDate) : describeWhen(t, lang, chosenDate))
                         : undefined}
@@ -1159,7 +1205,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 onClick={() => setIsDoseGuideOpen(v => !v)}
             >
                 <span className="list-row-text">
-                    <span className="list-row-title">{t('dose.guide.title')}</span>
+                    <span className="list-row-title"><DoseFieldLabel icon={Gauge}>{t('dose.guide.title')}</DoseFieldLabel></span>
                 </span>
                 {doseGuide?.level && (
                     <span className={`list-row-value ${LEVEL_TEXT[doseGuide.level]}`}>
@@ -1209,7 +1255,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 onClick={() => setIsGuideOpen(v => !v)}
             >
                 <span className="list-row-text">
-                    <span className="list-row-title">{t('log.inj_guide')}</span>
+                    <span className="list-row-title"><DoseFieldLabel icon={Help}>{t('log.inj_guide')}</DoseFieldLabel></span>
                 </span>
                 <span className="list-row-chevron" aria-hidden="true">
                     <ChevronDown size={16} className={`chev ${isGuideOpen ? 'rotate-180' : ''}`} />
@@ -1284,9 +1330,10 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
 
     const canAddQuick = Boolean(quickDoses && onAddQuickDose) && route !== Route.patchRemove;
     const saveSection = (
-        <ListGroup header={t('log.save_header')} chevronIcon={chevronIcon}>
+        <ListGroup header={<DoseFieldLabel icon={Save}>{t('log.save_header')}</DoseFieldLabel>} chevronIcon={chevronIcon}>
             <ListRow
                 title={t('log.save_template')}
+                leading={<DoseFieldIcon icon={TemplateAdd} tone="violet" />}
                 drillIn
                 chevron={showSaveTemplateInput ? <ChevronDown size={16} /> : chevronIcon}
                 aria-expanded={showSaveTemplateInput}
@@ -1305,12 +1352,14 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                         autoFocus
                     />
                     <Button variant="secondary" compact onClick={handleSaveAsTemplate}>
+                        <Save size={18} />
                         {t('btn.save')}
                     </Button>
                 </div>
             )}
             {canAddQuick && (
                 <ListRow
+                    leading={<DoseFieldIcon icon={quickExists ? Check : Repeat} tone="amber" />}
                     title={quickExists
                         ? t('log.add_quick_done')
                         : <span className="text-[var(--c-accent)]">{t('log.add_quick')}</span>}
@@ -1325,13 +1374,15 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     const saveButton = (
         <Button
             variant="primary"
+            className="dose-form-save"
             block={!isInline}
             compact={isInline}
             onClick={handleSave}
             disabled={isSaving}
+            aria-busy={isSaving}
         >
-            <Check size={20} />
-            <span>{saveLabel}</span>
+            {isSaving ? <span className="dose-form-saving" aria-hidden="true" /> : <Check size={20} />}
+            <span aria-live="polite">{isSaving ? 'Saving…' : saveLabel}</span>
         </Button>
     );
 
@@ -1341,12 +1392,14 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             <div className="flex flex-wrap items-center justify-between gap-2">
                 {eventToEdit ? (
                     <Button variant="destructive" className="-ml-3" onClick={handleDeleteEvent}>
+                        <Delete size={18} />
                         {t('log.delete_dose')}
                     </Button>
                 ) : <span />}
-                <div className="flex items-center gap-2">
+                <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
                     {hideHeader && (
                         <Button variant="secondary" compact onClick={onCancel}>
+                            <Close size={18} />
                             {t('btn.cancel')}
                         </Button>
                     )}
@@ -1360,6 +1413,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             {saveButton}
             {eventToEdit && (
                 <Button variant="destructive" className="-ml-3 self-start" onClick={handleDeleteEvent}>
+                    <Delete size={18} />
                     {t('log.delete_dose')}
                 </Button>
             )}
@@ -1367,7 +1421,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     );
 
     return (
-        <div className="flex h-full min-h-0 flex-col">
+        <div className="dose-form flex h-full min-h-0 flex-col">
             {!isInline && !hideHeader && (
                 <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3">
                     <h2 id={titleId} className="m-0 text-2xl font-bold text-[var(--c-ink)]">{title}</h2>
@@ -1383,7 +1437,9 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             >
                 {whatSection}
                 {whenSection}
-                {amountFields}
+                <div className="dose-form-amounts flex flex-col gap-6" data-fill-feedback={feedbackPhase}>
+                    {amountFields}
+                </div>
                 {guideGroup}
                 {doseAdvisory && route !== Route.patchRemove && (
                     <div className="px-4">

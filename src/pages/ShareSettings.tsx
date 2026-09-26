@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { InTarget, Link, Lock, Sync } from '../components/icons';
+import { Calendar, Check, Copy, Edit, InTarget, Link, Lock, Off, Plus, Share, Sync } from '../components/icons';
+import { LabelIcon } from '../components/ui/LabelIcon';
 import { DoseEvent, HRTMode, SimulationResult } from '../../logic';
 import { useTranslation } from '../contexts/LanguageContext';
 import { getShareCopy } from '../i18n/share';
@@ -247,16 +248,18 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
                             {/* Both labels share one grid cell so the button keeps a single
                                 width across the copy to copied swap, in every locale. */}
                             <Button variant="secondary" compact className="grid flex-1 place-items-center" onClick={handleCopy}>
-                                <span className={`col-start-1 row-start-1 ${copied ? 'invisible' : ''}`}>{copy.copy}</span>
-                                <span className={`col-start-1 row-start-1 ${copied ? '' : 'invisible'}`}>{copy.copied}</span>
+                                <span className={`col-start-1 row-start-1 inline-flex items-center gap-2 ${copied ? 'invisible' : ''}`}><Copy size={20} />{copy.copy}</span>
+                                <span className={`col-start-1 row-start-1 inline-flex items-center gap-2 ${copied ? '' : 'invisible'}`}><Check size={20} />{copy.copied}</span>
                             </Button>
                             {canShare && (
                                 <Button variant="secondary" compact className="flex-1" onClick={handleNativeShare}>
+                                    <Share size={20} />
                                     {copy.action}
                                 </Button>
                             )}
                         </div>
                         <Button variant="plain" className="self-start" onClick={() => { setCreatedShare(null); setCopied(false); }}>
+                            <Plus size={20} />
                             {t('account.share.another')}
                         </Button>
                     </Card>
@@ -268,6 +271,7 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
                                 footer={liveEnabled ? t('account.share.live_footer') : t('account.share.static_footer')}
                             >
                                 <ListRow
+                                    leading={<LabelIcon icon={Sync} tone="teal" />}
                                     title={<span id="share-live-label">{copy.liveToggle}</span>}
                                     trailing={
                                         <Switch
@@ -279,6 +283,7 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
                                     }
                                 />
                                 <ListRow
+                                    leading={<LabelIcon icon={Lock} tone="purple" />}
                                     title={<span id="share-password-label">{copy.passwordToggle}</span>}
                                     trailing={
                                         <Switch
@@ -292,7 +297,7 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
                             </ListGroup>
 
                             {passwordEnabled && (
-                                <Field label={copy.passwordLabel} htmlFor="share-password" hint={copy.passwordHint}>
+                                <Field label={<span className="inline-flex items-center gap-2"><LabelIcon icon={Lock} tone="purple" size={18} />{copy.passwordLabel}</span>} htmlFor="share-password" hint={copy.passwordHint}>
                                     <PasswordInput
                                         id="share-password"
                                         value={password}
@@ -318,6 +323,7 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
                                 {EXPIRY_PRESETS.map(({ id, days }) => (
                                     <ListRow
                                         key={id}
+                                        leading={<LabelIcon icon={Calendar} tone="blue" />}
                                         title={t(`account.share.expiry_${id}`)}
                                         value={expiryChoice === id ? formatStamp(Date.now() + days * DAY_MS, lang) : undefined}
                                         selected={expiryChoice === id}
@@ -325,6 +331,7 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
                                     />
                                 ))}
                                 <ListRow
+                                    leading={<LabelIcon icon={Edit} tone="purple" />}
                                     title={t('account.share.expiry_custom')}
                                     value={expiryChoice === 'custom' && expiresAtInput ? formatStamp(new Date(expiresAtInput).getTime(), lang) : undefined}
                                     selected={expiryChoice === 'custom'}
@@ -367,13 +374,14 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
                     <Loading label={copy.loading} />
                 ) : shares.length === 0 ? (
                     <ListGroup header={copy.manageTitle}>
-                        <ListRow title={<span className="text-[var(--c-muted)]">{copy.noneActive}</span>} />
+                        <ListRow leading={<LabelIcon icon={Link} tone="muted" />} title={<span className="text-[var(--c-muted)]">{copy.noneActive}</span>} />
                     </ListGroup>
                 ) : (
                     <ListGroup header={copy.manageTitle} footer={t('account.share.manage_footer')}>
                         {shares.map(share => (
                             <ListRow
                                 key={share.id}
+                                leading={<LabelIcon icon={Link} tone="blue" />}
                                 title={<span className="block truncate">{copy.sharedOn} {formatDay(share.createdAt, lang)}</span>}
                                 sub={
                                     <span className="flex flex-wrap gap-x-3">
@@ -388,7 +396,8 @@ const ShareSettings: React.FC<ShareSettingsProps> = ({
                                         onClick={() => handleRevoke(share)}
                                         disabled={revokingId === share.id}
                                     >
-                                        {revokingId === share.id ? <BusySpinner /> : copy.revoke}
+                                        {revokingId === share.id ? <BusySpinner /> : <Off size={18} />}
+                                        {copy.revoke}
                                     </Button>
                                 }
                             />

@@ -77,6 +77,11 @@ export const shell: AreaStrings = {
     },
     en: {
         'shell.back': 'Back',
+        'shell.save.dose_logged': 'Dose logged',
+        'shell.save.dose_planned': 'Planned dose saved',
+        'shell.save.dose_updated': 'Dose updated',
+        'shell.save.test_saved': 'Blood test saved',
+        'shell.save.test_updated': 'Blood test updated',
         'shell.nav.main': 'Main',
         'shell.nav.sidebar': 'Sidebar',
         'shell.tab.today': 'Today',

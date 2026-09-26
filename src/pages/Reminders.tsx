@@ -5,7 +5,8 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { useDialog } from '../contexts/DialogContext';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import { BackHeader, Button, Lead, ListGroup, ListRow, ListStack, Switch } from '../components/ui';
-import { ChevronRight, Plus } from '../components/icons';
+import { Calendar, ChevronRight, Export, Eye, Phone, Plus, Reminder } from '../components/icons';
+import { LabelIcon } from '../components/ui/LabelIcon';
 import { IconTile } from '../components/today/ComingUp';
 import { doseText, fmt, medInline, whenInline } from '../components/today/format';
 import { ScheduleTile, scheduleAsDose, scheduleSub, scheduleTitle } from '../components/reminders/format';
@@ -92,6 +93,7 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                     <div className="flex flex-col items-start gap-4">
                         <p className="m-0 text-base text-[var(--c-ink)]">{t('reminders.calendar.lead')}</p>
                         <Button onClick={downloadCalendar} disabled={!hasActive}>
+                            <Export size={20} />
                             {t('reminders.calendar.download')}
                         </Button>
                         <p className="m-0 text-sm text-[var(--c-muted)]">
@@ -100,6 +102,7 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                     </div>
                     <ListGroup footer={t('reminders.calendar.names_footer')}>
                         <ListRow
+                            leading={<LabelIcon icon={Eye} tone="purple" />}
                             title={t('reminders.calendar.names')}
                             trailing={
                                 <Switch checked={prefs.showNames} onChange={prefs.setShowNames} aria-label={t('reminders.calendar.names')} />
@@ -175,12 +178,13 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                 </ListGroup>
 
                 <ListGroup aria-label={t('reminders.delivery')} chevronIcon={CHEVRON} footer={t('reminders.system_footer')}>
-                    <ListRow title={t('reminders.in_app')} value={t('reminders.always_on')} />
+                    <ListRow leading={<LabelIcon icon={Reminder} tone="orange" />} title={t('reminders.in_app')} value={t('reminders.always_on')} />
                     <ListRow
+                        leading={<LabelIcon icon={Phone} tone="blue" />}
                         title={t('reminders.system')}
                         trailing={<Switch checked={prefs.notify} onChange={on => void toggleNotify(on)} aria-label={t('reminders.system')} />}
                     />
-                    <ListRow title={t('reminders.calendar')} drillIn onClick={() => setView('calendar')} />
+                    <ListRow leading={<LabelIcon icon={Calendar} tone="teal" />} title={t('reminders.calendar')} drillIn onClick={() => setView('calendar')} />
                 </ListGroup>
 
             </ListStack>

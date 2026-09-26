@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation, LanguageProvider } from './contexts/LanguageContext';
 import { useDialog, DialogProvider } from './contexts/DialogContext';
 import { HRTModeProvider, useHRTMode } from './contexts/HRTModeContext';
 import { PixelCatProvider } from './contexts/PixelCatContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { APP_VERSION, AppTheme } from './constants';
-import { DoseEvent, decompressData, encryptData, decryptData } from '../logic';
+import { DoseEvent, LabResult, decompressData, encryptData, decryptData } from '../logic';
 import { parseCloudBackup } from './utils/cloudBackup';
 import { hasBackupRecords } from './utils/backupAvailability';
 import { accessibleView } from './utils/accessibleView';
@@ -59,6 +59,7 @@ import { suppliesNeedingAttention, useSupplyForecasts } from './components/suppl
 import Onboarding, { markOnboardingSeen, shouldShowOnboarding } from './pages/Onboarding';
 import SiteNoticeBanner from './components/SiteNotice';
 import { SecondaryPageHost, SecondaryPageProvider, useSecondaryNavigation } from './components/ui/SecondaryPage';
+import { SaveFeedback, type SaveFeedbackMessage } from './components/ui/SaveFeedback';
 
 const AppContent = () => {
     const { t, lang } = useTranslation();
@@ -151,6 +152,33 @@ const AppContent = () => {
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isDisclaimerOpen, setIsDisclaimerOpen] = useState(false);
     const [pendingImportText, setPendingImportText] = useState<string | null>(null);
+    const [saveFeedback, setSaveFeedback] = useState<(SaveFeedbackMessage & { scope: string; view: ViewKey }) | null>(null);
+    const saveFeedbackSequence = useRef(0);
+    const dismissSaveFeedback = useCallback(() => setSaveFeedback(null), []);
+
+    useEffect(() => {
+        dismissSaveFeedback();
+    }, [scope, currentView, dismissSaveFeedback]);
+
+    const confirmRecordSave = (key: string, tone: SaveFeedbackMessage['tone']) => {
+        setSaveFeedback({ id: ++saveFeedbackSequence.current, label: t(key), tone, scope, view: currentView });
+    };
+
+    const handleSaveDose = (event: DoseEvent) => {
+        const isEdit = events.some(previous => previous.id === event.id);
+        if (isEdit) updateEvent(event);
+        else addEvent(event);
+        const isPlanned = event.timeH * 3_600_000 > Date.now();
+        confirmRecordSave(isEdit ? 'shell.save.dose_updated' : isPlanned ? 'shell.save.dose_planned' : 'shell.save.dose_logged',
+            isPlanned ? 'planned' : 'dose');
+    };
+
+    const handleSaveLabResult = (result: LabResult) => {
+        const isEdit = labResults.some(previous => previous.id === result.id);
+        if (isEdit) updateLabResult(result);
+        else addLabResult(result);
+        confirmRecordSave(isEdit ? 'shell.save.test_updated' : 'shell.save.test_saved', 'test');
+    };
 
     // --- Auto-sync preference ---
     // Storage key kept from when this only ever uploaded, so an existing
@@ -483,6 +511,12 @@ const AppContent = () => {
                     this component, so it stays put across view changes. */}
                 <SiteNoticeBanner />
 
+                <SaveFeedback
+                    message={saveFeedback?.scope === scope && saveFeedback.view === currentView ? saveFeedback : null}
+                    enabled={!hasPages && !isFormOpen}
+                    onDismiss={dismissSaveFeedback}
+                />
+
                 <div
                     ref={mainScrollRef}
                     data-page-scroll
@@ -541,10 +575,10 @@ const AppContent = () => {
                             isQuickAddOpen={isQuickAddOpen}
                             setIsQuickAddOpen={setIsQuickAddOpen}
                             doseTemplates={doseTemplates}
-                            onSaveEvent={e => {
-                                if (events.find(p => p.id === e.id)) updateEvent(e);
-                                else addEvent(e);
-                            }}
+                            quickDoses={quickDoses}
+                            onAddQuickDose={addQuickDose}
+                            onDeleteQuickDose={deleteQuickDose}
+                            onSaveEvent={handleSaveDose}
                             onDeleteEvent={deleteEvent}
                             onAddEvents={addEvents}
                             onDeleteEvents={deleteEvents}
@@ -569,10 +603,7 @@ const AppContent = () => {
                             isQuickAddLabOpen={isQuickAddLabOpen}
                             setIsQuickAddLabOpen={setIsQuickAddLabOpen}
                             labResults={labResults}
-                            onSaveLabResult={r => {
-                                if (labResults.find(prev => prev.id === r.id)) updateLabResult(r);
-                                else addLabResult(r);
-                            }}
+                            onSaveLabResult={handleSaveLabResult}
                             onDeleteLabResult={deleteLabResult}
                             onClearLabResults={clearLabResults}
                             calibrationMethod={calibrationMethod}
@@ -835,10 +866,7 @@ const AppContent = () => {
                 onClose={() => setIsFormOpen(false)}
                 eventToEdit={editingEvent}
                 prefill={doseFormPrefill}
-                onSave={(e: DoseEvent) => {
-                    if (events.find(p => p.id === e.id)) updateEvent(e);
-                    else addEvent(e);
-                }}
+                onSave={handleSaveDose}
                 onDelete={deleteEvent}
                 templates={doseTemplates}
                 onSaveTemplate={addTemplate}

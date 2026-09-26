@@ -1,354 +1,576 @@
-# HRT‑Recorder Pharmacokinetic Models
+# How Cadence models hormone concentrations
 
-This README explains the algorithms used for each drug/route, key parameters and units, what was tuned, why we tuned it, and how the implementation evolved.
+> Updated: September 26, 2026
+>
+> An English revision of the December 5, 2025 model explanation, checked against the current Oyama HRT Cadence implementation.
+>
+> Implementation reference: `logic.ts` in repository revision `c6af429`. This describes the local code reviewed on the date above; it does not establish which version is deployed on a public website.
 
----
+Cadence turns recorded doses into estimated concentration–time curves. Its core is a linear pharmacokinetic (PK) model: each dose contributes a time-dependent amount of drug, and contributions for the same substance are added together. The current implementation has separate channels for estradiol (E2), cyproterone acetate (CPA), and testosterone (T), plus an optional laboratory-based correction for E2.
 
-## 0) 总览（模型架构）
+This article documents the software's equations, parameter choices, and limitations. The curves are model estimates, not measured blood concentrations or a validated basis for choosing an individual dose. Empirically fitted parameters should not be read as universal physiological constants.
 
-**目标**：用一套轻量的、可解释的 PK 近似模型，覆盖常见雌激素制剂与给药途径，在手机端实时算出血药浓度–时间曲线与 AUC。
+## Contents
 
-**核心构件（与代码一一对应）**
-- **DoseEvent**：一次给药事件，带路由、时间、剂量、酯别与一些附加字段（如凝胶面积、贴片标称释放速率 µg/day）。
-- **ParameterResolver**：把事件映射为具体参数 `PKParams`（k₁/k₂/k₃、F、双库或双通路比例、零阶速率等）。
-- **ThreeCompartmentModel**：解析解工具箱：
-  - 三室模型（首过吸收 k₁ → 酯水解 k₂ → 游离 E2 清除 k₃）的解析式。
-  - 单室 Bateman 形式（口服/凝胶简化）。
-  - 双通路舌下模型（快：口腔黏膜；慢：吞咽 = 口服；**E2: dualAbsAmount；EV: dualAbs3CAmount**）。
-  - 贴片：零阶输入在佩戴窗口内，移除后按 k₃ 衰减；或旧版一阶“假库”。
-- **SimulationEngine**：把一堆 `DoseEvent` 预编译为时间→量的函数，遍历时间点，线性叠加各事件的中心室药量，再以体分布换算为浓度，AUC 用梯形法则积分。
+1. Model structure and units
+2. Ester-to-parent conversion
+3. Default parameters and effective availability
+4. Mathematical kernels
+5. Estradiol routes
+6. Testosterone and CPA
+7. Simulation grid, concentration conversion, and AUC
+8. Interpolation
+9. Laboratory calibration
+10. Custom parameters and implementation boundaries
+11. Changes from the original article
+12. Source map and evidence
 
-**单位与换算**
-- 剂量 `doseMG` 以 mg 计；中心室药量计算单位也是 mg。
-- 浓度输出为 pg/mL：`conc = amountMG × 1e9 / Vd_ml`。
-- 体分布体积：`Vd = vdPerKG × BW`，其中 `vdPerKG` 默认 **2.0 L·kg⁻¹**（可在设置中调整）。
-- **输入剂量均已按 E2 等效（E2‑eq）换算**；因此各路由的 `F` 不再乘以分子量换算因子。 `EsterInfo.toE2Factor` 仅用于显示/对照，不参与计算。
+## 1. Model structure and units
 
----
+The main input is an array of `DoseEvent` records and a body weight:
 
-## 1) 公共参数（`PKparameter.swift :: CorePK`）
+```ts
+runSimulation(events: DoseEvent[], bodyWeightKG: number): SimulationResult | null
+```
 
-| 名称 | 含义 | 默认值 | 备注 |
-| --- | --- | --- | --- |
-| `vdPerKG` | 表观分布容积（每 kg） | 2.0 L·kg⁻¹ | 移动端可配置；用于 mg → pg/mL 换算 |
-| `kClear` | 游离 E2 清除速率常数 k₃ | 0.41 h⁻¹ | 对应 t½ ≈ 1.69 h；为经验标定值，用于与项目中目标曲线贴合 |
-| `kClearInjection` | 注射专用游离 E2 清除速率常数 k₃（仅 injection 路由使用） | 0.041 h⁻¹ | 对应 t½ ≈ 16.9 h；保持 flip‑flop 形状以匹配 EEN/EV/EC 的 Tmax/Cmax，不等同于生理清除 |
-| `depotK1Corr` | 注射两库 k₁ 的全局校正系数 | 1.0 | 改峰/拖尾时可整体缩放注射的 k₁ |
+An event contains its actual administration time, route, compound, dose, and optional route-specific data. `resolveParams` selects parameters, and `PrecomputedEventModel` constructs a function for the event's contribution.
 
-> 注：`kClear` 是游离 E2 中心室的表观清除常数，其锚点来自贴片移除后的终末半衰期（≈ 1–2 h），在此基础上取中间值 **0.41 h⁻¹** 以兼顾舌下与贴片的日内回落。它服务于本项目的简化模型与多路叠加稳定性，并不等价于群体生理清除率，不应外推到人群参数。
+:::info[Core idea]{open}
 
-**关于 kClear 的来龙去脉**
-- **锚点来源**：最初把 `kClear` 定在 1–2 小时的半衰期区间，是依据某些雌二醇贴片的说明书与审评资料对“移除贴片后”的血药下降描述。贴片移除时外源输入为零，后续的下降主要由系统清除主导，因此该时段的终末斜率可以近似视为清除常数 k₃ 的体现。
-- **数值选择**：按 `t½ = 1–2 h` 反推 `k = ln2 / t½ ≈ 0.35–0.69 h⁻¹`，本项目选择中间值 `kClear = 0.41 h⁻¹`（`t½ ≈ 1.69 h`），既能匹配贴片移除后的回落节奏，也与舌下日内回落经验相符。
-- **为什么不用口服去估**：口服 Bateman 场景下常见 flip‑flop 现象，当吸收速率 `ka` 与或小于清除速率 `ke` 时，终末相斜率反而更像 `ka` 而非 `ke`，因此不适合作为清除常数的锚点。相对地，贴片在移除后 `ka = 0`，终末相更干净。
+For substance $s$, let $\mathcal{J}_s$ be the set of its dose-event indices. The uncalibrated model is:
 
-**注射专用 `kClearInjection`（有效参数说明）**  
-注射油剂的末端斜率主要受“从油性贮库进入血液”的缓慢输入所支配（flip‑flop）。为在简化一室清除的前提下复现文献级别的 EEN/EV/EC 峰时与长尾，注射路径使用了 **`kClearInjection = 0.041 h⁻¹`**（当前默认值，可在 PK 参数设置中调整）。它是为**形状校准**而设的有效参数，并不等同于生理清除。  
-- 仅在 `event.route == .injection` 时使用；其他路由继续使用 `kClear = 0.41 h⁻¹`。  
-- 这样可在不增加额外分布/代谢池的情况下，保持注射曲线的吸收限速形状（天级 Tmax、较平稳的稳态）。  
-- 若需生理可解释性更强的估计，应考虑在模型中显式加入贮库/结合/可逆代谢池而非调整清除常数。
+$$
+A_s(t)=\sum_{j\in\mathcal{J}_s} A_j(t),
+$$
 
----
+where $A_j(t)$ is the central-compartment amount in mg. No endogenous baseline, hormone production feedback, or interaction between the three substance channels is added.
 
-## 2) 注射油剂（EV/EB/EC/EN）
+:::
 
-### 2.1 模型与参数路径
-- **模型**：两并联“库”吸收 → 酯水解 → 清除。
-- “快库”控制峰时与峰高（Tmax/Cmax），“慢库”控制尾相（半衰期）。
-- 解析解使用三室模型：吸收 k₁、酯水解 k₂、清除 k₃。
-- **参数来源**：`TwoPartDepotPK`、`EsterPK.k2`、`InjectionPK.formationFraction`、`EsterInfo.toE2Factor`、`CorePK.kClear`、`CorePK.depotK1Corr`。
-- **代码入口**：`ParameterResolver.resolve(... case .injection ...)` → `ThreeCompartmentModel.injAmount(...)`。
+| Field or symbol | Meaning | Unit |
+| --- | --- | --- |
+| `timeH`, $t$ | Hours since the Unix epoch | h |
+| `doseMG`, $D$ | Mass of the recorded ester or compound | mg |
+| `bodyWeightKG`, $W$ | Body weight used for the simulation | kg |
+| $k_{\mathrm{a}},k_1,k_2,k_3$ | First-order rate constants | h⁻¹ |
+| `releaseRateUGPerDay` | Nominal patch delivery rate | µg/day |
+| `patchWearH` | Planned patch wear duration | h |
+| `concPGmL_E2` | Estradiol concentration | pg/mL |
+| `concPGmL_CPA` | CPA concentration, despite the field name | **ng/mL** |
+| `concNGdL_T` | Model testosterone concentration | ng/dL |
 
-### 2.2 关键数值（默认）
+`doseMG` is **not stored as E2-equivalent mass**. If an equivalent-dose field is used in the form, `DoseForm` converts it back to compound mass before saving. Gel dose means active drug mass, not the mass of the gel vehicle. For a rate-based patch, the form saves `doseMG = 0`; delivery is determined by the release-rate extra.
 
-| 酯 | Frac_fast | k1_fast (h⁻¹) | t½_fast (h) | k1_slow (h⁻¹) | t½_slow (h) | k2 (h⁻¹) | t½_hydrolysis (h) |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| EB | 0.90 | 0.144 | 4.81 | 0.114 | 6.08 | 0.090 | 7.70 |
-| EV | 0.40 | 0.0216 | 32.08 | 0.0138 | 50.23 | 0.070 | 9.90 |
-| EC | 0.229164549 | 0.005035046 | 137.66 | 0.004510574 | 153.67 | 0.045 | 15.40 |
-| EN | 0.05 | 0.0010 | 693.15 | 0.0050 | 138.63 | 0.015 | 46.21 |
+In the equations below, dimensional inputs and outputs are represented by their **numerical values in the stated units**: time in hours, dose and amount in mg, weight in kg, and rates in $\mathrm{h}^{-1}$. Units are stated in the surrounding text and tables, rather than appended to one side of a numerical-value equation. Conversion factors such as $10^9$ operate on these numerical values. Kernel arguments follow this same convention.
 
-*注：注射路径的清除常数采用 `k3 = kClearInjection = 0.041 h⁻¹`。*
+The model uses an **apparent distribution volume**, not literal plasma volume. For each substance:
 
-### 2.3 生物利用度（形成分数 F）
-- 形成游离 E2 的经验分数 `InjectionPK.formationFraction[ester]`。本项目剂量已按 E2‑eq 输入，**因此 `F = formationFraction`**。
+$$
+V_{s,\mathrm{mL}}=v_s W\times1000.
+$$
 
-**当前 `formationFraction`（预乘 `toE2Factor` 之前）**  
-| 酯 | formationFraction |
+| Substance | $v_s$ |
 | --- | ---: |
-| EB | 0.1092237647 |
-| EV | 0.0622582882 |
-| EC | 0.117255838 |
-| EN | 0.12 |
-这些数值为经验标定项，用于在不同酯别间保持相对关系的同时，将单次给药的 $C_{\max}/T_{\max}$ 和稳态峰谷对齐到文献级别的量级。
+| E2 | 2.0 L/kg |
+| CPA | 14.0 L/kg |
+| T | 1.0 L/kg |
 
-- **调参缘由**：临床/社区曲线显示注射后总体暴露较口服/经皮显著更高，且不同酯别水解率不同，故在保持相对关系的同时加入了经验倍数以贴实峰值与 AUC。
+These volume coefficients are fixed constants in the current engine. Changing body weight rescales the entire simulation; there is no time-varying weight history in `runSimulation`.
 
-### 2.4 数学形式（概念）
-- 两个并联吸收库按 `Frac_fast` 和 `1 − Frac_fast` 分药量，分别以 `k1_fast` 与 `k1_slow` 进入“酯”室，水解为 E2 后以 `k₃` 清除。
-- 解析解采用三指数线性组合；当速率接近时采用极限形式（避免除零）。
+## 2. Ester-to-parent conversion
 
-### 2.5 模型尝试与取舍
-- 先前的“单库吸收”很难同时兼顾峰与长尾，因此改为两库模型。
-- 尝试过浓度依赖的清除（早期“hill/浓度反馈”想法），在实际叠加多事件时容易引入非物理解耦与数值不稳，最终回退为常数 `k₃`。
-- 保留 `depotK1Corr` 作为一键全局微调旋钮，用于不同品牌或溶剂粘度的整体系数修正。
+The enzyme-cleavable ester contributes mass that is not part of the parent hormone. Let $M_e$ be the molar mass of compound $e$. For an estradiol ester, the dimensionless parent-mass ratio is:
 
----
+$$
+m_e=\frac{M_{\mathrm{E2}}}{M_e}.
+$$
 
-## 3) 贴片（E2）
+For testosterone esters, the numerator is $M_{\mathrm{T}}$. Although the helper is named `getToE2Factor`, it returns a testosterone-parent ratio for T compounds.
 
-### 3.1 路由与参数
-- **两种实现**：  
-  1) **零阶输入**：当事件带 `extras[.releaseRateUGPerDay]` 时，按标称 µg/day 转 mg/h 注入中心室，移除后按 `k₃` 衰减。  
-  2) **一阶近似（遗留）**：若未提供标称释放率，则用 `PatchPK.generic = .firstOrder(k1: 0.0075 h⁻¹)` 作为高载量贴片的近似。
-- **佩戴窗口**：`patchApply` 到随后的 `patchRemove` 之间的时间跨度 `wearH`。
+| Code | Compound | Molar mass used by the code ($\mathrm{g}\,\mathrm{mol}^{-1}$) |
+| --- | --- | ---: |
+| E2 | Estradiol | 272.38 |
+| EB | Estradiol benzoate | 376.50 |
+| EV | Estradiol valerate | 356.50 |
+| EC | Estradiol cypionate | 396.58 |
+| EN | Estradiol enanthate | 384.56 |
+| EU | Estradiol undecylate | 440.66 |
+| T | Testosterone | 288.42 |
+| TC | Testosterone cypionate | 412.60 |
+| TE | Testosterone enanthate | 400.59 |
+| TU | Testosterone undecanoate | 456.70 |
 
-- **零阶**：  
-  佩戴期（`0 ≤ t ≤ wearH`）：
-  
-  $$
-  A(t) = \frac{\text{rateMGh}}{k_3} \,(1 - e^{-k_3 t})
-  $$
-  
-  移除后（`t > wearH`）：
-  
-  $$
-  A(t) = A(\text{wearH})\, e^{-k_3 (t - \text{wearH})}
-  $$
-  
-- **一阶**：以 `k₁` 做“假库”吸收 + 口径 `F = 1`；移除时截断后续输入（实现上等价于减去佩戴结束后的继续吸收项）。
+Unesterified E2 and T both have a parent-mass ratio of 1. These are code constants, not a claim about the precision of biological predictions.
 
-### 3.3 调参与选择
-- 文献与说明书以 µg/day 标称，实际贴补图形更接近零阶，因此默认优先零阶，仅在缺乏数据时降级为一阶近似。
-- **`F = 1.0`（相对标称释放率）的依据**：现代基质型贴片（Vivelle-Dot、Climara、Alora 等）按设计使其"体内标称释放率"即为实际递送速率——FDA 说明书将其称为 nominal in vivo delivery rate，故零阶模型直接取 `F = 1.0 × toE2Factor`，不再额外打折。已于 2026-07 移除 UI 中的 Beta 标记。
+For example, the theoretical E2-equivalent dose $D_{\mathrm{E2,eq}}$, expressed in mg, for a 4 mg EV dose is:
 
----
+$$
+D_{\mathrm{E2,eq}} = 4\times\frac{272.38}{356.50}\approx 3.056.
+$$
 
-## 4) 经皮凝胶（E2 / T）
+This theoretical mass is distinct from the route's effective systemic contribution. The default injected EV multiplier additionally includes the fitted formation coefficient:
 
-### 4.1 路由与参数
-- **模型**：单室一阶吸收 + 清除，`F` 为经皮可达的系统暴露分数。
-- **吸收速率 `k₁`**：在 flip-flop 动力学下（`k₁ ≪ k₃`），末端衰减速率由吸收主导，故 `k₁` 取自说明书报告的凝胶表观消除半衰期（~36 h）：`k₁ = ln(2)/36 ≈ 0.0193 h⁻¹`。注意 36 h 出自 **EstroGel** 说明书（"about 36 hours following administration of 1.25 g EstroGel"，NDA 021166），此前本文档与代码注释均误标为 Divigel；Divigel 说明书写的是 "about 10 hours"（NDA 022038）。两份说明书确有分歧（产品、剂型、涂抹部位皆不同），36 h 属于二选一而非共识值。`k₁` 不影响暴露量（AUC = F·D/k₃ 与 `k₁` 无关），只决定 Tmax 与峰谷形状。
-- **`F`（生物利用率）按涂抹部位**：手臂/大腿 ≈ 5%，阴囊/生殖器部位 ≈ 25%（约 5×，外推自阴囊贴片给药数据 Premoli et al. 2005，因缺乏阴囊凝胶给药的直接人体研究）。
-  - 手臂/大腿的 5% 由**说明书自身的稳态血药浓度反推**得出，而非引用任何现成百分比——美国的雌二醇凝胶说明书根本未给出百分比（Divigel NDA 022038、EstroGel NDA 021166 对吸收只有定性描述）。Divigel 0.25/0.5/1.0 mg/day 的 Cavg 为 9.8/21/30.5 pg/mL，EstroGel 0.75 mg/day 为 28.3 pg/mL；本模型在 65–70 kg 下需 F = 0.039–0.058（均值 0.050）才能复现。说明书数值未做基线校正，故属上限，真值可能更接近 0.04。
-  - **不应引用 Järvinen et al. 1999 来支撑这个数**：其"61% 片剂 / 109% 贴片"是**相对**生物利用率，无法确定绝对分数。不过贴片一侧可佐证量级：1.09 × 50 µg/day ÷ 1.5 mg 应用量 ≈ 3.6%。
-  - **常见的"10%"是另一个量，不可直接代入 `F`**：那是在厂商大面积涂抹法（Oestrogel SmPC，750 cm² 整条手臂）下**穿过皮肤**的比例；Wikipedia "Pharmacokinetics of estradiol" 也给出 10%（引 Sitruk-Ware 1989），但针对的是醇溶液这一类别。同一款 0.06% 凝胶的德国 Gynokadin Fachinformation 则写 5–6% "Bioverfügbarkeit"，而两者报告的血药浓度相同（2.5 g 给药 60–80 pg/mL）。`F` 在模型中线性且只出现一次，改成 0.10 会让所有预测值翻倍；由于用户按预测值调整剂量，偏高的 `F` 会把实际用量推向偏低。
-- **睾酮凝胶（T）**：手臂/大腿 ≈ 10%（AndroGel/Testim FDA 说明书），阴囊 ≈ 50%（保守取 Iyer et al. 2017, *Andrology*；Kuhnert et al. 2005 报道的 5–8× 范围下限）。2026-07 之前，T 凝胶未按部位区分（`t_gel_F` 恒为 0.10，UI 的部位选择器对 T 无效），现已修复为与 E2 对称的按部位实现。
-- **代码入口**：`getBioavailabilityMultiplier(... case .gel ...)` → `resolveParams` → `oneCompAmount(...)`。
+$$
+F_{\mathrm{EV},\mathrm{inj}}=0.0623\times\frac{272.38}{356.50}.
+$$
 
-### 4.2 局限与后续方向
-- 仍忽略涂抹面积/剂量密度的非线性饱和效应（原型 `sigmaSat ≈ 0.008 mg·cm⁻²` 已从代码移除；调试阶段曾出现"低剂量偏低、高剂量偏高"的系统性误差）；当前按部位的常量 `F` 是文献支持的简化，而非该非线性效应的完整还原。
-- 阴囊/生殖器 E2 凝胶的 `F` 值为跨物质（T→E2）外推，非直接人体数据，标注于代码注释与 PK 自定义参数面板。
-- 待办：恢复面积/剂量依赖，并引入皮肤贮库的短暂零阶泄放以更好描述涂抹后前数小时的平台。
+:::warning[Apply the mass conversion once]{open}
 
----
+The saved dose remains 4 mg. The solver applies the conversion through $F$; callers must not pre-convert the saved dose and then apply the same factor again.
 
-## 5) 口服（E2/EV）
+:::
 
-### 5.1 模型与参数
-- **模型**：单室 Bateman 吸收–清除。**EV 的水解效应已折叠进更小的 `kAbsEV`，不单独建 `k₂`。**
-- **默认参数**：  
-  `kAbsE2 = 0.32 h⁻¹`（E2 片，`Tmax ≈ 2–3 h`）。  
-  `kAbsEV = 0.05 h⁻¹`（EV 片，`Tmax ≈ 6–7 h`）。  
-  `bioavailability = 0.03`（口服首过后系统暴露，E2 与 EV 近似相同量级）。  
+CPA is handled separately. Its oral solver uses CPA mass directly with $F=0.7$. The generic `getBioavailabilityMultiplier` helper does not implement this CPA exception and must not be used as the authoritative oral CPA solver parameter.
 
-### 5.2 调参说明
-- `F = 0.03` 体现了口服首过代谢的强烈损耗；与常见文献 2–5% 的数量级一致。
-- `kAbs` 调整使曲线在 2–7 小时区间达到合理峰位。
+## 3. Default parameters and effective availability
 
----
+`getBioavailabilityMultiplier(route, ester, extras)` supplies the effective dose multiplier for the hormone routes. In this article, $F$ includes the parent-mass conversion wherever applicable. For injections it also includes an empirical formation coefficient; it is therefore broader than a directly measured absolute bioavailability.
 
-## 6) 舌下（E2/EV）
+For estradiol routes:
 
-### 6.1 模型与参数（路线图）
-- **双通路**：把剂量按分流系数 **θ** 分为两支：
-  - **快通路（口腔黏膜）**：$k_{1,\text{fast}} = k_{\text{SL}}$，**绕过首过**。本项目统一按**等效 E2(E2‑eq)**输入，因此快支 **$F_{\text{fast}}=1$**。
-  - **慢通路（吞咽→胃肠）**：$k_{1,\text{slow}} = k_{\text{Abs,E2/EV}}$，**进入首过**，**$F_{\text{slow}}=F_{\text{oral}}=0.03$**。
-- **EV 与 E2 的差异**：
-  - **舌下 E2**：无水解步（$k_2=0$），用单室 Bateman 对两支路叠加（`dualAbsAmount`）。
-  - **舌下 EV**：**进血后仍需水解为 E2**（$k_2=k_{2,\text{EV}}$），两支路均走「吸收 ($k_1$) → 水解 ($k_2$) → 清除 ($k_3$)」的三室解析式（`dualAbs3CAmount`）。
-  - **清除**：中心室游离 E2 的清除常数 $k_3 = 0.41\ \mathrm{h}^{-1}$（见§1），与贴片移除后回落节奏一致。
+| Route | Effective multiplier |
+| --- | --- |
+| Injection | $f_{\mathrm{form},e}\,m_e$ |
+| Oral | $0.03\,m_e$ |
+| Sublingual | $[\theta+(1-\theta)\,0.03]m_e$ |
+| Gel | $F_{\mathrm{site}}\,m_e$ |
+| Patch application | $m_e$, normally 1 for E2 |
+| Patch removal | 0; changes the delivery window only |
 
-### 6.2 黏膜分流 θ 的**行为建模**（取代早期 RF 反推法）
-早期文档用 $\theta=\frac{F_{\text{oral}}(RF-1)}{1-F_{\text{oral}}}$ 从相对生物利用度 RF 反推 θ。该做法只能匹配 **AUC 比例**，会误估 **峰值/达峰时间**，因此已弃用。
+The non-injection E2 elimination constant is $0.41\,\mathrm{h}^{-1}$. Injection uses a separate effective constant, $0.041\,\mathrm{h}^{-1}$. The corresponding single-exponential half-lives, $\ln 2/k$, are approximately 1.69 and 16.9 hours. Neither is the terminal half-life of every complete route-specific curve: slow absorption and ester conversion can control the tail.
 
-我们显式建模**溶解**与**吞咽清除**，把口腔当作最小可用系统：
-- 固体剂量 ($S$) 以速率 $k_{\text{diss}}$ 溶到口腔液相 \(D\)；
-- 溶解相 ($D$) 面临两个竞争路径：**黏膜吸收** $(k_{\text{SL}})$ 与**吞咽清除** $(k_{\text{sw}})$。
+The defaults below can be changed only where exposed by `PKCustomParams`. A custom parameter set takes precedence over the documented defaults.
 
-连立常微分方程（单位 h）：
+## 4. Mathematical kernels
+
+Let a dose occur at $t_0$, and let $\tau=t-t_0$. Every dose contribution is zero for $\tau<0$.
+
+### 4.1 First-order absorption and elimination
+
+Define the Bateman kernel:
+
+$$
+B(\tau;D,F,k_{\mathrm{a}},k_{\mathrm{e}})
+=\frac{DFk_{\mathrm{a}}}{k_{\mathrm{a}}-k_{\mathrm{e}}}
+\left(e^{-k_{\mathrm{e}}\tau}-e^{-k_{\mathrm{a}}\tau}\right),
+\qquad \tau\ge0.
+$$
+
+This represents an absorption compartment feeding one central compartment. In the code it appears as `oneCompAmount` and `_analytic2C`.
+
+When $\lvert k_{\mathrm{a}}-k_{\mathrm{e}}\rvert<10^{-9}$, the implementation uses the equal-rate limit:
+
+$$
+B(\tau)=DFk_{\mathrm{a}}\tau e^{-k_{\mathrm{e}}\tau}.
+$$
+
+### 4.2 Sequential absorption, conversion, and elimination
+
+For an ester requiring an explicit conversion step, and for $\tau\ge 0$ with distinct positive rates, define:
+
 $$
 \begin{aligned}
-\frac{dS}{dt}&=-k_{\text{diss}}\,S\\
-\frac{dD}{dt}&=k_{\text{diss}}\,S-(k_{\text{SL}}+k_{\text{sw}})\,D
+H(\tau;D,F,k_1,k_2,k_3)
+&= DFk_1k_2\Biggl[
+\frac{\exp(-k_1\tau)}{(k_1-k_2)(k_1-k_3)}\\[6pt]
+&\qquad + \frac{\exp(-k_2\tau)}{(k_2-k_1)(k_2-k_3)}\\[6pt]
+&\qquad + \frac{\exp(-k_3\tau)}{(k_3-k_1)(k_3-k_2)}
+\Biggr].
 \end{aligned}
 $$
 
-在用户的“含服窗口” $T_{\text{hold}}$ 内，**真正走黏膜**的比例定义为
+The stages are an absorption depot, an ester/conversion compartment, and the parent-hormone central compartment. `_analytic3C` evaluates this expression.
+
+:::warning[Numerical stability]{open}
+
+The old article said nearly equal rates cause the function to return zero. That is no longer the implementation. `_separateRates` uses a separation scale of $10^{-6}\max(k_1,k_2,k_3)$, keeps $k_1$ fixed, and perturbs nearby $k_2$ and $k_3$ before evaluating the expression. This is a numerical approximation around removable singularities, not an explicit symbolic equal-rate solution or a guarantee of accuracy for every parameter combination.
+
+When there is no ester-conversion step, the route dispatcher uses the Bateman kernel rather than substituting $k_2=0$ into the three-stage expression.
+
+:::
+
+## 5. Estradiol routes
+
+### 5.1 Injection
+
+The injection model splits the dose between two parallel depots. Let $f$ be the fraction assigned to the branch labeled fast, with $1-f$ assigned to the branch labeled slow:
+
 $$
-\boxed{\ \theta(T_{\text{hold}})=\frac{1}{\text{Dose}}\int_{0}^{T_{\text{hold}}} k_{\text{SL}}\,D(t)\,dt\ }
-$$
-超过 $T_{\text{hold}}$ 的残留（未吸收固体与溶解相）一律视为吞咽，进入口服通道（即我们的**慢支**）。
-
-**参数锚点与合理区间**
-- $k_{\text{SL}}$ 以**实测达峰**锚定：舌下 E2 常见 $T_{\max}\approx 1\ \mathrm{h}$。一室解析
-  $T_{\max}=\frac{\ln(k_a/k_e)}{k_a-k_e}$，代入 $k_e=k_3=0.41\ \mathrm{h}^{-1}$ 反推 $k_a\approx 1.8\text{–}2.0\ \mathrm{h}^{-1}$。本项目取 **$k_{\text{SL}}=1.8\ \mathrm{h}^{-1}$**。
-- $k_{\text{diss}}$：口腔制剂溶解/崩解的**分钟级**过程，经验半衰期选 **3/5/10 min** 三档（速崩/常规/偏慢），便于随配方微调。
-- $k_{\text{sw}}$：**有效**唾液清除率（非吞咽频次），经验区间 **0.8 / 1.8 / 3.0 h⁻¹** 代表低/中/高个体差异，后续可用外部数据回归精化。
-
-**计算实现**
-- App 内对上式做**数值积分**（固定步长 Δt≈3.6 s 的 Euler），得到 $\theta(T_{\text{hold}})$。
-- 为便于直观理解，我们也提供一个保守的闭式近似（作为上界/直觉，不用于核心计算）：
-
-$$
-\theta_{\text{eff}}\ \approx\ \frac{k_{\text{SL}}}{k_{\text{SL}}+k_{\text{sw}}}\Bigl(1-e^{-(k_{\text{SL}}+k_{\text{sw}})T_{\text{hold}}}\Bigr)\Bigl(1-e^{-k_{\text{diss}}T_{\text{hold}}}\Bigr)
+\begin{aligned}
+A(\tau) &= H(\tau;Df,F,k_{1,\mathrm{f}},k_2,k_3)\\[4pt]
+&\quad + H(\tau;D(1-f),F,k_{1,\mathrm{s}},k_2,k_3).
+\end{aligned}
 $$
 
-**UI 档位（不再使用 `theta_default`，用户必须选择一档）**  
-采用中档场景（$k_{\text{sw}}=1.8\ \mathrm{h}^{-1}$，溶解半衰期 5 min）计算，并给出跨场景范围作参考：
+The current default parameters are:
 
-| 档位 | 建议含服时长 | θ 推荐 | 典型范围（跨不同 $k_{\text{sw}}$/$k_{\text{diss}}$） |
-| --- | ---: | ---: | ---: |
-| Quick | ≈ 2 min | **0.01** | 0.004–0.012 |
-| Casual | ≈ 5 min | **0.04** | 0.021–0.057 |
-| Standard | ≈ 10 min | **0.11** | 0.064–0.156 |
-| Strict | ≈ 15 min | **0.18** | 0.115–0.253 |
+| Compound | $f$ | $k_{1,\mathrm{f}}$ | $k_{1,\mathrm{s}}$ | $k_2$ | $f_{\mathrm{form}}$ |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| EB | 0.90 | 0.144 | 0.114 | 0.090 | 0.1092 |
+| EV | 0.40 | 0.0216 | 0.0138 | 0.070 | 0.0623 |
+| EC | 0.229164549 | 0.005035046 | 0.004510574 | 0.045 | 0.1173 |
+| EN | 0.05 | 0.0010 | 0.0050 | 0.015 | 0.12 |
+| EU | 0.08 | 0.0060 | 0.0022 | 0.012 | 0.040 |
+| E2 | 1.0 | 0.5 | 0 | 0 | 1.0 |
 
-- UI 选择的档位直接映射为 \(\theta\) 并写入 `DoseEvent.extras[.sublingualTheta]`；**不再读取/依赖 `theta_default`**。
+All rates are in h⁻¹. Here $F=f_{\mathrm{form}}m_e$, and $k_3=0.041$ by default. E2 absorption rates are multiplied by the fixed `depotK1Corr = 1.0`.
 
-**一致性校验（慢支=口服）**  
-当 $\theta=0$ 时，舌下模型**严格退化为口服**：慢支的 $k_{1,\text{slow}}$、$F_{\text{slow}}$、$k_2$、$k_3$ 与对应口服路由完全一致。在回归测试中对比了 “SL，$\theta=0$” 与 “Oral” 的整轨迹，差异 0。
+The names “fast” and “slow” are implementation labels. In the EN row, the branch named “fast” actually has the smaller rate constant. The values above intentionally preserve that behavior.
 
-### 6.3 数学形式（实现对照）
-- **舌下 E2（无水解）**：两支路的一室 Bateman 叠加  
-  $$
-  A(t)=A_{\text{fast}}(t)+A_{\text{slow}}(t),\quad
-  A_{\text{branch}}(t)=\frac{F\,k_1}{k_1-k_3}\,\text{Dose}_{\text{branch}}\bigl(e^{-k_3 t}-e^{-k_1 t}\bigr)
-  $$
-- **舌下 EV（含水解）**：两支路的三室解析叠加  
-  $$
-  A(t)=A^{(3C)}_{\text{fast}}(t)+A^{(3C)}_{\text{slow}}(t),\quad
-  A^{(3C)}_{\text{branch}}(t)=\texttt{\_analytic3C}\bigl(t;\ \text{Dose}_{\text{branch}},F,k_1,k_{2,\text{EV}},k_3\bigr)
-  $$
-  其中 $\text{Dose}_{\text{fast}}=\theta\cdot\text{Dose},\ \text{Dose}_{\text{slow}}=(1-\theta)\cdot\text{Dose}$，且 $F_{\text{fast}}=1,\ F_{\text{slow}}=F_{\text{oral}}$。
+Unesterified E2 has $k_2=0$, so its injection contribution uses $B$ instead of $H$. The generic `injection` route does not separately encode intramuscular versus subcutaneous kinetics, injection site, oil vehicle, or injection volume.
 
----
+### 5.2 Oral E2 and EV
 
-## 7) AUC 计算与稳态
-- **AUC**：在 `SimulationEngine` 中对已合成的浓度轨迹采用梯形法积分得到（单位 `pg·h/mL`）。
-- **稳态**：模型为线性系统（在当前常数 `k₃` 设定下），重复给药时叠加自然收敛至稳态。注射两库与贴片零阶输入也保持线性可叠加性。
-- **注意**：由于本项目对若干参数做了经验缩放使 `Cmax/Tmax` 更贴近观测，AUC 的绝对值在不同路由间比较时需谨慎，适合作为同一路由下的相对比较与个体内优化。
+Both oral E2 and oral EV use the Bateman kernel:
 
----
+$$
+A(\tau)=B(\tau;D,0.03m_e,k_{\mathrm{a}},0.41),
+$$
 
-## 8) 探索历程（摘记）
-以下按时间线回顾，方便未来溯源与复现。时间基于内部项目记录与代码注释。
+with $k_{\mathrm{a}}$ expressed in $\mathrm{h}^{-1}$:
 
-- **2025‑06**：完成三室解析解（注射/口服/凝胶的公共内核），最初版本采用单库吸收。实现 AUC 计算与 pg/mL 输出。
-- **2025‑07‑中**：  
-  - 贴片新增零阶输入路径，UI 支持 `releaseRateUGPerDay`。未提供标称时继续启用一阶近似。  
-  - 舌下路由从“含服时长”降维到固定双通路分流 θ，以减少用户面板的负担并稳定曲线。（此做法已在 2025‑09‑22 废弃，见下文）
-- **2025‑07‑末**：注射改为两库模型（`TwoPartDepotPK`），分别用 `k1_fast` 与 `k1_slow` 控制峰与尾；为贴合真实暴露，`formationFraction` 引入经验放大因子并与 `toE2Factor` 相乘作为 `F`。
-- **2025‑08‑初**：  
-  - 尝试“浓度反馈清除”（早期 hill/抑制式 k），在多事件叠加时出现不稳定与过拟合风险，回退为常数 `k₃` 并在注释中保留方案。  
-  - 凝胶在进行“剂量/面积”非线性修正时出现系统性偏差（低剂量低估、高剂量高估），临时回退为 `(k₁ = 0.045, F = 0.05)` 常量实现，并在代码旁保留 `sigmaSat` 等参数以待重启。
-- **2025‑08‑中**：统一由 `ParameterResolver` 把各路由映射到 `PKParams`，`SimulationEngine` 以事件窗口裁剪贴片贡献（`patchApply → patchRemove`），AUC 梯形法稳定。
-- **2025‑09‑03**：  
-  - 为注射路径加入 `CorePK.kClearInjection = 0.05 h⁻¹`，并在 `ParameterResolver` 中按路由切换 `k3`。  
-  - 重新标定注射两库参数：`Frac_fast`、`k1_fast`、`k1_slow`（详见 2.2 表），以复现 EV ≈ 2.1 d、EC ≈ 4 d、EN ≈ 6.5 d 的单剂达峰与稳态形状。  
-  - 更新 `InjectionPK.formationFraction` 为分酯别经验值（见 2.3），并在 README 中明确其“有效参数”属性与适用范围。
-- **2025‑09‑22**：
-  - 舌下：**废弃 RF→θ 的反推与固定 θ**；引入**行为驱动**的 θ 计算（显式建模溶解 $k_{\text{diss}}$ 与吞咽清除 $k_{\text{sw}}$），按 $T_{\text{hold}}$ 数值积分得到 \(\theta\)。
-  - UI：移除 `theta_default`，改为**四档可选**（Quick/Casual/Standard/Strict），默认显示建议含服时长与推荐 θ。
-  - 舌下 EV：两支路均加入水解 \(k_2\)，实现切换为 `dualAbs3CAmount`；舌下 E2 继续用 `dualAbsAmount`。
-  - 一致性单元测试：验证 $\theta=0$ 时舌下与口服整轨迹重合（慢支参数与 Oral 路由完全一致）。
-- **2026‑07‑06**：
-  - 三室解析核 `_analytic3C` 的**可去奇点**处理修复：当任意两个速率常数（k₁/k₂/k₃）几乎相等时，旧实现直接返回 0（造成曲线掉零或数值抵消不稳）。新实现先用 `_separateRates` 将重合速率分开 ~1e‑6·max(k) 的极小量，使解析式收敛到正确的 l'Hôpital 极限。已用 RK4 数值积分交叉验证（最坏相对误差 < 5e‑6），且对默认参数曲线**零改动**（仅在校准清除网格 kMul∈[0.5,2] 扫过酯水解率 k₂ 等重合区才触发）。
-  - 文档与代码对齐：`kClearInjection` 现记为默认 **0.041 h⁻¹**（t½ ≈ 16.9 h），口服 `kAbsE2` 记为 **0.32 h⁻¹**（与其 `Tmax ≈ 2–3 h` 一致），修正早前文档中的过时数值。
-- **2026‑07‑21**：
-  - 凝胶（E2）：吸收速率由经验常量 `k₁ = 0.022 h⁻¹` 改为按文献表观半衰期反推 `k₁ = ln(2)/36 ≈ 0.0193 h⁻¹`（见 §4.1）。
-  - 凝胶（T）：修复部位选择器对睾酮凝胶无效的问题——此前无论选择手臂/大腿/阴囊，`t_gel_F` 恒为 0.10；现按部位区分为 `t_gel_arm`/`t_gel_thigh`/`t_gel_scrotal`（默认 0.10 / 0.10 / 0.50），阴囊值外推自 Iyer et al. 2017、Kuhnert et al. 2005 的睾酮凝胶部位对比数据。PK 自定义参数面板同步更新。
-  - 凝胶（E2）阴囊/生殖器部位的 `e2_gel_scrotal` 由 0.40 调整为 0.25（约 5× 手臂/大腿），改为直接对齐 Premoli et al. 2005 阴囊贴片给药的实测倍数，而非睾酮凝胶类比的上限。
-  - 移除了未使用的死代码常量 `GelSiteParams`（与 `_getGelBio`/`_activePKParams` 的实际实现重复且未被引用）。
-  - UI：移除 Gel、Patch Apply、Patch Remove 路由标签与提示文案中的 "(Beta)" 标记及相应免责声明——上述路由的核心假设（零阶贴片以标称释放率为 `F=1.0`；凝胶按部位生物利用率）均可追溯到具体文献/官方说明书，不再视为实验性功能。`ester.EU`（十一酸雌二醇）保留 Beta 标记，因其人体药代数据仍非常有限（个体间差异可达 10 倍，终末半衰期未知）。
+$$
+k_{\mathrm{a}}=\begin{cases}
+0.05, & \text{if } e=\mathrm{EV}\\[4pt]
+0.32, & \text{if } e=\mathrm{E2}
+\end{cases}
+.
+$$
 
----
+`resolveParams` assigns a nonzero $k_2$ to oral EV, but `PrecomputedEventModel` calls `oneCompAmount`, which does not use it. There is no additional explicit hydrolysis stage in the oral EV curve. This distinction matters when reading parameter objects rather than following the executed solver path.
 
-## 9) 参考与依据（部分）
-下列仅列出常用且与实现高度相关的部分参考，非详尽清单。
+### 5.3 Sublingual E2 and EV
 
-**社区与技术文档**
-- mtf.wiki：雌二醇凝胶（含经皮半衰期、实用注意事项）<https://mtf.wiki/zh-cn/docs/medicine/estrogen/gel>
-- Transfem Science（含注射曲线汇总、舌下综述、不同途径比较等）
-- Injectable E2 meta-analysis（注射曲线的非正式荟萃）<https://transfemscience.org/articles/injectable-e2-meta-analysis/>
-- Sublingual estradiol overview（舌下作为替代途径的综述）<https://transfemscience.org/articles/sublingual-e2-transfem/>
-- Approximate comparable doses（不同途径的近似等效剂量）<https://transfemscience.org/articles/e2-equivalent-doses/>
-- Oral vs transdermal estradiol（口服与透皮比较）<https://transfemscience.org/articles/oral-vs-transdermal-e2/>
-- estrannai.se：对于Injection的三室模型和Patch的相关算法参考<https://estrannai.se/docs/ingredients/>
+The dose is split into a mucosal branch $D\theta$ and a swallowed branch $D(1-\theta)$.
 
-**官方说明书/监管资料**
-- Climara®（Bayer）说明书：移除贴片后约 12 h 回落至基线，表观半衰期约 4 h（FDA 标签）<https://www.accessdata.fda.gov/drugsatfda_docs/label/2001/20375s16lbl.pdf>
-- FDA NDA 临床药理综述与产品手册：透皮相对口服的生物利用度、部位差异、周内曲线稳定性等（多份，示例）  
-  <https://www.accessdata.fda.gov/drugsatfda_docs/nda/99/020994_clinphrmr.pdf>  
-  <https://www.accessdata.fda.gov/drugsatfda_docs/label/2008/020375s026lbl.pdf>
+A finite `extras.sublingualTheta` takes precedence and is clamped to $[0,1]$. Otherwise, a numeric `sublingualTier` selects a preset; the default is Standard.
 
-**期刊/综述（示例）**
-- Ginsburg ES et al. Half-life of estradiol in postmenopausal women. Fertil Steril. 1998：贴片移除后终末半衰期约 161 min（107–221 min）。<https://pubmed.ncbi.nlm.nih.gov/9473164/>
-- Kuhl H. Pharmacology of estrogens and progestogens: influence of different routes of administration. *Climacteric*. 2005. <https://pubmed.ncbi.nlm.nih.gov/16112947/>
-- Oinonen et al. / Järvinen et al. Absorption and bioavailability of oestradiol from a gel, a patch and a tablet. *Maturitas*. 1999：凝胶生物利用率为片剂的 61%、贴片的 109%。**这是相对值**，仅用于佐证量级（贴片一侧折算约 3.6%），不作为 `e2_gel_arm` 的依据。<https://pubmed.ncbi.nlm.nih.gov/10465378/>
-- Premoli MC et al. Scrotal transdermal estradiol delivery, 2005：阴囊贴片给药雌二醇水平约为前臂给药的 5 倍。
-- Iyer R et al. Pharmacokinetics of testosterone cream applied to scrotal skin. *Andrology*. 2017：阴囊皮肤睾酮吸收显著高于腹部。<https://onlinelibrary.wiley.com/doi/full/10.1111/andr.12357>
-- Kuhnert B et al. Testosterone substitution with a new transdermal, hydroalcoholic gel applied to scrotal or non-scrotal skin. 2005：阴囊 vs 非阴囊皮肤睾酮凝胶吸收比较。
-- transfemscience.org: Genital Application via the Scrotum and Neolabia for Greatly Enhanced Absorption of Transdermal Estradiol in Transfeminine People（汇总阴囊/外阴部位给药的证据与外推依据）<https://transfemscience.org/articles/genital-e2-application/>
-- 比较矩阵与储库型贴片的生物利用度与速率差异的研究（如 Menorest® vs Estraderm®）。
+| Tier index | Preset | Default $\theta$ | Associated hold-time label |
+| --- | --- | ---: | ---: |
+| 0 | Quick | 0.01 | 2 min |
+| 1 | Casual | 0.04 | 5 min |
+| 2 | Standard | 0.11 | 10 min |
+| 3 | Strict | 0.18 | 15 min |
 
-**官方说明书（补充）**
-- EstroGel® 0.06% (estradiol gel) FDA 说明书：表观终末消除半衰期 **36 h**（`k₁` 即取自此处）；1.25 g/day 稳态 Cavg 28.3 pg/mL。<https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/021166s019lbl.pdf>
-- Divigel® 0.1% (estradiol gel) FDA 说明书：表观终末半衰期 **10 h**（与 EstroGel 不一致）；每日涂抹于大腿于第 12 天达稳态；0.25/0.5/1.0 mg/day 稳态 Cavg 9.8/21/30.5 pg/mL（未做基线校正）。<https://www.accessdata.fda.gov/drugsatfda_docs/label/2007/022038lbl.pdf>
-- 两份美国雌二醇凝胶说明书均**未**给出任何吸收百分比或生物利用率数字。
-- Vivelle-Dot® / AndroGel® FDA 说明书：贴片按"体内标称递送速率"设计（0.025–0.1 mg/day），凝胶睾酮系统生物利用率约 10%。
+These are preset mappings. The runtime does not integrate a tablet-dissolution or swallowing model from elapsed hold time. The four preset $\theta$ values can be customized.
 
-**百科与药学数据库**
-- Wikipedia: Pharmacokinetics of estradiol（路由差异、凝胶 36 h 表观半衰期等聚合条目）<https://en.wikipedia.org/wiki/Pharmacokinetics_of_estradiol>
-- Wikipedia: Estradiol undecylate（人体药代数据有限、终末半衰期未知、个体差异可达 10 倍——`ester.EU` 保留 Beta 标记的依据）<https://en.wikipedia.org/wiki/Estradiol_undecylate>
-- DrugBank: Estradiol（透皮生物利用度对比口服、部位差异）<https://go.drugbank.com/drugs/DB00783>
+For E2:
 
-> 说明：实现中还参考了多份品牌说明书与审评文档、二级综述与数据手册，此处不一一列举。
+$$
+A_{\mathrm{E2}}(\tau)
+=B(\tau;D\theta,1,1.8,0.41)
++B(\tau;D(1-\theta),0.03,0.32,0.41).
+$$
 
----
+For EV, only the mucosal branch has explicit ester conversion:
 
-## 10) 局限
-- 个体差异未建模：肝功能、SHBG、年龄、体脂、并用药等可能改变 `F` 与各速率常数。
-- 凝胶的面积/负荷非线性：当前未在模型中体现；存在低剂量低估与高剂量高估的潜在风险。
-- 注射溶剂/体积影响：对扩散 `k₁` 的影响尚未显式参数化，现仅可用全局系数 `depotK1Corr` 近似。
-- 口服/舌下仅建模游离 E2：雌酮及其硫酸酯的储库效应未纳入。
-- AUC 的跨路由可比性有限：参数含经验缩放，AUC 适合于相同路由内的相对比较与个体内优化。
+$$
+\begin{aligned}
+A_{\mathrm{EV}}(\tau) &= H(\tau;D\theta,m_{\mathrm{EV}},1.8,0.070,0.41)\\[4pt]
+&\quad + B(\tau;D(1-\theta),0.03m_{\mathrm{EV}},0.05,0.41).
+\end{aligned}
+$$
 
----
+The swallowed EV branch uses the same simplified kernel as oral EV. Consequently, setting $\theta=0$ reproduces the corresponding oral E2 or EV curve. The original article's description of two three-stage EV branches is outdated.
 
-## 11) 快速对照：各路由实现要点
+### 5.4 Gel
 
-| 路由 | 解析/数值 | 输入 | 模型 | 关键参数 | F 的来源 |
-| --- | --- | --- | --- | --- | --- |
-| 注射（油剂 EB/EV/EC/EN） | 解析 | mg | 两库吸收 + k₂ 水解 + k₃ 清除 | `Frac_fast, k1_fast, k1_slow, k2, k3 (= kClearInjection)` | `formationFraction` |
-| 贴片（零阶） | 解析 | µg/day → mg/h | 零阶恒速输入 + k₃ 清除；移除后指数衰减 | `rateMGh, k3` | 固定 1.0 |
-| 贴片（一阶遗留） | 解析 | mg | 一阶“假库” + k₃ 清除；移除时截断 | `k1, k3` | 固定 1.0 |
-| 凝胶 | 解析 | mg（+面积 cm²） | 单室 Bateman（临时常量版） | `k1 = 0.022, F = 0.05, k3` | 常量 0.05 |
-| 口服 E2 | 解析 | mg | 单室 Bateman | `kAbsE2 = 0.32, F = 0.03, k3` | 常量 0.03 |
-| 口服 EV | 解析 | mg | 单室 Bateman | `kAbsEV = 0.05, F = 0.03, k3` | 常量 0.03 |
-| 舌下 E2/EV | 解析 | mg（等效 E2） | 双通路：快 = 黏膜、慢 = 吞咽→口服；**E2 用一室（dualAbsAmount），EV 用三室（dualAbs3CAmount）** | `θ` 来自 UI 档位（Quick/5/10/15 分钟映射）；`kAbsSL=1.8`，`kAbsE2/EV`，`k2(EV)`，`k3` | 快 1.0；慢 `F_oral=0.03` |
+The E2 gel model is:
 
----
+$$
+A(\tau)=B(\tau;D,F_{\mathrm{site}}m_e,0.0193,0.41).
+$$
 
-## 12) 实现细节摘抄
-- **PrecomputedEventModel**：
-  - 注射：`injAmount(tau, dose, p)`
-  - 凝胶/口服：`oneCompAmount(tau, dose, p)`（把 `k1_fast` 视作该路由的 `ka`）
-  - 舌下：`dualAbsAmount(tau, dose, p)`（`Frac_fast = θ`，`F_fast` 与 `F_slow` 可分配）
-- **贴片**：
-  - 找到紧随的 `patchRemove` 决定 `wearH`。
-  - 零阶：佩戴内 `rateMGh/k3 × (1 − e^{−k3 t})`；移除后按 `e^{−k3 Δt}` 衰减。
-  - 一阶：用 `oneCompAmount` 计算佩戴内吸收；移除后把“如果继续吸收”的部分减掉，使吸收在 `wearH` 处截断。
-- **SimulationEngine**：
-  - 时间网格均匀划分，逐点累加各事件药量 → 换算 pg/mL。
-  - **AUC**：梯形法累计。
+For the usual E2 compound, $m_e=1$. `gelSite` is a numeric index into `GEL_SITE_ORDER`:
+
+| Index | Site key | Default E2 $F_{\mathrm{site}}$ |
+| --- | --- | ---: |
+| 0 | `arm` | 0.05 |
+| 1 | `thigh` | 0.05 |
+| 2 | `scrotal` | 0.25 |
+
+The literal absorption rate in the code is **0.0193 h⁻¹**, approximately $\ln 2/36$, replacing the original article's 0.022 h⁻¹.
+
+The 36-hour reference is product-specific: the [EstroGel FDA label](https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/021166s019lbl.pdf) reports an apparent terminal half-life of about 36 hours, whereas the [Divigel FDA label](https://www.accessdata.fda.gov/drugsatfda_docs/label/2007/022038lbl.pdf) reports about 10 hours. Using 36 hours as an absorption timescale is the model's assumption; it is not a universal measured absorption constant for estradiol gels.
+
+The arm/thigh value of 0.05 is an effective calibration choice documented in the code. The scrotal value of 0.25 is an extrapolated model parameter, not a directly established E2-gel bioavailability. These parameters do not establish that a formulation is suitable for a particular application site.
+
+Although an `areaCM2` extra exists, the current PK solver does not use application area or dose density. It also does not explicitly model washing, skin transfer, vehicle differences, or saturable absorption.
+
+### 5.5 Patches
+
+:::info[Two patch modes]{open}
+
+1. **Constant-rate delivery:** a finite, positive `releaseRateUGPerDay` specifies the nominal delivery rate.
+2. **Legacy first-order delivery:** without a valid positive release rate, the model approximates absorption from the recorded patch dose.
+
+Both modes stop input at the resolved end of the wear period and then model elimination of the remaining central-compartment amount.
+
+:::
+
+A finite, positive `releaseRateUGPerDay` activates constant-rate delivery. Let $r$ be the nominal rate in µg/day. The effective input rate $R$, expressed in mg/h, is:
+
+$$
+R = \frac{rF}{24\times1000}.
+$$
+
+For an E2 patch, $F=1$. If the wear duration is $T_{\mathrm{w}}$:
+
+$$
+A(\tau)=\begin{cases}
+\dfrac{R}{k_3}(1-e^{-k_3\tau}),&0\le\tau\le T_{\mathrm{w}}\\[6pt]
+\dfrac{R}{k_3}(1-e^{-k_3T_{\mathrm{w}}})e^{-k_3(\tau-T_{\mathrm{w}})},&\tau>T_{\mathrm{w}}
+\end{cases}
+.
+$$
+
+No reservoir-capacity limit is imposed in this branch; `doseMG` does not cap the amount delivered.
+
+Without a valid positive release rate, the legacy branch uses $B$ with $k_{\mathrm{a}}=0.0075\,\mathrm{h}^{-1}$ for E2. After removal:
+
+$$
+A(\tau)=B(T_{\mathrm{w}};D,F,k_{\mathrm{a}},k_3)e^{-k_3(\tau-T_{\mathrm{w}})}.
+$$
+
+Patch timing is resolved in this order:
+
+1. Applications and removals are walked chronologically. Each removal is paired with the oldest unpaired application: first in, first out.
+2. A paired removal strictly later than application determines wear duration, overriding the planned duration.
+3. Otherwise, a finite positive `patchWearH` is used.
+4. Without either, delivery is treated as continuing indefinitely.
+
+Pairing is based on event order, not a patch identifier or compound. Planned expiry does not remove an application from the pairing queue. Therefore, complex overlapping or mixed-compound patch histories can be ambiguous. A removal recorded at exactly the application time does not produce zero wear under the current strict comparison; the resolver falls back to the planned duration or indefinite wear.
+
+## 6. Testosterone and CPA
+
+### 6.1 Testosterone
+
+Testosterone events use a separate parameter set and concentration channel. The same mathematical kernels are reused.
+
+| Parameter | Default |
+| --- | ---: |
+| Apparent distribution volume | 1.0 L/kg |
+| Non-injection elimination $k_3$ | 0.5 h⁻¹ |
+| Injection elimination $k_3$ | 0.035 h⁻¹ |
+| Gel absorption $k_{\mathrm{a}}$ | 0.05 h⁻¹ |
+| Legacy patch absorption $k_{\mathrm{a}}$ | 0.03 h⁻¹ |
+| Gel site multipliers: arm / thigh / scrotal | 0.10 / 0.10 / 0.50 |
+
+For testosterone ester injections:
+
+| Compound | $f$ | $k_{1,\mathrm{f}}$ | $k_{1,\mathrm{s}}$ | $k_2$ | Formation coefficient |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| TC | 0.35 | 0.025 | 0.005 | 0.20 | 0.025 |
+| TE | 0.40 | 0.035 | 0.008 | 0.20 | 0.025 |
+| TU | 0.10 | 0.008 | 0.0009 | 0.20 | 0.025 |
+
+The effective multiplier is the formation coefficient times $M_{\mathrm{T}}/M_e$. Gel similarly applies the site multiplier and parent-mass ratio. T patches use the same constant-rate or legacy equations as E2, with T-specific rates and volume.
+
+The implementation returns zero for oral T, sublingual T, and unesterified T injection. This describes the software's supported paths, not a claim that all other formulations or routes are medically impossible. Although the output is labeled total testosterone, it contains only the contribution modeled from logged doses; endogenous production, suppression, aromatization, and binding dynamics are not separately simulated.
+
+### 6.2 Cyproterone acetate
+
+Oral CPA uses:
+
+$$
+A_{\mathrm{CPA}}(\tau)=B(\tau;D,0.7,1.0,0.017).
+$$
+
+The apparent distribution volume is 14 L/kg, and the output is **ng/mL**. This special case bypasses the hormone-equivalent conversion. CPA concentration is not converted into a predicted testosterone suppression effect or an E2 contribution.
+
+## 7. Simulation grid, concentration conversion, and AUC
+
+### 7.1 Time range and sampling
+
+`runSimulation` returns `null` for an empty event list or a body weight less than or equal to zero. For valid inputs it sorts a copy of the events by `timeH` and constructs one model per non-removal event.
+
+Let $t_{\min}$ and $t_{\max}$ be the first and last recorded event times. The simulation range is:
+
+$$
+t_{\mathrm{start}}=t_{\min}-24,
+$$
+
+$$
+t_{\mathrm{end}}=\max(t_{\max}+336,\ t_{\mathrm{now}}+24).
+$$
+
+The current clock therefore affects the output range even when dose records do not change. Reproducible comparisons should hold the clock fixed.
+
+The base point count is:
+
+$$
+N=\min\left(100000,\max\left(2000,\left\lceil t_{\mathrm{end}}-t_{\mathrm{start}}\right\rceil\right)\right),
+$$
+
+with uniform spacing $\Delta t=(t_{\mathrm{end}}-t_{\mathrm{start}})/(N-1)$. This provides roughly hourly or finer sampling before the cap is reached, replacing the old fixed 1,000-point grid.
+
+The engine then adds every explicit event time and selected points at 0.25, 0.5, 1, 2, 4, 6, 8, 12, 24, and 48 hours after dose events. Extra sampling is skipped for events whose age at the simulation end exceeds twice their computed lifetime. The merged times are deduplicated and sorted, so the **final grid is nonuniform and can contain more than 100,000 points**. Planned patch-expiry times are not automatically inserted as dedicated grid points.
+
+### 7.2 Contribution pruning
+
+The engine keeps a sliding set of active dose models. For non-patch events it estimates a lifetime using the slowest positive resolved rate:
+
+$$
+L=\left\lceil\frac{13.816}{k_{\min}}\right\rceil.
+$$
+
+For finite-duration patches it uses wear time plus $\lceil13.816/k_3\rceil$; indefinite patches are not pruned. Contributions are skipped once their lifetime expires.
+
+This is an exponential-tail performance heuristic. It is not an exact relative-error bound for every sum of exponentials or nearly equal-rate limit. Patch lifetime lookup also identifies an application by timestamp, so multiple applications at the same time with different wear durations can share the wrong pruning duration even though the contribution model itself is paired by event identity.
+
+### 7.3 Substance-specific concentrations
+
+Amounts are accumulated separately. The following equations return E2 in pg/mL, CPA in ng/mL, and T in ng/dL, using amounts in mg and apparent volumes in mL:
+
+$$
+C_{\mathrm{E2}}(t)=\frac{A_{\mathrm{E2}}(t)10^9}{V_{\mathrm{E2},\mathrm{mL}}},
+$$
+
+$$
+C_{\mathrm{CPA}}(t)=\frac{A_{\mathrm{CPA}}(t)10^6}{V_{\mathrm{CPA},\mathrm{mL}}},
+$$
+
+$$
+C_{\mathrm{T}}(t)=\frac{A_{\mathrm{T}}(t)10^8}{V_{\mathrm{T},\mathrm{mL}}}.
+$$
+
+Use the substance-specific arrays to interpret hormone concentrations.
+
+### 7.4 What the returned AUC actually measures
+
+The legacy compatibility array is:
+
+$$
+C_{\mathrm{legacy}}(t)=C_{\mathrm{E2}}(t)+1000C_{\mathrm{CPA}}(t).
+$$
+
+Testosterone is excluded. Let $n$ be the number of samples in the final grid. The `auc` property integrates this legacy array using the trapezoidal rule:
+
+$$
+\mathrm{AUC}_{\mathrm{returned}}\approx
+\sum_{i=1}^{n-1}
+\frac{C_{\mathrm{legacy}}(t_i)+C_{\mathrm{legacy}}(t_{i-1})}{2}
+(t_i-t_{i-1}).
+$$
+
+If CPA is present, this adds the mass concentrations of two different drugs after a unit conversion. It has **no interpretation as a combined hormone effect or E2 exposure**. Only when CPA is absent does it equal the uncalibrated E2 AUC over the sampled window. A T-only simulation has zero returned legacy AUC despite a nonzero T curve.
+
+For meaningful substance-specific AUC, integrate the relevant array separately: E2 in pg·h/mL, CPA in ng·h/mL, and T in ng·h/dL. For calibrated E2 exposure, integrate the corrected E2 curve. `runSimulation().auc` is not automatically recalculated by laboratory calibration.
+
+All these sampled AUCs cover a finite window, not necessarily the full dose tail or a steady-state dosing interval. For comparison, the ideal untruncated Bateman kernel satisfies:
+
+$$
+\int_0^\infty B(\tau;D,F,k_{\mathrm{a}},k_{\mathrm{e}})\,\mathrm{d}\tau
+= \frac{DF}{k_{\mathrm{e}}}.
+$$
+
+The concentration integral also requires the volume and unit conversion.
+
+## 8. Interpolation
+
+The four interpolation functions use the corresponding output channel:
+
+| Function | Output |
+| --- | --- |
+| `interpolateConcentration` | Legacy E2 + converted CPA sum |
+| `interpolateConcentration_E2` | E2, pg/mL |
+| `interpolateConcentration_CPA` | CPA, ng/mL |
+| `interpolateConcentration_T` | T, ng/dL |
+
+An empty time array returns `null`. A query at or outside either endpoint returns that endpoint's concentration; the functions do not extrapolate a new PK tail.
+
+Inside the range, binary search locates adjacent samples and evaluates:
+
+$$
+C(t)=C(t_i)+\frac{t-t_i}{t_{i+1}-t_i}\left[C(t_{i+1})-C(t_i)\right].
+$$
+
+Interpolation works on the final nonuniform grid. It approximates the sampled curve rather than reevaluating each event's analytical kernel at the requested time.
+
+## 9. Laboratory calibration
+
+The base PK engine and laboratory calibration are separate stages. `computeCalibration` returns a time-dependent correction:
+
+$$
+C_{\mathrm{E2},\mathrm{cal}}(t)=C_{\mathrm{E2},\mathrm{base}}(t)\,r(t).
+$$
+
+The current-level calculation in `useAppData` applies this factor to E2. CPA and T remain unchanged.
+
+### 9.1 Laboratory inputs
+
+E2 results in pmol/L are divided by 3.671 to obtain pg/mL. Results recorded in ng/dL or nmol/L are classified as testosterone results and excluded from E2 calibration. For testosterone, the code converts nmol/L to ng/dL by multiplying by 28.842.
+
+For each eligible E2 result, the code compares the observation with interpolated baseline E2 at the blood-draw time. Observations at or below zero and predictions below 1 pg/mL are excluded. The implementation can fall back to the nearest sample if interpolation fails. The comparison ratio is observation divided by prediction.
+
+Laboratory times outside the simulation window inherit interpolation's endpoint clamping; calibration does not separately reject those times. Accurate dose and draw timestamps remain essential to interpreting the fit.
+
+### 9.2 Available methods
+
+| Method | Behavior |
+| --- | --- |
+| `off` | Returns $r(t)=1$. |
+| `ekf` | Extended Kalman filter for log-amplitude and log-clearance, processing results chronologically. |
+| `ou_kalman` | Time-varying log correction with Ornstein–Uhlenbeck mean reversion; no clearance adjustment. |
+| `mipd` | Model-informed maximum-a-posteriori fit using Gaussian parameter priors and a robust Student-t likelihood. |
+
+The function defaults to `mipd` with `retrospective` history. User settings may select a different method or history mode.
+
+EKF and MIPD evaluate E2 responses on 21 log-spaced clearance multipliers from 0.5 to 2.0, multiplying both E2 elimination constants. Fit calculations interpolate log predictions across this grid. The correction curve selects the nearest grid simulation and combines its concentration ratio with an amplitude scale. Thus changing clearance changes curve shape as well as height.
+
+Clearance learning is enabled when at least three eligible labs are available. This is a software threshold, not evidence that any three draws uniquely identify clearance. In forward MIPD it is checked separately for each prefix of the lab history. In EKF it is checked once against the full supplied lab count, so adding a third lab can change earlier fitted snapshots.
+
+The grid spans 0.5–2.0, but the optimizer state itself is not strictly clamped to that interval. An out-of-range fitted `kMul` can therefore be reported while the concentration response is evaluated at a grid boundary. The grid range should not be described as a guaranteed bound on the reported parameter.
+
+For OU-Kalman, the mean-reversion timescale is 336 hours and the stationary log standard deviation is 0.5. The correction relaxes toward 1 between or after observations. Retrospective mode additionally uses smoothing across the lab history.
+
+### 9.3 Historical application and interpretation
+
+In `forward` mode, the correction before the first eligible lab is 1. Later segments use the available per-lab fit or forward-filter correction. In `retrospective` mode, later observations can change earlier estimates. Because of the EKF clearance threshold described above, forward EKF should not be presented as an absolute guarantee that adding a lab can never revise earlier output.
+
+Returned factors are constrained to approximately 0.01–100. `fitErrPct` is a summary of log-space residuals, not a prediction interval, a confidence level, or a measure of clinical validation. A good fit can absorb errors in dose history, route assumptions, timing, and baseline production as well as genuine individual PK differences.
+
+## 10. Custom parameters and implementation boundaries
+
+`DEFAULT_PK_PARAMS` defines the baseline. `applyPKOverrides` sanitizes supplied values, merges them with defaults, and activates the result. Configurable values include E2 and T elimination rates, ester-injection formation coefficients, E2 oral availability, sublingual preset fractions, and gel site fractions.
+
+Absorption rates, ester-conversion rates, depot splits, CPA parameters, and apparent distribution volumes are not exposed through the current `PKCustomParams` interface. `runSimulationWithParams` temporarily applies an explicit parameter set and restores the previous one in a `finally` block; calibration uses it to evaluate candidate curves.
+
+Parameter sanitization is not full event validation. The low-level `runSimulation` entry point only checks for no events or nonpositive body weight; it does not independently enforce every finite-number, date, dose, or route/compound constraint. Normal app input and import validation must supply valid records.
+
+The model also omits explicit SHBG/albumin binding, estrone and estrone-sulfate pools, endogenous production, endocrine suppression, and drug–drug interactions. The E2 output must not be described as a calculated unbound or “free E2” assay value: there is no binding model separating free and bound fractions. Brand, application technique, and individual physiological differences are only partly represented by route constants and calibration.
+
+## 11. Changes from the original article
+
+| Original description | Current implementation |
+| --- | --- |
+| E2 and four estradiol esters | Adds EU, separate testosterone channels, and oral CPA |
+| Oral availability described simply as 0.03 | Hormone solver includes the ester-to-parent mass ratio |
+| Two three-stage branches for sublingual EV | Three-stage mucosal branch plus Bateman swallowed branch |
+| Gel absorption 0.022 h⁻¹ and one availability value | 0.0193 h⁻¹ and site-dependent availability |
+| Near-equal three-stage rates return zero | Rates are perturbed before analytical evaluation |
+| Injection always uses the three-stage expression | Unesterified E2 uses the Bateman fallback |
+| Patch duration determined only by a later removal | FIFO pairing, planned wear fallback, then indefinite wear |
+| 1,000 uniformly spaced samples | Adaptive base grid plus event and selected peri-event samples |
+| End time is last event plus 14 days | Also extends to at least the current time plus 24 hours |
+| One concentration and E2 AUC | Separate substance channels; legacy AUC mixes E2 and CPA |
+| No laboratory correction | Optional E2 calibration with four methods and two history modes |
+
+## 12. Source map and evidence
+
+The implementation is the source of truth for statements about what this version calculates:
+
+| Source | Relevant definitions |
+| --- | --- |
+| `logic.ts` | `DoseEvent`, `SimulationResult`, molecular weights and PK constants |
+| `logic.ts` | `DEFAULT_PK_PARAMS`, `getBioavailabilityMultiplier`, `resolveParams` |
+| `logic.ts` | `_analytic2C`, `_analytic3C`, `oneCompAmount`, `PrecomputedEventModel` |
+| `logic.ts` | `patchRemovalTimes`, `resolvePatchWearH`, `computeMaxLifetimeH` |
+| `logic.ts` | `runSimulation` and the four interpolation functions |
+| `logic.ts` | `computeCalibrationPoints`, `computeCalibration`, calibration estimators |
+| `src/components/DoseForm.tsx` | Compound-mass storage and route-specific extras |
+| `src/hooks/useAppData.ts` | Application of E2 calibration to the current level |
+
+The gel half-life discussion was checked against the [EstroGel FDA label, clinical pharmacology section](https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/021166s019lbl.pdf) and the [Divigel FDA label, clinical pharmacology section](https://www.accessdata.fda.gov/drugsatfda_docs/label/2007/022038lbl.pdf). Those documents support the product-specific observations cited above; they do not validate the complete Cadence model, its empirical site multipliers, or its use for individual dosing decisions.
+
+Other numerical tables in this article report implementation defaults. Their presence in source code establishes reproducibility, not independent clinical validation.

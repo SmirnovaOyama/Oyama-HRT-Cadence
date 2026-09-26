@@ -1,0 +1,82 @@
+.save-feedback {
+    display: grid;
+    grid-template-rows: 0fr;
+    flex: 0 0 auto;
+    opacity: 0;
+    transition: grid-template-rows 220ms cubic-bezier(.22, 1, .36, 1), opacity 160ms ease;
+}
+
+.save-feedback[data-visible="true"] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.save-feedback-clip {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.save-feedback-spacing {
+    padding: 10px 1rem 0;
+}
+
+.save-feedback-line {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 40px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 6px 14px 6px 7px;
+    border-radius: 999px;
+    background: var(--c-target-fill);
+    color: var(--c-target);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.save-feedback-line[data-tone="test"] {
+    background: var(--c-second-tint);
+    color: var(--c-second);
+}
+
+.save-feedback-line[data-tone="planned"] {
+    background: var(--c-accent-container);
+    color: var(--c-on-accent-container);
+}
+
+.save-feedback-check {
+    display: grid;
+    flex: 0 0 28px;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--c-surface);
+    animation: save-feedback-confirm 360ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.save-feedback-check svg {
+    animation: save-feedback-mark 280ms ease-out both;
+}
+
+@keyframes save-feedback-confirm {
+    from { transform: scale(.72) rotate(-12deg); opacity: 0; }
+    to { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes save-feedback-mark {
+    from { transform: scale(.6); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@media (min-width: 768px) {
+    .save-feedback-spacing { padding-inline: 2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .save-feedback { transition: none; }
+    .save-feedback-check,
+    .save-feedback-check svg { animation: none; }
+}
