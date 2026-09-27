@@ -1,10 +1,14 @@
 import { createContext, useContext } from 'react';
-import type { Lang } from '../i18n/translations';
-import { translateEnglish } from '../i18n/english';
+import type { DisplayLanguage } from '../i18n/languages';
+
+interface LanguageState {
+    lang: DisplayLanguage;
+    setLang: (lang: DisplayLanguage) => void;
+    t: (key: string) => string;
+}
 
 // Separate from the UI module so hot updates preserve context identity.
-export const englishLanguage = { lang: 'en' as Lang, t: translateEnglish };
-export const LanguageContext = createContext<typeof englishLanguage | null>(null);
+export const LanguageContext = createContext<LanguageState | null>(null);
 
 export const useTranslation = () => {
     const context = useContext(LanguageContext);

@@ -1,3 +1,4 @@
+import { localeFor } from '../components/today/format';
 import { formatRelative } from '../utils/helpers';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { BackHeader, ListGroup, ListRow } from '../components/ui';
@@ -25,7 +26,7 @@ interface TransparencySettingsProps {
 }
 
 const TransparencySettings: React.FC<TransparencySettingsProps> = ({ onBack }) => {
-    const { t } = useTranslation();
+    const { t, lang } = useTranslation();
     const [stats, setStats] = useState<TransparencyStats | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -61,10 +62,10 @@ const TransparencySettings: React.FC<TransparencySettingsProps> = ({ onBack }) =
 
     const now = stats?.server_time ?? Math.floor(Date.now() / 1000);
 
-    const count = (n: number | undefined) => <span className="tabular-nums">{(n ?? 0).toLocaleString('en-US')}</span>;
+    const count = (n: number | undefined) => <span className="tabular-nums">{(n ?? 0).toLocaleString(localeFor(lang))}</span>;
     const recent = stats?.recent_registrations ?? [];
     const updated = lastUpdated
-        ? t('transparency.last_updated').replace('{t}', new Date(lastUpdated).toLocaleTimeString('en-US'))
+        ? t('transparency.last_updated').replace('{t}', new Date(lastUpdated).toLocaleTimeString(localeFor(lang)))
         : undefined;
 
     return (

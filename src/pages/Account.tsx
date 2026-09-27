@@ -1,3 +1,4 @@
+import { localeFor } from '../components/today/format';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Attention, Back, ChevronDown, CloudDownload, CloudUpload, Database, Delete, Devices, Edit, ImageAdd, Key, Lock, Merge, Minus,
@@ -476,7 +477,7 @@ const Account: React.FC<AccountProps> = ({
                                                             <span className="list-row-leading"><LabelIcon icon={Database} tone="blue" /></span>
                                                             <span className="list-row-text">
                                                                 <span className="list-row-title">
-                                                                    {new Date(b.created_at * 1000).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                                                                    {new Date(b.created_at * 1000).toLocaleString(localeFor(lang), { dateStyle: 'medium', timeStyle: 'short' })}
                                                                 </span>
                                                                 <span className="list-row-sub">{formatBytes(b.data_size)}</span>
                                                             </span>

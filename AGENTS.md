@@ -41,3 +41,5 @@ forms and confirmations on their existing pages.
 
 Latest owner icon update (2026-09-25): use simpler original outline glyphs across the app,
 keeping Today exactly as approved. Follow the revised `design/cadence/icons/grammar.md`.
+
+Latest owner update (2026-09-26): support English and Simplified Chinese, with an inline language selector on the You page and localized dates. Preserve existing language preferences. This overrides all earlier English-only instructions. Deploy the redesign to hrt.mahiro.uk while preserving the original site’s accounts, encrypted backups, avatars and browser records.
