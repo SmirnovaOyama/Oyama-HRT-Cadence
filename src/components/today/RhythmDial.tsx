@@ -47,8 +47,10 @@ type Paint = { fill: string; stroke?: string; strokeWidth?: number; dash?: strin
 const SEG: Record<'dose' | 'past' | 'today' | 'doseToday' | 'future', Paint> = {
     dose: { fill: 'var(--c-accent)' },
     past: { fill: 'var(--c-plate-strong)' },
-    today: { fill: 'var(--c-accent-container)', stroke: 'var(--c-ink)', strokeWidth: 2 },
-    doseToday: { fill: 'var(--c-accent)', stroke: 'var(--c-ink)', strokeWidth: 2 },
+    // Today is picked out by its tint, its bold label and the hand; a heavy ink
+    // outline on top of those made the segment read as a separate box.
+    today: { fill: 'var(--c-accent-container)', stroke: 'var(--c-accent)', strokeWidth: 1.5 },
+    doseToday: { fill: 'var(--c-accent)' },
     future: { fill: 'var(--c-surface)', stroke: 'var(--c-hairline)', strokeWidth: 1 },
 };
 

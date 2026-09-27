@@ -17,7 +17,8 @@ import EstimateInfoModal from '../components/EstimateInfoModal';
 import DoseAdvisoryNotice from '../components/DoseAdvisory';
 import PixelCat from '../components/PixelCat';
 import { Button, PageHeader, Section } from '../components/ui';
-import { BackedUp, CloudOff, Help, Plus, Sync, Tests } from '../components/icons';
+import { Attention, BackedUp, CloudOff, Help, Plus, Sync, Tests } from '../components/icons';
+import type { IconComponent } from '../components/icons';
 import RhythmDial from '../components/today/RhythmDial';
 import RangeRuler, { TargetRange, rulerScale } from '../components/today/RangeRuler';
 import ComingUp, { LogDosePrefill, ROUTE_ICON, prefillFor } from '../components/today/ComingUp';
@@ -32,7 +33,6 @@ import {
     relativeTime,
     shortDateTitle,
     weekdayLong,
-    whenInline,
 } from '../components/today/format';
 import {
     UpcomingDose,
@@ -183,7 +183,6 @@ const Home: React.FC<HomeProps> = ({
         [cycle, dialPick.inner, nowMs],
     );
     const upcoming = React.useMemo(() => upcomingDoses(regimens, nowMs).slice(0, 4), [regimens, nowMs]);
-    const next = upcoming[0] ?? null;
 
     // ── Level ─────────────────────────────────────────────────────────────
     const level = isTransmasc ? currentT : currentLevel;
@@ -291,28 +290,31 @@ const Home: React.FC<HomeProps> = ({
         });
     }, [cycle, nowMs, lang, t]);
 
-    const legendLine = React.useMemo(() => {
-        if (!cycle) return null;
-        const parts: string[] = [];
+    const legend = React.useMemo(() => {
+        if (!cycle) return [] as { icon: IconComponent; tone: string; text: string }[];
         const outerMed = medInline(cycle.regimen.ester, t, lang);
-        parts.push(cycle.cycleDays === 7
-            ? fmt(t('today.legend.outer_weekly'), { med: outerMed })
-            : fmt(t('today.legend.outer_days'), { med: outerMed, n: cycle.cycleDays }));
+        const rows = [{
+            icon: ROUTE_ICON[cycle.regimen.family],
+            tone: 'text-[var(--c-accent)]',
+            text: cycle.cycleDays === 7
+                ? fmt(t('today.legend.outer_weekly'), { med: outerMed })
+                : fmt(t('today.legend.outer_days'), { med: outerMed, n: cycle.cycleDays }),
+        }];
         if (dialPick.inner && slots) {
-            parts.push(fmt(t('today.legend.inner'), { med: medInline(dialPick.inner.ester, t, lang) }));
+            rows.push({
+                icon: ROUTE_ICON[dialPick.inner.family],
+                tone: 'text-[var(--c-second)]',
+                text: fmt(t('today.legend.inner'), { med: medInline(dialPick.inner.ester, t, lang) }),
+            });
             const missed = slots.filter(s => s.state === 'missed');
-            if (missed.length === 1) parts.push(fmt(t('today.legend.missed_one'), { day: weekdayLong(missed[0].dayStartMs, lang) }));
-            else if (missed.length > 1) parts.push(fmt(t('today.legend.missed_many'), { n: missed.length }));
+            const missedText = missed.length === 1
+                ? fmt(t('today.legend.missed_one'), { day: weekdayLong(missed[0].dayStartMs, lang) })
+                : missed.length > 1 ? fmt(t('today.legend.missed_many'), { n: missed.length }) : null;
+            if (missedText) rows.push({ icon: Attention, tone: 'text-[var(--c-attention)]', text: missedText });
         }
-        return joinSentences(lang, parts);
+        return rows;
     }, [cycle, dialPick.inner, slots, lang, t]);
-
-    const nextLine = next
-        ? fmt(t('today.next'), {
-            dose: `${medInline(next.regimen.ester, t, lang)} ${doseText(next.regimen.last)}`,
-            when: whenInline(next.dueMs, nowMs, lang, t),
-        })
-        : null;
+    const legendLine = legend.length ? joinSentences(lang, legend.map(row => row.text)) : null;
 
     const openUpcoming = onLogDose ? (item: UpcomingDose) => onLogDose(prefillFor(item, nowMs)) : undefined;
 
@@ -378,6 +380,9 @@ const Home: React.FC<HomeProps> = ({
     // ── Blocks ────────────────────────────────────────────────────────────
     const levelValue = (
         <>
+            {shownLevel != null && (
+                <span className="block text-[13px] font-semibold leading-4 text-[var(--c-muted)] xl:text-sm">{t('today.estimated')}</span>
+            )}
             <span className="block text-[44px] font-semibold leading-[44px] tabular-nums xl:text-[64px] xl:leading-[64px]">
                 {shownLevel ?? '--'}
             </span>
@@ -417,17 +422,23 @@ const Home: React.FC<HomeProps> = ({
                     })}
                 />
             )}
-            {trend?.outlook && <p className="m-0 text-sm text-[var(--c-muted)]">{trend.outlook}</p>}
-            {isTransmasc && currentT > 0 && (
-                <p className="m-0 text-center text-sm text-[var(--c-muted)]">{fmt(t('today.t_nmol'), { value: (currentT / 28.842).toFixed(1) })}</p>
-            )}
-            {!isTransmasc && currentCPA > 0 && (
-                <p className="m-0 text-center text-sm text-[var(--c-muted)]">{fmt(t('today.cpa_level'), { value: currentCPA.toFixed(1) })}</p>
+            {(trend?.outlook || (isTransmasc ? currentT > 0 : currentCPA > 0)) && (
+                <div className="flex flex-col gap-1 text-center text-sm text-[var(--c-muted)]">
+                    {trend?.outlook && <p className="m-0">{trend.outlook}</p>}
+                    {isTransmasc && currentT > 0 && (
+                        <p className="m-0">{fmt(t('today.t_nmol'), { value: (currentT / 28.842).toFixed(1) })}</p>
+                    )}
+                    {!isTransmasc && currentCPA > 0 && (
+                        <p className="m-0">{fmt(t('today.cpa_level'), { value: currentCPA.toFixed(1) })}</p>
+                    )}
+                </div>
             )}
         </>
     );
 
-    const plate = 'flex flex-col gap-3 rounded-[20px] bg-[var(--c-plate)] p-4 xl:p-5';
+    // Today's two cards share one look: white, a hairline edge, 20px corners.
+    const card = 'rounded-[20px] border border-[var(--c-hairline)] bg-[var(--c-surface)]';
+    const plate = `flex flex-col gap-3 ${card} p-4 xl:p-5`;
 
     const dialPlate = cycle ? (
         <section aria-label={cycleTitle ?? undefined} className={plate}>
@@ -452,7 +463,16 @@ const Home: React.FC<HomeProps> = ({
             </RhythmDial>
             {statusLine}
             {levelDetails}
-            {legendLine && <p className="m-0 text-sm text-[var(--c-muted)]">{legendLine}</p>}
+            {legend.length > 0 && (
+                <ul className="m-0 flex list-none flex-col gap-1.5 border-t border-[var(--c-hairline)] p-0 pt-3 text-[15px] leading-5 text-[var(--c-muted)]">
+                    {legend.map(({ icon: Icon, tone, text }) => (
+                        <li key={text} className="flex items-start gap-2">
+                            <Icon size={18} className={`mt-px flex-none ${tone}`} />
+                            <span>{text}</span>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </section>
     ) : (
         // List-first fallback: no cycle to draw, so the level block stands alone.
@@ -535,47 +555,32 @@ const Home: React.FC<HomeProps> = ({
             <PageHeader title={title} subtitle={subtitle} trailing={trailing} />
             {dueCards}
 
-            <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-stretch">
-                {/* Left: the dial plate, notices and the one main action */}
-                <div className="flex min-w-0 flex-col gap-4 xl:col-start-1 xl:row-start-1">
-                    {dialPlate}
-                    <DoseAdvisoryNotice
-                        advisory={doseAdvisory}
-                        hormoneAdvisory={hormoneAdvisory}
-                        showCalibrate={false}
-                        onCalibrate={onNavigateToLab}
-                        t={t}
-                        className={(doseAdvisory || hormoneAdvisory) && !nextLine ? 'xl:flex-1' : undefined}
-                    />
-                    {(nextLine || onLogDose || showCalibrate) && (
-                        <div className={`flex flex-col gap-2 ${nextLine || showCalibrate ? '' : 'md:hidden'}`}>
-                            {nextLine && (
-                                <p className={`m-0 text-base ${next?.overdue ? 'text-[var(--c-attention)]' : 'text-[var(--c-ink)]'}`}>{nextLine}</p>
-                            )}
-                            <div className={`flex items-center gap-2 ${showCalibrate ? '' : 'md:hidden'}`}>
-                                {onLogDose && (
-                                    <Button variant="primary" compact onClick={() => onLogDose()} className="min-w-0 flex-1 px-3 md:hidden">
-                                        <Plus size={18} />
-                                        {t('today.log_dose')}
-                                    </Button>
-                                )}
-                                {showCalibrate && (
-                                    <Button variant="secondary" compact onClick={onNavigateToLab} className="min-w-0 flex-1 px-3 md:flex-none md:px-4">
-                                        <Tests size={18} />
-                                        {t('advisory.calibrate.cta')}
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
+            {/* Phone: dial, Coming up, chart. Desktop: the same left column, with the
+                chart beside it, held in view while the column scrolls. "Log a dose"
+                lives in the tab bar and sidebar, and the next dose is Coming up's
+                first row, so neither is repeated here. */}
+            <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[520px_minmax(0,1fr)] xl:items-start">
+                <div className="flex min-w-0 flex-col gap-6">
+                    <div className="flex flex-col gap-4">
+                        {dialPlate}
+                        <DoseAdvisoryNotice
+                            advisory={doseAdvisory}
+                            hormoneAdvisory={hormoneAdvisory}
+                            showCalibrate={false}
+                            onCalibrate={onNavigateToLab}
+                            t={t}
+                        />
+                        {showCalibrate && (
+                            <Button variant="secondary" compact onClick={onNavigateToLab} className="self-start px-4">
+                                <Tests size={18} />
+                                {t('advisory.calibrate.cta')}
+                            </Button>
+                        )}
+                    </div>
 
-                {/* Right on desktop: chart first, then Coming up. Phone order is Coming up, then the chart. */}
-                <div className="flex min-w-0 flex-col gap-6 xl:contents">
                     {(upcoming.length > 0 || suppliesAttention.length > 0) && (
                         <Section
                             title={t('today.coming_up')}
-                            className="xl:col-start-2 xl:row-start-2"
                             action={onNavigateToReminders && (
                                 <Button variant="plain" onClick={onNavigateToReminders} className="-mr-3">
                                     {t('today.reminders_link')}
@@ -594,32 +599,27 @@ const Home: React.FC<HomeProps> = ({
                             />
                         </Section>
                     )}
-
-                    <section
-                        className="min-w-0 xl:col-start-2 xl:row-start-1 xl:flex xl:flex-col xl:rounded-2xl xl:border xl:border-[var(--c-hairline)] xl:bg-[var(--c-surface)] xl:px-5 xl:pb-4 xl:pt-3"
-                    >
-                        <ResultChart
-                            sim={simulation}
-                            projection={projection}
-                            events={events}
-                            onPointClick={onEditEvent}
-                            showEstimateLabel={false}
-                            labResults={labResults}
-                            calibrationFn={calibrationFn}
-                            isDarkMode={isDarkMode}
-                            isMono={isMono}
-                            title={t('today.this_week')}
-                            className="xl:flex xl:flex-1 xl:flex-col"
-                            headerClassName="xl:items-baseline"
-                            rangeClassName="hidden w-[200px] max-w-full shrink-0 xl:flex 2xl:w-[240px]"
-                            rangeSize="sm"
-                            plotClassName="h-56 md:h-64 xl:h-auto xl:min-h-80 xl:flex-1 xl:[&>svg]:absolute xl:[&>svg]:inset-0"
-                        />
-                        <p className="m-0 mt-2 text-sm text-[var(--c-muted)]">
-                            {fmt(t(projection ? 'today.chart_caption' : 'today.chart_caption_logged'), { hormone: inline(hormone, lang) })}
-                        </p>
-                    </section>
                 </div>
+
+                <section className={`min-w-0 ${card} px-3 pb-3 pt-3 xl:sticky xl:top-6 xl:px-4 xl:pb-4`}>
+                    <ResultChart
+                        sim={simulation}
+                        projection={projection}
+                        events={events}
+                        onPointClick={onEditEvent}
+                        showEstimateLabel={false}
+                        labResults={labResults}
+                        calibrationFn={calibrationFn}
+                        isDarkMode={isDarkMode}
+                        isMono={isMono}
+                        title={t('today.this_week')}
+                        headerClassName="xl:items-baseline"
+                        rangeClassName="hidden w-[200px] max-w-full shrink-0 xl:flex 2xl:w-[240px]"
+                        rangeSize="sm"
+                        plotClassName="h-56 md:h-64 xl:h-[360px]"
+                        onSurface
+                    />
+                </section>
             </div>
         </div>
     );

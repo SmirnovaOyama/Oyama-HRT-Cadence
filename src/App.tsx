@@ -1,3 +1,4 @@
+import { localeFor } from './components/today/format';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation, LanguageProvider } from './contexts/LanguageContext';
 import { useDialog, DialogProvider } from './contexts/DialogContext';
@@ -459,7 +460,7 @@ const AppContent = () => {
                 showDialog('alert', t('account.cloud_load_failed'));
                 return;
             }
-            showDialog('confirm', (t('account.load_confirm') as string).replace('{time}', new Date(timestamp * 1000).toLocaleString('en-US')), () => {
+            showDialog('confirm', (t('account.load_confirm') as string).replace('{time}', new Date(timestamp * 1000).toLocaleString(localeFor(lang))), () => {
                 processImportedData(parsed);
             });
         } catch (e) {

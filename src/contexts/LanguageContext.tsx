@@ -1,16 +1,21 @@
-import React, { useEffect } from 'react';
-import { englishLanguage, LanguageContext } from './languageState';
+import React, { useEffect, useMemo, useState } from 'react';
+import { LanguageContext } from './languageState';
+import { resolveLanguage, translatorFor, type DisplayLanguage } from '../i18n/languages';
 
 export { useTranslation } from './languageState';
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
+    const [lang, setLang] = useState<DisplayLanguage>(() => {
+        let saved: string | null = null;
+        try { saved = localStorage.getItem('hrt-lang'); } catch { /* Storage may be unavailable. */ }
+        return resolveLanguage(saved, typeof navigator === 'undefined' ? [] : navigator.languages);
+    });
     useEffect(() => {
-        // Migrate the old preference without touching any health records.
-        try { localStorage.setItem('hrt-lang', 'en'); } catch { /* Storage may be unavailable. */ }
-        document.title = 'HRT Tracker';
-        document.documentElement.lang = 'en';
+        try { localStorage.setItem('hrt-lang', lang); } catch { /* Storage may be unavailable. */ }
+        document.title = lang === 'zh' ? 'HRT 用药记录' : 'HRT Tracker';
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
         document.documentElement.dir = 'ltr';
-    }, []);
-
-    return <LanguageContext.Provider value={englishLanguage}>{children}</LanguageContext.Provider>;
+    }, [lang]);
+    const value = useMemo(() => ({ lang, setLang, t: translatorFor(lang) }), [lang]);
+    return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };

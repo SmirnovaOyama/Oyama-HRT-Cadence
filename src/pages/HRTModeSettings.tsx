@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useHRTMode } from '../contexts/HRTModeContext';
 import { BackHeader, ListGroup, ListRow } from '../components/ui';
-import { Helix } from '../components/icons';
+import { HrtType } from '../components/icons';
 import { LabelIcon } from '../components/ui/LabelIcon';
 import { LIST_CHECK, YouPage } from './you/shared';
 
@@ -31,7 +31,7 @@ const HRTModeSettings: React.FC<HRTModeSettingsProps> = ({ onBack }) => {
             >
                 {OPTIONS.map(({ value, labelKey }) => (
                     <ListRow key={value} className="min-h-[52px]"
-                        leading={<LabelIcon icon={Helix} tone={value === 'transfem' ? 'pink' : 'blue'} />}
+                        leading={<LabelIcon icon={HrtType} tone={value === 'transfem' ? 'pink' : 'blue'} />}
                         title={t(labelKey)} selected={mode === value} onClick={() => setMode(value)} />
                 ))}
             </ListGroup>

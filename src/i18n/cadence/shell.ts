@@ -7,6 +7,11 @@ import type { AreaStrings } from './types';
 // in the reader's locale ("4 minutes ago", "4分钟前", "4 dakika önce").
 export const shell: AreaStrings = {
     zh: {
+        'shell.save.dose_logged': '已记录用药',
+        'shell.save.dose_planned': '已保存计划用药',
+        'shell.save.dose_updated': '已更新用药记录',
+        'shell.save.test_saved': '已保存化验结果',
+        'shell.save.test_updated': '已更新化验结果',
         'shell.back': '返回',
         'shell.nav.main': '主导航',
         'shell.nav.sidebar': '侧边栏',

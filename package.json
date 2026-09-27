@@ -19,7 +19,8 @@
     "wrangler:migrate:reconcile": "wrangler d1 execute oyama-cadence-db --remote --file=scripts/mark-applied-migrations.sql",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "deploy:production": "bun run build && wrangler deploy --config wrangler.production.toml"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

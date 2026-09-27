@@ -41,6 +41,11 @@
 .list-row-has-value:has(> .list-row-leading > .label-icon) .list-row-value {
     min-width: min(3.5em, 35%);
 }
+/* You page (owner request, 2026-09-27): every row's text starts on one column,
+   16 + 20px glyph + 12, which is where its inset separators start too. Rows with
+   a value otherwise sat 2px further left. Scoped so other lists keep theirs. */
+.you-settings .list-group .list-row:has(> .list-row-leading) { gap: 12px; }
+.you-settings .list-group-footer { padding-top: 6px; }
 
 @keyframes control-land {
     from { scale: 0.9; }

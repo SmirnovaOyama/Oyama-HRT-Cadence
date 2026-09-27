@@ -20,7 +20,7 @@ const ONBOARDING_KEY = 'app-onboarded';
  * account. Matched by shape rather than listed, since the accounts on a device
  * aren't known here.
  */
-const EVENTS_KEY = /^hrt-(u[^-]+-)?(masc-)?events$/;
+const EVENTS_KEY = /^hrt-(u.+-)?(masc-)?events$/;
 
 export const shouldShowOnboarding = (): boolean => {
     if (localStorage.getItem(ONBOARDING_KEY) === 'true') return false;

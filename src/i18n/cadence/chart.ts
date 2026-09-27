@@ -4,6 +4,7 @@ import type { AreaStrings } from './types';
 // `bun run i18n:check` enforces it.
 export const chart: AreaStrings = {
     zh: {
+        'chart.readout_value': '约 {value} {unit}。',
         'chart.cpa': '环丙孕酮',
         'chart.now_at': '现在 {time}',
         'chart.target_range': '目标 {low}–{high}',
@@ -23,6 +24,14 @@ export const chart: AreaStrings = {
         'chart.keyboard_hint': '用左右方向键查看其他时刻。',
         'chart.if_no_more': '不再用药时的走势',
         'chart.readout_no_more': '约 {value} {unit}，假如不再用药。',
+        'chart.key.solid': '已发生',
+        'chart.key.dashed': '预测',
+        'chart.key.logged': '已记录',
+        'chart.key.planned': '计划中',
+        'chart.key.lab': '血检',
+        'chart.key.band': '可能范围',
+        'chart.axis_left': '左轴：{series}',
+        'chart.axis_right': '右轴：{series}',
         'chart.legend_marks_logged': '实线是已经发生的，虚线是不再用药时的走势。实心三角是已用的剂量，菱形是血检。',
     },
     'zh-TW': {
@@ -91,6 +100,14 @@ export const chart: AreaStrings = {
         'chart.if_no_more': 'If you take no more doses',
         'chart.readout_no_more': 'About {value} {unit} if you take no more doses.',
         'chart.legend_marks_logged': 'The solid line shows estimated levels so far, while the dashed line projects future levels if you take no more doses. Filled triangles mark recorded doses, and diamonds mark blood tests.',
+        'chart.key.solid': 'So far',
+        'chart.key.dashed': 'Forecast',
+        'chart.key.logged': 'Logged',
+        'chart.key.planned': 'Planned',
+        'chart.key.lab': 'Blood test',
+        'chart.key.band': 'Likely range',
+        'chart.axis_left': 'Left: {series}',
+        'chart.axis_right': 'Right: {series}',
     },
     ja: {
         'chart.cpa': 'シプロテロン',

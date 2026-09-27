@@ -16,6 +16,12 @@ import { isProjection } from '../hooks/useProjection';
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
 
+/** Line weights: the primary estimate is the main line; a second series
+ *  (cyproterone beside estradiol) is thinner and lighter. */
+const PRIMARY_W = 2.75;
+const SECOND_W = 1.5;
+const SECOND_OPACITY = 0.6;
+
 type RangeKey = '7d' | '30d' | 'all';
 
 // Pick a "nice" rounding step (1/2/5 × 10^n) near the requested magnitude.
@@ -45,6 +51,64 @@ const ticksFor = ([lo, hi]: [number, number]): number[] => {
     for (let v = lo; v <= hi + step * 0.5; v += step) out.push(Math.round(v / step) * step);
     return out;
 };
+
+// The smallest "nice" step (1, 2, 2.5 or 5 × 10^n) that is at least `raw`.
+const niceCeil = (raw: number): number => {
+    if (!(raw > 0)) return 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    for (const n of [1, 2, 2.5, 5, 10]) if (n * mag >= raw * (1 - 1e-9)) return n * mag;
+    return 10 * mag;
+};
+
+/** With two series both axes use four equal intervals from zero, so the right
+ *  axis labels sit on the left axis gridlines. */
+const QUARTERS = [0, 1, 2, 3, 4];
+const quarterTicks = ([lo, hi]: [number, number]): number[] => QUARTERS.map(i => lo + ((hi - lo) * i) / 4);
+
+type Midnight = { ms: number; dayNum: number; dow: number; monthNum: number; dom: number };
+
+/** Local midnights (in `timeZone` when given, else the device's) covering
+ *  [from, to]. `dayNum` counts calendar days, so choices made from it (which
+ *  days carry a label) stay put while the window pans. */
+export function midnightsBetween(from: number, to: number, timeZone?: string): Midnight[] {
+    const out: Midnight[] = [];
+    const push = (ms: number, y: number, m: number, d: number) => {
+        const dayNum = Math.round(Date.UTC(y, m, d) / DAY);
+        out.push({ ms, dayNum, dow: ((dayNum % 7) + 11) % 7, monthNum: y * 12 + m, dom: d });
+    };
+    if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) return out;
+    if (!timeZone) {
+        const d = new Date(from);
+        d.setHours(0, 0, 0, 0);
+        for (let guard = 0; d.getTime() <= to && guard < 5000; guard++) {
+            push(d.getTime(), d.getFullYear(), d.getMonth(), d.getDate());
+            d.setDate(d.getDate() + 1);
+        }
+        return out;
+    }
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hourCycle: 'h23',
+    });
+    const fieldsAt = (ms: number) => {
+        const p: Record<string, number> = {};
+        for (const x of parts.formatToParts(ms)) if (x.type !== 'literal') p[x.type] = Number(x.value);
+        return p;
+    };
+    // The zone's offset at an instant: its wall-clock time read as UTC, minus the instant.
+    const offsetAt = (ms: number) => {
+        const p = fieldsAt(ms);
+        return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - Math.floor(ms / 60000) * 60000;
+    };
+    const start = fieldsAt(from);
+    for (let i = 0; i < 5000; i++) {
+        const wall = Date.UTC(start.year, start.month - 1, start.day + i);
+        const ms = wall - offsetAt(wall - offsetAt(wall));
+        if (ms > to) break;
+        const d = new Date(wall);
+        push(ms, d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    }
+    return out;
+}
 
 const prefersReducedMotion = () =>
     typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -156,6 +220,18 @@ const textWidth = (s: string, px: number, bold = false) => {
     return em * px;
 };
 
+/** A legend sample: the line style or mark it names, in a neutral colour. */
+const KeySwatch = ({ kind }: { kind: 'solid' | 'dashed' | 'logged' | 'planned' | 'lab' | 'band' }) => (
+    <svg width={18} height={12} viewBox="0 0 18 12" className="flex-none" aria-hidden="true">
+        {kind === 'solid' && <path d="M1.5 6H16.5" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" />}
+        {kind === 'dashed' && <path d="M1 6H17" stroke="currentColor" strokeWidth={2} strokeDasharray="4 3" />}
+        {kind === 'logged' && <path d="M9 2.5L13 10H5Z" fill="currentColor" />}
+        {kind === 'planned' && <path d="M9 3L12.5 9.5H5.5Z" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />}
+        {kind === 'lab' && <rect x={5.75} y={2.75} width={6.5} height={6.5} transform="rotate(45 9 6)" fill="var(--c-ink)" />}
+        {kind === 'band' && <rect x={1} y={2} width={16} height={8} rx={2} fill="var(--c-ink)" fillOpacity={0.12} />}
+    </svg>
+);
+
 const ResultChart = ({
     sim,
     events,
@@ -175,6 +251,7 @@ const ResultChart = ({
     plotClassName = 'h-56 md:h-64',
     showCalibrationNote = true,
     projection = null,
+    onSurface = false,
 }: {
     sim: SimulationResult | null;
     events: DoseEvent[];
@@ -209,6 +286,8 @@ const ResultChart = ({
      *  schedule", and its planned doses show as outlined triangles. Without it
      *  the dashed part is the logged doses wearing off, and says so. */
     projection?: SimulationResult | null;
+    /** True inside a white card, so label halos match it rather than the page. */
+    onSurface?: boolean;
 }) => {
     const { t, lang } = useTranslation();
     const { isTransmasc: contextIsTransmasc } = useHRTMode();
@@ -415,15 +494,20 @@ const ResultChart = ({
         // Keep the target band's lower edge on-screen so "below target" reads clearly,
         // without forcing the whole (often much higher) band into view.
         if (primaryTarget) mx = Math.max(mx, primaryTarget.low * 1.05);
+        // Two series: four equal steps, so the right axis lines up with this one.
+        if (hasSecondary) return [0, 4 * niceCeil((Number.isFinite(mx) && mx > 0 ? mx * 1.08 : 4) / 4)] as [number, number];
         return buildYDomain(0, mx);
-    }, [slice, labPoints, markers, primaryTarget]);
+    }, [slice, labPoints, markers, primaryTarget, hasSecondary]);
 
+    // Cyproterone reads 0–40 ng/mL in steps of 10; only a level above 40 widens it,
+    // still in four steps.
     const ySecondary = useMemo(() => {
         if (!hasSecondary) return [0, 1] as [number, number];
         let mx = -Infinity;
         for (const d of slice) if (d.s != null && d.s > mx) mx = d.s;
         for (const m of markers) if (m.axis === 's' && m.v > mx) mx = m.v;
-        return buildYDomain(0, mx);
+        const step = mx <= 40 ? 10 : niceCeil((mx * 1.05) / 4);
+        return [0, 4 * step] as [number, number];
     }, [slice, markers, hasSecondary]);
 
     // The primary series at an arbitrary hour, calibrated the same way the
@@ -464,6 +548,9 @@ const ResultChart = ({
     // axis type and the gutters it sits in proportional when the desktop scale
     // steps up. Recomputed with the measured size, which is what a breakpoint
     // change triggers.
+    const yTickVals = useMemo(() => (hasSecondary ? quarterTicks(yPrimary) : ticksFor(yPrimary)), [yPrimary, hasSecondary]);
+    const ysTickVals = useMemo(() => quarterTicks(ySecondary), [ySecondary]);
+
     const ui = useMemo(() => {
         if (typeof window === 'undefined') return 1;
         const px = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -471,8 +558,9 @@ const ResultChart = ({
     }, [width, height]);
     const axisFont = 13 * ui;
 
-    const mL = 40 * ui;
-    const mR = (hasSecondary ? 44 : 8) * ui;
+    const labelsW = (vals: number[]) => vals.reduce((w, v) => Math.max(w, textWidth(fmtAxis(v), axisFont)), 0);
+    const mL = Math.max(24 * ui, labelsW(yTickVals) + 10 * ui);
+    const mR = hasSecondary ? Math.max(20 * ui, labelsW(ysTickVals) + 10 * ui) : 8 * ui;
     const mB = 28 * ui;
     const plotW = Math.max(0, width - mL - mR);
 
@@ -487,8 +575,13 @@ const ResultChart = ({
         const nx = mL + (vt1 === vt0 ? 0 : ((now - vt0) / (vt1 - vt0)) * plotW);
         return Math.max(0, Math.min(width - tabW, nx - tabW / 2));
     })();
-    const tabHitsCaption = tabX < textWidth(leftCaption, axisFont, true) + 6 * ui
-        || (hasSecondary && tabX + tabW > width - textWidth(rightCaption, axisFont, true) - 6 * ui);
+    // Two captions and the tab share that row only when all three fit with room
+    // to spare. Otherwise the captions go under the plot as text that wraps, so
+    // on a narrow screen they can never run past the card.
+    const captionsBelow = hasSecondary
+        && textWidth(leftCaption, axisFont, true) + textWidth(rightCaption, axisFont, true) + tabW + 36 * ui > width;
+    const tabHitsCaption = !captionsBelow && (tabX < textWidth(leftCaption, axisFont, true) + 6 * ui
+        || (hasSecondary && tabX + tabW > width - textWidth(rightCaption, axisFont, true) - 6 * ui));
     const captionRow = tabHitsCaption ? 20 * ui : 0;
     const mT = 34 * ui + captionRow; // room for the "Now" tab above the plot
     const plotH = Math.max(0, height - mT - mB);
@@ -599,28 +692,58 @@ const ResultChart = ({
         return `${top}L${back.slice(1)}Z`;
     };
 
-    const xTicks = useMemo(() => {
-        if (plotW <= 0) return [];
-        const count = Math.max(2, Math.min(6, Math.floor(plotW / (90 * ui))));
-        const seen = new Set<string>();
-        const out: { time: number; label: string }[] = [];
-        for (let i = 0; i <= count; i++) {
-            const time = t0 + ((t1 - t0) * i) / count;
-            const label = formatDate(new Date(time), lang, timeZone);
-            if (seen.has(label)) continue;
-            seen.add(label);
-            out.push({ time, label });
-        }
-        return out;
+    // X axis: a short tick at every local midnight (every Monday, or every first
+    // of the month, once days get too close to tell apart), with date labels
+    // thinned to fit. Which days are labelled comes from the calendar, not the
+    // window, so labels stay on their days while the chart pans.
+    const days = useMemo(
+        () => midnightsBetween(Math.min(fullMin, t0) - DAY, Math.max(fullMax, t1) + DAY, timeZone),
+        // Rebuilt when the data's span or the zone changes, not on every eased frame.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [t0, t1, plotW, lang, timeZone, mL, ui]);
+        [Math.floor(Math.min(fullMin, t0) / DAY), Math.ceil(Math.max(fullMax, t1) / DAY), timeZone],
+    );
+    const xAxis = useMemo(() => {
+        if (plotW <= 0 || t1 <= t0) return { ticks: [] as number[], labels: [] as { time: number; label: string }[], sig: '' };
+        const pxPerDay = plotW / ((t1 - t0) / DAY);
+        const labelRoom = textWidth(formatDate(new Date(now), lang, timeZone), axisFont) + 14 * ui;
+        const fits = (daysApart: number) => daysApart * pxPerDay >= labelRoom;
+        let tickDays: Midnight[];
+        let labelled: (d: Midnight) => boolean;
+        let sig: string;
+        if (pxPerDay >= 4 * ui) {
+            tickDays = days;
+            const k = [1, 2, 3].find(fits);
+            if (k) {
+                labelled = d => d.dayNum % k === 0;
+                sig = `d${k}`;
+            } else {
+                const w = fits(7) ? 1 : 2;
+                labelled = d => d.dow === 1 && Math.floor((d.dayNum + 3) / 7) % w === 0;
+                sig = `w${w}`;
+            }
+        } else if (pxPerDay * 7 >= 4 * ui) {
+            tickDays = days.filter(d => d.dow === 1);
+            const w = [1, 2, 4, 8, 13, 26].find(n => fits(7 * n)) ?? 52;
+            labelled = d => Math.floor((d.dayNum + 3) / 7) % w === 0;
+            sig = `W${w}`;
+        } else {
+            tickDays = days.filter(d => d.dom === 1);
+            const n = [1, 2, 3, 6, 12].find(m => fits(30.4 * m)) ?? 24;
+            labelled = d => d.monthNum % n === 0;
+            sig = `M${n}`;
+        }
+        return {
+            ticks: tickDays.map(d => d.ms),
+            labels: tickDays.filter(labelled).map(d => ({ time: d.ms, label: formatDate(new Date(d.ms), lang, timeZone) })),
+            sig,
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [days, t0, t1, plotW, lang, timeZone, ui]);
 
     // Label sets for both axes, each carrying whatever it is replacing.
-    const yTickVals = useMemo(() => ticksFor(yPrimary), [yPrimary]);
-    const ysTickVals = useMemo(() => ticksFor(ySecondary), [ySecondary]);
     const yFade = useFadingSet(yTickVals, yTickVals.join(','));
     const ysFade = useFadingSet(ysTickVals, ysTickVals.join(','));
-    const xFade = useFadingSet(xTicks, xTicks.map(t => t.label).join('|'), dragging);
+    const xFade = useFadingSet(xAxis.labels, xAxis.sig, dragging);
 
     // Mid-rescale an incoming set can be crushed together. Its numbers wait
     // until there is room to hold them.
@@ -821,6 +944,35 @@ const ResultChart = ({
     })();
 
 
+    // Direct labels. The target range is named at the left of its band; the
+    // forecast label normally sits low in the future part, and moves to the top
+    // of the plot when it would land on the target label.
+    const halo = onSurface ? c.surface : c.paper;
+    const targetText = primaryTarget ? fillIn(t('chart.target_range'), { low: primaryTarget.low, high: primaryTarget.high }) : '';
+    const targetX = mL + 4 * ui;
+    const targetY = (() => {
+        if (!primaryTarget) return null;
+        const yHi = Math.max(mT, Math.min(bottom, YP(primaryTarget.high)));
+        const yLo = Math.max(mT, Math.min(bottom, YP(primaryTarget.low)));
+        if (yLo - yHi < 0.5) return null;
+        return yLo - yHi >= axisFont + 8 * ui ? yLo - 6 * ui : yHi - 6 * ui;
+    })();
+    const targetW = textWidth(targetText, axisFont, true);
+    const forecastY = (() => {
+        const low = bottom - 12 * ui;
+        if (targetY == null) return low;
+        const fw = textWidth(forecastText, axisFont);
+        const overlapX = forecastX < targetX + targetW + 8 * ui && forecastX + fw > targetX - 8 * ui;
+        const overlapY = Math.abs(low - targetY) < axisFont + 6 * ui;
+        return overlapX && overlapY ? mT + axisFont + 8 * ui : low;
+    })();
+
+    // The legend under the plot names only what the current window shows.
+    const hasFuture = data.length > 0 && fullMax > now && now < t1;
+    const hasLogged = markers.some(m => !m.planned);
+    const hasPlanned = markers.some(m => m.planned);
+    const hasLabs = labPoints.length > 0;
+
     let lastLabelX = -Infinity;
 
     return (
@@ -891,8 +1043,10 @@ const ResultChart = ({
 
                         {/* Units, labelled directly. With two series each caption
                             takes its curve's colour and sits over its own axis. */}
-                        <text x={0} y={14 * ui} fontSize={axisFont} fontWeight={600} fill={hasSecondary ? c.primary : c.muted}>{leftCaption}</text>
-                        {hasSecondary && (
+                        {!captionsBelow && (
+                            <text x={0} y={14 * ui} fontSize={axisFont} fontWeight={600} fill={hasSecondary ? c.primary : c.muted}>{leftCaption}</text>
+                        )}
+                        {hasSecondary && !captionsBelow && (
                             <text x={width} y={14 * ui} textAnchor="end" fontSize={axisFont} fontWeight={600} fill={c.second}>
                                 {rightCaption}
                             </text>
@@ -919,6 +1073,14 @@ const ResultChart = ({
                                 </g>
                             );
                         })()}
+
+                        {/* Gridlines at the left axis ticks. With two series the right axis
+                            uses the same four steps, so its labels sit on these lines too. */}
+                        {yTickVals.map((v, i) => {
+                            const y = YP(v);
+                            if (y <= mT + 0.5 || y >= bottom - 0.5) return null;
+                            return <line key={`gy-${i}`} x1={mL} y1={y} x2={mL + plotW} y2={y} stroke={c.hairline} strokeWidth={1} />;
+                        })}
 
                         {/* Top gridline and baseline */}
                         <line x1={mL} y1={mT} x2={mL + plotW} y2={mT} stroke={c.hairline} strokeWidth={1} />
@@ -965,13 +1127,25 @@ const ResultChart = ({
                             )
                         )}
 
+                        {/* A short tick at each day's 00:00 (or each Monday / first of the month) */}
+                        <g>
+                            {xAxis.ticks.map(time => {
+                                const x = X(time);
+                                if (x < mL - 0.5 || x > mL + plotW + 0.5) return null;
+                                return <line key={`xt-${time}`} x1={x} y1={bottom} x2={x} y2={bottom + 4 * ui} stroke={c.rule} strokeWidth={1} />;
+                            })}
+                        </g>
+
                         {/* X axis labels, on the same treatment */}
                         {([['out', xFade.prev, 1 - xFade.u], ['in', xFade.next, xFade.u]] as const).map(([tag, set, o]) =>
                             o <= 0.002 ? null : (
                                 <g key={`xg-${tag}`} opacity={o}>
                                     {set.map((tk, i) => {
                                         const x = X(tk.time);
-                                        if (x < mL - 40 || x > mL + plotW + 40) return null;
+                                        if (x < mL - 0.5 || x > mL + plotW + 0.5) return null;
+                                        // Centred under its tick, and never cut off by the chart's edge.
+                                        const half = textWidth(tk.label, axisFont) / 2;
+                                        if (x - half < 0 || x + half > width) return null;
                                         return (
                                             <text key={`x-${i}`}
                                                   className={tag === 'in' ? 'chart-appear' : undefined}
@@ -988,10 +1162,10 @@ const ResultChart = ({
                             <g clipPath={`url(#sweep-${clipId})`}>
                                 {/* What has happened: solid */}
                                 <g clipPath={`url(#past-${clipId})`}>
-                                    <path d={pPath} fill="none" stroke={c.primary} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"
+                                    <path d={pPath} fill="none" stroke={c.primary} strokeWidth={PRIMARY_W * ui} strokeLinejoin="round" strokeLinecap="round"
                                           strokeDasharray={isMono && primaryIsCPA ? '2 3' : undefined} />
                                     {hasSecondary && (
-                                        <path d={sPath} fill="none" stroke={c.second} strokeWidth={isMono ? 1.5 : 2} strokeLinejoin="round" strokeLinecap="round"
+                                        <path d={sPath} fill="none" stroke={c.second} strokeWidth={SECOND_W * ui} strokeOpacity={SECOND_OPACITY} strokeLinejoin="round" strokeLinecap="round"
                                               strokeDasharray={isMono ? '2 3' : undefined} />
                                     )}
                                 </g>
@@ -1000,11 +1174,11 @@ const ResultChart = ({
                                     logged doses wearing off. */}
                                 <g clipPath={`url(#future-${clipId})`}>
                                     {likely && <path d={likely} fill={c.ink} fillOpacity={0.07} stroke="none" />}
-                                    <path d={pPath} fill="none" stroke={c.primary} strokeWidth={2} strokeLinejoin="round"
+                                    <path d={pPath} fill="none" stroke={c.primary} strokeWidth={PRIMARY_W * ui} strokeLinejoin="round"
                                           strokeDasharray={isMono && primaryIsCPA ? '2 3' : '6 4'} />
                                     {hasSecondary && (
-                                        <path d={sPath} fill="none" stroke={c.second} strokeWidth={isMono ? 1.5 : 2} strokeLinejoin="round"
-                                              strokeDasharray={isMono ? '2 3' : '6 4'} />
+                                        <path d={sPath} fill="none" stroke={c.second} strokeWidth={SECOND_W * ui} strokeOpacity={SECOND_OPACITY} strokeLinejoin="round"
+                                              strokeDasharray={isMono ? '2 3' : '5 4'} />
                                     )}
                                 </g>
                             </g>
@@ -1078,23 +1252,19 @@ const ResultChart = ({
                         </g>
 
                         {/* Direct labels */}
-                        {primaryTarget && (() => {
-                            const yHi = Math.max(mT, Math.min(bottom, YP(primaryTarget.high)));
-                            const yLo = Math.max(mT, Math.min(bottom, YP(primaryTarget.low)));
-                            if (yLo - yHi < 0.5) return null;
-                            const y = yLo - yHi >= axisFont + 8 * ui ? yLo - 6 * ui : yHi - 6 * ui;
-                            return (
-                                <text className="chart-appear" style={{ animationDelay: '120ms' }} pointerEvents="none"
-                                      x={mL + 4 * ui} y={y} fontSize={axisFont} fontWeight={600} fill={c.target}>
-                                    {fillIn(t('chart.target_range'), { low: primaryTarget.low, high: primaryTarget.high })}
-                                </text>
-                            );
-                        })()}
+                        {targetY != null && (
+                            // A halo in the colour behind it keeps the label clear of the curves.
+                            <text className="chart-appear" style={{ animationDelay: '120ms' }} pointerEvents="none"
+                                  x={targetX} y={targetY} fontSize={axisFont} fontWeight={600} fill={c.target}
+                                  stroke={splitX >= targetX + targetW ? c.plate : halo} strokeWidth={4} strokeLinejoin="round" paintOrder="stroke">
+                                {targetText}
+                            </text>
+                        )}
                         {forecastLines.length > 0 && (
                             <text className="chart-appear" style={{ animationDelay: sweepDelay(forecastX) }} pointerEvents="none"
-                                  x={forecastX} y={bottom - 12 * ui - (forecastLines.length - 1) * 16 * ui}
+                                  x={forecastX} y={forecastY}
                                   fontSize={axisFont} fontWeight={500} fill={c.muted}
-                                  stroke={c.paper} strokeWidth={4} strokeLinejoin="round" paintOrder="stroke">
+                                  stroke={halo} strokeWidth={4} strokeLinejoin="round" paintOrder="stroke">
                                 {forecastLines.map((line, i) => (
                                     <tspan key={i} x={forecastX} dy={i === 0 ? 0 : 16 * ui}>{line}</tspan>
                                 ))}
@@ -1113,6 +1283,29 @@ const ResultChart = ({
                         )}
                     </svg>
                 )}
+            </div>
+
+            {/* Under the plot: the axis names when they did not fit above it, then
+                what the marks mean. Screen readers get the same from the legend above. */}
+            <div className="mt-2 flex flex-col gap-1.5" aria-hidden="true">
+                {captionsBelow && (
+                    <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-[13px] font-semibold leading-[18px]">
+                        <span className="min-w-0 [overflow-wrap:anywhere]" style={{ color: c.primary }}>
+                            {fillIn(t('chart.axis_left'), { series: leftCaption })}
+                        </span>
+                        <span className="min-w-0 text-end [overflow-wrap:anywhere]" style={{ color: c.second }}>
+                            {fillIn(t('chart.axis_right'), { series: rightCaption })}
+                        </span>
+                    </div>
+                )}
+                <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-[13px] leading-[18px] text-[var(--c-muted)]">
+                    <li className="inline-flex items-center gap-1.5"><KeySwatch kind="solid" />{t('chart.key.solid')}</li>
+                    {hasFuture && <li className="inline-flex items-center gap-1.5"><KeySwatch kind="dashed" />{t('chart.key.dashed')}</li>}
+                    {hasLogged && <li className="inline-flex items-center gap-1.5"><KeySwatch kind="logged" />{t('chart.key.logged')}</li>}
+                    {hasPlanned && <li className="inline-flex items-center gap-1.5"><KeySwatch kind="planned" />{t('chart.key.planned')}</li>}
+                    {hasLabs && <li className="inline-flex items-center gap-1.5"><KeySwatch kind="lab" />{t('chart.key.lab')}</li>}
+                    {hasFuture && spread != null && <li className="inline-flex items-center gap-1.5"><KeySwatch kind="band" />{t('chart.key.band')}</li>}
+                </ul>
             </div>
 
             {/* Readout: what the chart says at the read-off, or now */}

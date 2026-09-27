@@ -10,7 +10,7 @@ Current implementation and verification boundaries are recorded in [implementati
 
 0. `spec/format_rules.md`: row density and page structure, including the owner's 2026-09-24 preference to minimise small section headings. It overrides the boards' row layouts: one-line titles, a value OR a short sub-line (never both), explanations in group footers, no icon tiles in settings lists, destructive actions in their own group, and no redundant group headers.
 1. `boards/*.dc.html`: the final artboards. When a spec disagrees with a board, the board wins unless a later owner rule below overrides it. The boards are self-contained HTML with inline styles, so exact values can be read straight from them.
-2. `icons/icons.json` and `icons/grammar.md`: the original icon set (104 icons) and its construction rules. Each value in `icons.json` is the inner markup of `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">`. The stroke width follows optical sizing: 1.75 at 22px and up, 2 at 18–21px, 2.25 below 18px.
+2. `icons/icons.json` and `icons/grammar.md`: the original icon set (106 icons) and its construction rules. Each value in `icons.json` is the inner markup of `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">`. The stroke width follows optical sizing: 1.75 at 22px and up, 2 at 18–21px, 2.25 below 18px.
 3. `spec/typescale.md`: type sizes (revision 2). Mobile uses Apple HIG sizes (body 17, secondary 15, 13 only for chart ticks and tab labels). Desktop is about 1.1× that.
 4. `spec/fonts_buttons_v2.md`: Apple system fonts and the control system. Revision 6 records the owner's capsule-control update and lighter treatment, overriding older control shapes and weights.
 5. `spec/listview_v3.md`: choosers are iOS-style inset grouped lists.
@@ -52,3 +52,5 @@ respect reduced motion, preserve drafts and immediate data updates, and retain t
 The same update requests icons throughout forms, actions, settings, reminders, supplies and sharing.
 Use the existing original glyphs with visible labels, colorful medicine/route tiles, and compact colored
 outline glyphs for ordinary settings and field labels. Preserve the approved Today glyph and pixel cat.
+
+Latest owner update (2026-09-26): support English and Simplified Chinese, with an inline language selector on the You page and localized dates. Preserve existing language preferences. This overrides all earlier English-only instructions. Deploy the redesign to hrt.mahiro.uk while preserving the original site’s accounts, encrypted backups, avatars and browser records.

@@ -1,5 +1,7 @@
+import CustomSelect from '../components/CustomSelect';
+import { useTranslation } from '../contexts/LanguageContext';
 import React, { useId, useState } from 'react';
-import { Appearance, Attention, Delete, Export, External, Flask, Helix, Help, Import, Info, Link, Reminder, Share, Shield, SignIn, SignOut, Sliders, Supplies, Sync, Terminal, Weight } from '../components/icons';
+import { Appearance, Attention, Delete, Disclaimer, Export, External, Flask, Help, HrtType, Import, Info, Language, Link, Reminder, Share, Shield, SignIn, SignOut, Sliders, Supplies, Sync, Terminal, Weight } from '../components/icons';
 import { Button, ListGroup, ListRow, PageHeader, Switch } from '../components/ui';
 import { LabelIcon } from '../components/ui/LabelIcon';
 import PixelCat from '../components/PixelCat';
@@ -78,16 +80,17 @@ const SOURCE_REPO = 'https://github.com/SmirnovaOyama/Oyama-HRT-Cadence';
 
 /** A row whose only control is a Switch. The row's title names the switch;
  *  any explanation belongs in the group footer (format_rules.md 7). */
-function SwitchRow({ title, checked, onChange, icon }: {
+function SwitchRow({ title, checked, onChange, leading }: {
     title: string;
     checked: boolean;
     onChange: (v: boolean) => void;
-    icon: React.ReactNode;
+    /** Named `leading` like ListRow's, so ListGroup insets the separator below it. */
+    leading: React.ReactNode;
 }) {
     const id = useId();
     return (
         <ListRow
-            leading={icon}
+            leading={leading}
             title={<span id={id}>{title}</span>}
             trailing={<Switch checked={checked} onChange={onChange} aria-labelledby={id} />}
         />
@@ -116,6 +119,7 @@ const Settings: React.FC<SettingsProps> = ({
     onNavigate, onSignIn, syncStatus, syncErrorCode, lastSyncedAt,
     schedules = [], supplyForecasts = [],
 }) => {
+    const { setLang } = useTranslation();
     const { mode } = useHRTMode();
     const { user, logout } = useAuth();
     const signedIn = isLoggedIn && !!user;
@@ -142,7 +146,7 @@ const Settings: React.FC<SettingsProps> = ({
     const danger = (text: string) => <span className="text-[var(--c-danger)]">{text}</span>;
 
     return (
-        <YouPage className="[&_.list-row-tall]:min-h-[52px] [&_.list-sep-icon]:ms-[48px]">
+        <YouPage className="you-settings [&_.list-row-tall]:min-h-[52px] [&_.list-sep-icon]:ms-[48px]">
             <PageHeader title={t('you.title')} />
 
             <div className="flex flex-col gap-6">
@@ -166,25 +170,28 @@ const Settings: React.FC<SettingsProps> = ({
                         />
                     </ListGroup>
                 ) : (
-                    <section className="flex flex-col gap-4 rounded-2xl bg-[var(--c-plate)] p-4">
-                        <p className="m-0 text-base font-semibold text-[var(--c-ink)]">{t('you.signed_out_title')}</p>
-                        <Button variant="primary" block onClick={signIn}>
+                    <section className="flex flex-col items-start gap-4 rounded-2xl bg-[var(--c-plate)] p-4">
+                        <div className="flex flex-col gap-1">
+                            <p className="m-0 text-base font-semibold text-[var(--c-ink)]">{t('you.signed_out_title')}</p>
+                            <p className="m-0 text-[15px] leading-5 text-[var(--c-muted)]">{t('you.signed_out_body')}</p>
+                        </div>
+                        <Button variant="secondary" compact onTint onClick={signIn} className="max-w-full whitespace-normal px-4 py-2 text-center">
                             <SignIn size={20} />
                             {t('you.sign_in')}
                         </Button>
                     </section>
                 )}
 
-                <ListGroup chevronIcon={LIST_CHEVRON}>
+                <ListGroup header={t('you.group.treatment')} chevronIcon={LIST_CHEVRON}>
                     <ListRow
-                        leading={<LabelIcon icon={Helix} tone="pink" />}
+                        leading={<LabelIcon icon={HrtType} />}
                         title={t('you.hrt_mode')}
                         value={t(mode === 'transfem' ? 'mode.transfem' : 'mode.transmasc')}
                         drillIn
                         onClick={onNavigateToHRTMode}
                     />
                     <ListRow
-                        leading={<LabelIcon icon={Weight} tone="teal" />}
+                        leading={<LabelIcon icon={Weight} />}
                         title={t('you.weight')}
                         value={`${weight}\u00a0kg`}
                         drillIn
@@ -192,7 +199,7 @@ const Settings: React.FC<SettingsProps> = ({
                     />
                     {onNavigate && (
                         <ListRow
-                            leading={<LabelIcon icon={Reminder} tone="orange" />}
+                            leading={<LabelIcon icon={Reminder} />}
                             title={t('reminders.title')}
                             value={remindersValue}
                             drillIn
@@ -201,7 +208,7 @@ const Settings: React.FC<SettingsProps> = ({
                     )}
                     {onNavigate && (
                         <ListRow
-                            leading={<LabelIcon icon={Supplies} tone="green" />}
+                            leading={<LabelIcon icon={Supplies} />}
                             title={t('supplies.title')}
                             value={suppliesAttention
                                 ? (
@@ -217,79 +224,83 @@ const Settings: React.FC<SettingsProps> = ({
                     )}
                 </ListGroup>
 
-                <ListGroup chevronIcon={LIST_CHEVRON}>
-                    <ListRow leading={<LabelIcon icon={Appearance} tone="purple" />} title={t('settings.theme')} value={t(THEME_LABEL[theme])} drillIn onClick={onNavigateToAppearance} />
+                <ListGroup header={t('you.group.display')} chevronIcon={LIST_CHEVRON}>
+                    <ListRow leading={<LabelIcon icon={Appearance} />} title={t('settings.theme')} value={t(THEME_LABEL[theme])} drillIn onClick={onNavigateToAppearance} />
+                    <CustomSelect bare label={t('settings.language')} value={lang}
+                        icon={<LabelIcon icon={Language} />}
+                        options={[{ value: 'en', label: 'English' }, { value: 'zh', label: '简体中文' }]}
+                        onChange={value => setLang(value === 'zh' ? 'zh' : 'en')} />
                 </ListGroup>
 
-                <ListGroup chevronIcon={LIST_CHEVRON}>
+                <ListGroup header={t('you.group.data')} chevronIcon={LIST_CHEVRON}>
                     {signedIn && (
-                        <SwitchRow icon={<LabelIcon icon={Sync} tone="blue" />} title={t('you.sync.switch')} checked={autoSync} onChange={setAutoSync} />
+                        <SwitchRow leading={<LabelIcon icon={Sync} />} title={t('you.sync.switch')} checked={autoSync} onChange={setAutoSync} />
                     )}
-                    <ListRow leading={<LabelIcon icon={Export} tone="teal" />} title={t('you.export')} drillIn onClick={onNavigateToExport} />
-                    <ListRow leading={<LabelIcon icon={Import} tone="blue" />} title={t('you.import')} drillIn onClick={onNavigateToImport} />
+                    <ListRow leading={<LabelIcon icon={Export} />} title={t('you.export')} drillIn onClick={onNavigateToExport} />
+                    <ListRow leading={<LabelIcon icon={Import} />} title={t('you.import')} drillIn onClick={onNavigateToImport} />
                     {signedIn && onNavigate && (
-                        <ListRow leading={<LabelIcon icon={Share} tone="purple" />} title={t('you.share')} drillIn onClick={() => onNavigate('share')} />
+                        <ListRow leading={<LabelIcon icon={Share} />} title={t('you.share')} drillIn onClick={() => onNavigate('share')} />
                     )}
                 </ListGroup>
 
-                <ListGroup footer={t('you.model_footer')} chevronIcon={LIST_CHEVRON}>
+                <ListGroup header={t('you.group.estimates')} footer={t('you.model_footer')} chevronIcon={LIST_CHEVRON}>
                     <ListRow
-                        leading={<LabelIcon icon={Sliders} tone="teal" />}
+                        leading={<LabelIcon icon={Sliders} />}
                         title={t('you.pk_params')}
                         value={t(pkParams ? 'pk.customized' : 'pk.default')}
                         drillIn
                         onClick={onNavigateToPKParams}
                     />
-                    <ListRow leading={<LabelIcon icon={Flask} tone="purple" />} title={t('transparency.title')} drillIn onClick={onNavigateToTransparency} />
+                    <ListRow leading={<LabelIcon icon={Flask} />} title={t('transparency.title')} drillIn onClick={onNavigateToTransparency} />
                     <ListRow
-                        leading={<LabelIcon icon={Help} tone="blue" />}
+                        leading={<LabelIcon icon={Help} />}
                         title={t('you.model_explainer')}
                         trailing={<ExternalMark />}
                         onClick={() => openExternal('drawer.model_confirm', MODEL_ARTICLE)}
                     />
                 </ListGroup>
 
-                <ListGroup chevronIcon={LIST_CHEVRON}>
-                    <ListRow leading={<LabelIcon icon={Info} tone="blue" />} title={t('settings.version')} value={appVersion} />
-                    <ListRow leading={<LabelIcon icon={Shield} tone="green" />} title={t('drawer.disclaimer')} drillIn onClick={() => setIsDisclaimerOpen(true)} />
+                <ListGroup header={t('you.group.about')} chevronIcon={LIST_CHEVRON}>
+                    <ListRow leading={<LabelIcon icon={Info} />} title={t('settings.version')} value={appVersion} />
+                    <ListRow leading={<LabelIcon icon={Disclaimer} />} title={t('drawer.disclaimer')} drillIn onClick={() => setIsDisclaimerOpen(true)} />
                     {/* The intro only ever shows itself once, so this is the only way back
                         to it, and the only way anyone who skipped it can read it. */}
-                    <ListRow leading={<LabelIcon icon={Help} tone="purple" />} title={t('settings.show_intro')} drillIn onClick={onShowIntro} />
+                    <ListRow leading={<LabelIcon icon={Help} />} title={t('settings.show_intro')} drillIn onClick={onShowIntro} />
                     <ListRow
-                        leading={<LabelIcon icon={Link} tone="muted" />}
+                        leading={<LabelIcon icon={Link} />}
                         title={t('you.source_code')}
                         trailing={<ExternalMark />}
                         onClick={() => openExternal('drawer.github_confirm', SOURCE_REPO)}
                     />
                 </ListGroup>
 
-                <ListGroup footer={t('you.dev_mode_footer')} chevronIcon={LIST_CHEVRON}>
-                    <SwitchRow icon={<LabelIcon icon={Terminal} tone="teal" />} title={t('you.dev_mode')} checked={devMode} onChange={setDevMode} />
+                <ListGroup header={t('you.group.developer')} footer={t('you.dev_mode_footer')} chevronIcon={LIST_CHEVRON}>
+                    <SwitchRow leading={<LabelIcon icon={Terminal} />} title={t('you.dev_mode')} checked={devMode} onChange={setDevMode} />
                     {devMode && (
                         <ListRow leading={<span className="inline-flex w-5 justify-center"><PixelCat size={24} force /></span>} title={t('settings.cat_states')} drillIn onClick={onNavigateToCatStates} />
                     )}
                     {devMode && (
-                        <ListRow leading={<LabelIcon icon={Flask} tone="orange" />} title={t('settings.milk_tea_egg')} drillIn onClick={onNavigateToMilkTea} />
+                        <ListRow leading={<LabelIcon icon={Flask} />} title={t('settings.milk_tea_egg')} drillIn onClick={onNavigateToMilkTea} />
                     )}
                 </ListGroup>
 
                 {/* Desktop also reaches the admin area from the sidebar; on a phone
                     this row is the way in. */}
                 {isAdmin && (
-                    <ListGroup chevronIcon={LIST_CHEVRON}>
-                        <ListRow leading={<LabelIcon icon={Shield} tone="purple" />} title={t('nav.admin')} drillIn onClick={onNavigateToAdmin} />
+                    <ListGroup header={t('you.group.admin')} chevronIcon={LIST_CHEVRON}>
+                        <ListRow leading={<LabelIcon icon={Shield} />} title={t('nav.admin')} drillIn onClick={onNavigateToAdmin} />
                     </ListGroup>
                 )}
 
                 {/* Destructive actions, each set in its own group at the bottom. */}
-                <ListGroup footer={t('you.clear_footer')}>
+                <ListGroup header={t('you.group.records')} footer={t('you.clear_footer')}>
                     <ListRow leading={<Delete size={20} className="text-[var(--c-danger)]" />} title={danger(t('you.clear'))} disabled={!events.length} onClick={onClearAllEvents} />
                 </ListGroup>
 
                 {signedIn && (
-                    <ListGroup footer={onNavigate ? t('you.account.delete_footer') : undefined}>
+                    <ListGroup header={t('you.group.account')} footer={onNavigate ? t('you.account.delete_footer') : undefined}>
                         <ListRow
-                            leading={<LabelIcon icon={SignOut} tone="muted" />}
+                            leading={<LabelIcon icon={SignOut} />}
                             title={<span className="text-[var(--c-ink)]">{t('you.sign_out')}</span>}
                             onClick={() => { void logout(); }}
                         />

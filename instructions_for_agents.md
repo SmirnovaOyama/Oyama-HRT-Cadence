@@ -41,3 +41,5 @@ Latest owner update (2026-09-25): simple option selectors use dropdowns that exp
 not secondary pages. Selecting an option closes the dropdown and retains the form draft.
 This overrides the older requirement to put simple choices on secondary pages; keep substantial
 forms and confirmations on their existing pages.
+
+Latest owner update (2026-09-26): support English and Simplified Chinese, with an inline language selector on the You page and localized dates. Preserve existing language preferences. This overrides all earlier English-only instructions. Deploy the redesign to hrt.mahiro.uk while preserving the original site’s accounts, encrypted backups, avatars and browser records.

@@ -53,11 +53,16 @@ function dayWithDate(ms: number, lang: Lang): string {
     return new Intl.DateTimeFormat(localeFor(lang), { weekday: 'short', month: 'short', day: 'numeric' }).format(ms);
 }
 
-/** "Sat 09:12" within the last or next 6 days, else "Sat Sep 12, 09:12". */
+/** "Sat 09:12" within 3 days either side, else "Sat, Sep 12 at 09:12". A weekday
+ *  alone is unambiguous only inside that 7-day window: last Thursday's shot and
+ *  next Thursday's would otherwise both read "Thu 20:00". */
 export function dayAndTime(ms: number, nowMs: number, lang: Lang): string {
     const days = Math.abs(calendarDaysBetween(nowMs, ms));
-    const day = days <= 6 ? weekdayShort(ms, lang) : dayWithDate(ms, lang);
-    return `${day} ${formatTime(ms, lang)}`;
+    if (days <= 3) return `${weekdayShort(ms, lang)} ${formatTime(ms, lang)}`;
+    // Intl joins date and time with each language's own punctuation.
+    return new Intl.DateTimeFormat(localeFor(lang), {
+        weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).format(ms);
 }
 
 const EVENING_HOUR = 18;
