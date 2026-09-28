@@ -104,3 +104,9 @@ Timeline and the onboarding language choice) to be published to `hrt.mahiro.uk`.
   notice API returned HTTP 200, and the served frontend asset matched the build.
 - Right after publishing, the first request briefly returned the previous
   `index.html` while the new version propagated; later requests served the new one.
+
+Reverted the same day at the owner's request with
+`wrangler rollback 53c2c000-23a0-4432-b5b4-2c7751b5f5ad --config wrangler.production.toml`.
+`hrt.mahiro.uk` is back on the pre-redesign version `53c2c000`; no database
+change was involved. The redesign stays published separately on `oyama-cadence`
+(version `f19ede6c-b844-4ead-b760-d60fcaf56fcd`).
