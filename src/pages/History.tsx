@@ -383,10 +383,10 @@ const History: React.FC<HistoryProps> = ({
         );
     };
 
-    /* Mobile reads top to bottom in `order`. From xl the page splits into two
-       columns (chart and rhythm left, the add form and the history right); the
-       column wrappers are `display: contents` below xl so their children join
-       one flex column. */
+    /* Mobile reads top to bottom in `order`: add form, chart, rhythm, history.
+       From xl the page splits into two columns (add form, rhythm and history
+       left; the chart card right, held in view); the left wrapper is
+       `display: contents` below xl so its children join the one flex column. */
     return (
         <div className="relative pb-32">
             <div className="w-full max-w-2xl px-4 md:px-8 xl:max-w-none">
@@ -439,55 +439,55 @@ const History: React.FC<HistoryProps> = ({
             )}
 
             <div className="w-full max-w-2xl px-4 md:px-8 xl:max-w-none">
-                <div className={`flex flex-col gap-6 ${totalRecords > 0 ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start xl:gap-x-6' : ''}`}>
-                    {/* Left column: the chart with its note, then the rhythm. */}
-                    {totalRecords > 0 && (
-                        <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-6">
-                            {simulation !== undefined && (
-                                <div className="order-2 flex min-w-0 flex-col gap-2">
-                                    <ResultChart
-                                        sim={simulation}
-                                        projection={projection ?? null}
-                                        events={allEvents}
-                                        labResults={labResults}
-                                        calibrationFn={calibrationFn}
-                                        onPointClick={openFromChart}
-                                        isDarkMode={isDarkMode}
-                                        isMono={isMono}
-                                        showTitle={false}
-                                        rangeSize="sm"
-                                        rangeClassName="w-full shrink-0 sm:w-[240px]"
-                                        showCalibrationNote={false}
-                                    />
-                                    {adjustNote && (
-                                        <div className="flex flex-col items-start">
-                                            <p className="m-0 text-sm text-[var(--c-ink)]">{adjustNote}</p>
-                                            {onNavigateToLab && (
-                                                <Button variant="plain" className="-ml-1 px-1" onClick={onNavigateToLab}>
-                                                    {t('timeline.adjust_explain')}
-                                                </Button>
-                                            )}
-                                        </div>
+                <div className={`flex flex-col gap-6 ${totalRecords > 0 ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_440px] xl:items-start xl:gap-x-6' : ''}`}>
+                    {/* Desktop, right: the chart as a card like Today's, held in view
+                        while the history scrolls. On a phone it follows the add form. */}
+                    {totalRecords > 0 && simulation !== undefined && (
+                        <section className="order-2 flex min-w-0 flex-col gap-2 xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1 xl:rounded-[20px] xl:border xl:border-[var(--c-hairline)] xl:bg-[var(--c-surface)] xl:px-4 xl:pb-4 xl:pt-3 xl:[--chart-halo:var(--c-surface)]">
+                            <ResultChart
+                                sim={simulation}
+                                projection={projection ?? null}
+                                events={allEvents}
+                                labResults={labResults}
+                                calibrationFn={calibrationFn}
+                                onPointClick={openFromChart}
+                                isDarkMode={isDarkMode}
+                                isMono={isMono}
+                                headerClassName="[&>h2]:hidden xl:flex-nowrap xl:[&>h2]:block"
+                                rangeSize="sm"
+                                rangeClassName="w-full shrink-0 sm:w-[240px] xl:w-[184px]"
+                                showCalibrationNote={false}
+                            />
+                            {adjustNote && (
+                                <div className="flex flex-col items-start">
+                                    <p className="m-0 text-sm text-[var(--c-ink)]">{adjustNote}</p>
+                                    {onNavigateToLab && (
+                                        <Button variant="plain" className="-ml-1 px-1" onClick={onNavigateToLab}>
+                                            {t('timeline.adjust_explain')}
+                                        </Button>
                                     )}
                                 </div>
                             )}
+                        </section>
+                    )}
 
-                            <details className="group order-3">
+                    {/* Desktop, left: the add form, the rhythm, then the history, which is
+                        the long part of the page and so gets the wide column. */}
+                    <div className="contents xl:col-start-1 xl:row-start-1 xl:flex xl:min-w-0 xl:flex-col xl:gap-6">
+                        {totalRecords > 0 && (
+                            <details className="group order-3 xl:rounded-[20px] xl:border xl:border-[var(--c-hairline)] xl:bg-[var(--c-surface)] xl:px-4 xl:py-1">
                                 <summary className="cursor-pointer list-none rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--c-accent)] [&::-webkit-details-marker]:hidden">
                                     <h2 className="m-0 flex min-h-[44px] items-center justify-between gap-3 text-xl font-semibold text-[var(--c-ink)]">
                                         {t('timeline.rhythm')}
                                         <ChevronDown size={20} className="shrink-0 text-[var(--c-muted)] transition-transform group-open:rotate-180 motion-reduce:transition-none" />
                                     </h2>
                                 </summary>
-                                <div className="mt-3">
+                                <div className="mt-3 xl:pb-3">
                                     <DoseHeatmap events={allEvents} isDarkMode={isDarkMode} />
                                 </div>
                             </details>
-                        </div>
-                    )}
+                        )}
 
-                    {/* Right column: quick add, then the history. */}
-                    <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-6">
                         {/* Quick add: the dose form, with batch add above it. */}
                         {isQuickAddOpen && (
                             <div className="order-1 mt-2 flex flex-col gap-4 xl:mt-0">
