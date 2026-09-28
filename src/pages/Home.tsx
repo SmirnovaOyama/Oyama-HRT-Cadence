@@ -418,6 +418,14 @@ const Home: React.FC<HomeProps> = ({
         <p className="m-0 text-center text-sm text-[var(--c-muted)]">{detailLine}</p>
     ) : null;
 
+    // With doses but no blood test yet, the estimate card ends with a quiet
+    // link to add one: words that say why, not a free-standing button.
+    const calibrateLink = showCalibrate ? (
+        <Button variant="plain" onClick={onNavigateToLab} className="self-center whitespace-normal text-center text-[15px] leading-5">
+            {t('advisory.calibrate.cta')}
+        </Button>
+    ) : null;
+
     // Today's two cards share one look: white, a hairline edge, 20px corners.
     const card = 'rounded-[20px] border border-[var(--c-hairline)] bg-[var(--c-surface)]';
     const plate = `flex flex-col gap-3 ${card} p-4 xl:p-5`;
@@ -458,6 +466,7 @@ const Home: React.FC<HomeProps> = ({
                     )}
                 </div>
             )}
+            {calibrateLink}
         </section>
     ) : (
         // List-first fallback: no cycle to draw, so the level block stands alone.
@@ -470,6 +479,7 @@ const Home: React.FC<HomeProps> = ({
                 {statusLine}
             </div>
             {levelDetails}
+            {calibrateLink}
         </section>
     );
 
@@ -551,15 +561,8 @@ const Home: React.FC<HomeProps> = ({
                         <DoseAdvisoryNotice
                             advisory={doseAdvisory}
                             hormoneAdvisory={hormoneAdvisory}
-                            showCalibrate={false}
-                            onCalibrate={onNavigateToLab}
                             t={t}
                         />
-                        {showCalibrate && (
-                            <Button variant="secondary" compact onClick={onNavigateToLab} className="self-start px-4">
-                                {t('advisory.calibrate.cta')}
-                            </Button>
-                        )}
                     </div>
 
                     {(upcoming.length > 0 || suppliesAttention.length > 0) && (
