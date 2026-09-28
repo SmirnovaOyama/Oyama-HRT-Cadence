@@ -82,3 +82,25 @@ Post-deployment checks confirmed HTTP 200 for the original domain and public
 notice API, the matching frontend asset, the bilingual selector in that asset,
 and unchanged production D1/R2/secret bindings. All 150 tests, type checking,
 translation completeness/placeholder checks and the production build passed.
+
+## Original-site release (September 28, 2026)
+
+The September 26 redesign release was reverted at the owner's request the same
+day (back to `53c2c000-23a0-4432-b5b4-2c7751b5f5ad`). On September 28 the owner
+asked for the polished redesign (icons, Today, You, the level chart, the desktop
+Timeline and the onboarding language choice) to be published to `hrt.mahiro.uk`.
+
+- `worker.ts`, `migrations/` and the Wrangler configs are unchanged since the
+  September 26 release, so no database migration was run.
+- Rollback reference: prior Worker version `53c2c000-23a0-4432-b5b4-2c7751b5f5ad`.
+  D1 Time Travel bookmark captured before release:
+  `0000ab88-00000016-000050f4-97b1ee1502e9a97171bfbb79009f6c9d`. As before, prefer
+  rolling back the Worker; a database restore would discard newer writes.
+- Published Worker version: `70f96190-44d5-4efa-98c3-10ca0a552296`, bound to the
+  same `hrt-tracker-prod` D1 database and `mahiro-contents` R2 bucket, with the
+  existing `JWT_SECRET`, `ADMIN_USERNAME` and `ADMIN_PASSWORD` secrets in place.
+- Before release: type checking, translation checks, all 154 tests and the
+  production build passed. After release: the original domain and the public
+  notice API returned HTTP 200, and the served frontend asset matched the build.
+- Right after publishing, the first request briefly returned the previous
+  `index.html` while the new version propagated; later requests served the new one.
