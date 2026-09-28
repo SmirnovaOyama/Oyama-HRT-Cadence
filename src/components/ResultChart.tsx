@@ -18,7 +18,7 @@ const DAY = 24 * HOUR;
 
 /** Line weights: the primary estimate is the main line; a second series
  *  (cyproterone beside estradiol) is thinner and lighter. */
-const PRIMARY_W = 2.75;
+const PRIMARY_W = 2;
 const SECOND_W = 1.5;
 const SECOND_OPACITY = 0.6;
 
@@ -223,7 +223,7 @@ const textWidth = (s: string, px: number, bold = false) => {
 /** A legend sample: the line style or mark it names, in a neutral colour. */
 const KeySwatch = ({ kind }: { kind: 'solid' | 'dashed' | 'logged' | 'planned' | 'lab' | 'band' }) => (
     <svg width={18} height={12} viewBox="0 0 18 12" className="flex-none" aria-hidden="true">
-        {kind === 'solid' && <path d="M1.5 6H16.5" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" />}
+        {kind === 'solid' && <path d="M1.5 6H16.5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />}
         {kind === 'dashed' && <path d="M1 6H17" stroke="currentColor" strokeWidth={2} strokeDasharray="4 3" />}
         {kind === 'logged' && <path d="M9 2.5L13 10H5Z" fill="currentColor" />}
         {kind === 'planned' && <path d="M9 3L12.5 9.5H5.5Z" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />}
@@ -486,7 +486,7 @@ const ResultChart = ({
     }, [sim, proj, events, planned, isTransmasc, hasSecondary, calibrationFn, t0, t1, now]);
 
     // Y domains scale to what's visible in the current window.
-    const yPrimary = useMemo(() => {
+    const yPrimaryLive = useMemo(() => {
         let mx = -Infinity;
         for (const d of slice) if (d.p > mx) mx = d.p;
         for (const l of labPoints) if (l.v > mx) mx = l.v;
@@ -501,7 +501,7 @@ const ResultChart = ({
 
     // Cyproterone reads 0–40 ng/mL in steps of 10; only a level above 40 widens it,
     // still in four steps.
-    const ySecondary = useMemo(() => {
+    const ySecondaryLive = useMemo(() => {
         if (!hasSecondary) return [0, 1] as [number, number];
         let mx = -Infinity;
         for (const d of slice) if (d.s != null && d.s > mx) mx = d.s;
@@ -509,6 +509,12 @@ const ResultChart = ({
         const step = mx <= 40 ? 10 : niceCeil((mx * 1.05) / 4);
         return [0, 4 * step] as [number, number];
     }, [slice, markers, hasSecondary]);
+
+    // While a pan is under way the vertical scale holds still, so the curve
+    // doesn't stretch and squash under the pointer; it settles once released.
+    const frozenY = useRef<{ p: [number, number]; s: [number, number] } | null>(null);
+    const yPrimary = dragging && frozenY.current ? frozenY.current.p : yPrimaryLive;
+    const ySecondary = dragging && frozenY.current ? frozenY.current.s : ySecondaryLive;
 
     // The primary series at an arbitrary hour, calibrated the same way the
     // plotted curve is.
@@ -780,27 +786,94 @@ const ResultChart = ({
         setHover(nearestIndex(t0 + ((px - mL) / plotW) * (t1 - t0)));
     };
 
+    // Touch. A finger that holds still for a moment, or moves sideways, reads
+    // the chart: the cursor and the strip follow it and return to now when it
+    // lifts. A quick sideways flick pages the window instead, and vertical
+    // movement is left to the page. The mouse keeps drag to pan, hover to read.
+    type TouchGesture = {
+        pointerId: number;
+        startX: number;
+        startY: number;
+        startT: number;
+        mode: 'pending' | 'scrub';
+        samples: { x: number; t: number }[];
+        hold: number;
+    };
+    const touchRef = useRef<TouchGesture | null>(null);
+    useEffect(() => () => { if (touchRef.current) window.clearTimeout(touchRef.current.hold); }, []);
+    const isTouch = (e: React.PointerEvent) => e.pointerType !== 'mouse';
+
+    const endTouch = (e?: React.PointerEvent) => {
+        const g = touchRef.current;
+        if (!g) return;
+        window.clearTimeout(g.hold);
+        if (e && g.mode === 'scrub') { try { e.currentTarget.releasePointerCapture(g.pointerId); } catch { /* ignore */ } }
+        touchRef.current = null;
+        setHover(null);
+    };
+
+    // A flick moves the window by just under half its width, so a little of
+    // what was on screen stays in view.
+    const page = (dir: 1 | -1) => {
+        const step = Math.max(DAY, Math.round(((baseWindow[1] - baseWindow[0]) * 0.45) / DAY) * DAY);
+        setPanOffset(o => Math.max(minOffset, Math.min(maxOffset, Math.max(minOffset, Math.min(maxOffset, o)) + dir * step)));
+    };
+
     const onPointerDown = (e: React.PointerEvent) => {
+        if (isTouch(e)) {
+            endTouch();
+            const target = e.currentTarget;
+            const g: TouchGesture = {
+                pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, startT: e.timeStamp,
+                mode: 'pending', samples: [{ x: e.clientX, t: e.timeStamp }], hold: 0,
+            };
+            g.hold = window.setTimeout(() => {
+                if (touchRef.current !== g || g.mode !== 'pending') return;
+                g.mode = 'scrub';
+                try { target.setPointerCapture(g.pointerId); } catch { /* ignore */ }
+                updateHover(g.samples[g.samples.length - 1].x);
+            }, 160);
+            touchRef.current = g;
+            return;
+        }
         if (!canPan) return;
         dragRef.current = { startX: e.clientX, startY: e.clientY, startOffset: panOffset, moved: false, pointerId: e.pointerId };
     };
 
     const onPointerMove = (e: React.PointerEvent) => {
+        const g = touchRef.current;
+        if (g && e.pointerId === g.pointerId) {
+            g.samples.push({ x: e.clientX, t: e.timeStamp });
+            while (g.samples.length > 2 && e.timeStamp - g.samples[0].t > 100) g.samples.shift();
+            const dx = e.clientX - g.startX;
+            const dy = e.clientY - g.startY;
+            if (g.mode === 'pending') {
+                if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { endTouch(); return; } // the page scrolls
+                if (Math.abs(dx) <= 6) return;
+                g.mode = 'scrub';
+                window.clearTimeout(g.hold);
+                try { e.currentTarget.setPointerCapture(g.pointerId); } catch { /* ignore */ }
+            }
+            updateHover(e.clientX);
+            return;
+        }
+        if (isTouch(e)) return;
         const drag = dragRef.current;
         if (drag) {
             const dx = e.clientX - drag.startX;
             const dy = e.clientY - drag.startY;
             if (!drag.moved) {
                 // Decide intent from the first decisive movement: horizontal pans
-                // the chart, vertical (or a tap) is left to the page scroller.
+                // the chart, vertical is left to the page scroller.
                 if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) {
                     drag.moved = true;
+                    frozenY.current = { p: yPrimary, s: ySecondary };
                     setDragging(true);
                     setHover(null);
-                    // Capture so the pan keeps tracking even if the finger leaves the SVG.
+                    // Capture so the pan keeps tracking even if the pointer leaves the SVG.
                     try { e.currentTarget.setPointerCapture(drag.pointerId); } catch { /* ignore */ }
                 } else if (Math.abs(dy) > 6) {
-                    dragRef.current = null; // vertical scroll — bail out of the drag
+                    dragRef.current = null;
                     return;
                 }
             }
@@ -818,19 +891,41 @@ const ResultChart = ({
         const drag = dragRef.current;
         if (drag && e) { try { e.currentTarget.releasePointerCapture(drag.pointerId); } catch { /* ignore */ } }
         dragRef.current = null;
+        frozenY.current = null;
         if (dragging) setDragging(false);
     };
 
-    // A tap (a press that never became a pan) reads that moment and leaves the
-    // reading in the strip, since a finger has no hover to keep it there.
     const onPointerUp = (e: React.PointerEvent) => {
+        const g = touchRef.current;
+        if (g && e.pointerId === g.pointerId) {
+            const first = g.samples[0];
+            const last = g.samples[g.samples.length - 1];
+            const velocity = last.t > first.t ? (last.x - first.x) / (last.t - first.t) : 0; // px per ms
+            const dx = e.clientX - g.startX;
+            const flick = canPan && e.timeStamp - g.startT < 300 && Math.abs(dx) > 30 && Math.abs(velocity) > 0.4;
+            endTouch(e);
+            if (flick) page(dx < 0 ? 1 : -1); // flick left → later days
+            return;
+        }
+        if (isTouch(e)) return;
+        // A click (a press that never became a pan) reads that moment.
         if (!dragRef.current?.moved) updateHover(e.clientX);
         endDrag(e);
     };
 
-    const onPointerLeave = (e: React.PointerEvent) => {
+    const onPointerCancel = (e: React.PointerEvent) => {
+        endTouch(e);
         endDrag(e);
-        if (e.pointerType === 'mouse') setHover(null);
+    };
+
+    const onPointerLeave = (e: React.PointerEvent) => {
+        if (isTouch(e)) {
+            // A captured (scrubbing) finger keeps reporting; an uncaptured one has gone.
+            if (touchRef.current?.mode === 'pending') endTouch();
+            return;
+        }
+        endDrag(e);
+        setHover(null);
     };
 
     // With the chart focused, the arrow keys walk the read-off through the
@@ -947,7 +1042,8 @@ const ResultChart = ({
     // Direct labels. The target range is named at the left of its band; the
     // forecast label normally sits low in the future part, and moves to the top
     // of the plot when it would land on the target label.
-    const halo = onSurface ? c.surface : c.paper;
+    // A card can also set --chart-halo for the breakpoints where it is one.
+    const halo = onSurface ? c.surface : 'var(--chart-halo, var(--c-paper))';
     const targetText = primaryTarget ? fillIn(t('chart.target_range'), { low: primaryTarget.low, high: primaryTarget.high }) : '';
     const targetX = mL + 4 * ui;
     const targetY = (() => {
@@ -1021,7 +1117,7 @@ const ResultChart = ({
                         onPointerDown={onPointerDown}
                         onPointerMove={onPointerMove}
                         onPointerUp={onPointerUp}
-                        onPointerCancel={endDrag}
+                        onPointerCancel={onPointerCancel}
                         onPointerLeave={onPointerLeave}
                         style={{ touchAction: 'pan-y', cursor: canPan ? (dragging ? 'grabbing' : 'grab') : 'default' }}
                     >
