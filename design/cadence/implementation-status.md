@@ -1,9 +1,10 @@
 # Implementation status
 
-Updated 2026-09-24. This records the current implementation; the owner's UI rules in `README.md` and `AGENTS.md` remain the design authority.
+Updated 2026-09-28. This records the current implementation; the owner's UI rules in `README.md` and `AGENTS.md` remain the design authority.
 
 ## Implemented
 
+- Calm redesign (owner update, 2026-09-28): the icon set is the owner's own 46 drawings (`icons/grammar.md` revision 4), rendered at their drawn 1.7 stroke. Coloured route, medicine, supply and blood-test tiles, coloured settings and field-label glyphs, and icons on plain text buttons are gone; content rows lead with one muted `RowGlyph`. The You page uses plain grouped rows without small headings. Today drops the range ruler and keeps its details to quiet lines; the chart loses its past shading, filled "Now" tab and read-off box. The desktop rail's actions are rows with a small circle, the tab bar's current tab is neutral, the save confirmation is one neutral style, and Timeline history is one card with day headings inside it.
 - The app is English-only, including first-run onboarding, existing saved language preferences, date formatting and error screens. Language selectors have been removed; user-entered records are preserved as entered.
 - Reminders and Supplies are connected to Today, the sidebar and You. Their records participate in local persistence, encrypted backup, import and sync, with compatibility for older backups.
 - In-app reminders support due states, snooze, skip and optional system notifications while the app runs. Calendar export is the fallback when the app is closed.

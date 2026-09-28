@@ -26,20 +26,6 @@ export function GroupHeader({ children, id }: { children: React.ReactNode; id?: 
     return <h2 id={id} className="list-group-header">{children}</h2>;
 }
 
-/** 40px leading tile for a list row (C11): plate fill, muted 22px icon. */
-export function IconTile({ icon: Icon, danger = false }: { icon: IconComponent; danger?: boolean }) {
-    return (
-        <span
-            aria-hidden="true"
-            className={`grid h-10 w-10 place-items-center rounded-[12px] ${danger
-                ? 'bg-[var(--c-danger-fill)] text-[var(--c-danger)]'
-                : 'bg-[var(--c-plate)] text-[var(--c-muted)]'}`}
-        >
-            <Icon size={22} />
-        </span>
-    );
-}
-
 /** Round avatar: the uploaded picture, or the first letter of the username
  *  on the accent container when there is none. */
 export function Avatar({ username, size = 56, cacheKey }: { username: string; size?: number; cacheKey?: number }) {

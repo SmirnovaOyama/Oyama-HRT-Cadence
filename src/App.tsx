@@ -161,8 +161,8 @@ const AppContent = () => {
         dismissSaveFeedback();
     }, [scope, currentView, dismissSaveFeedback]);
 
-    const confirmRecordSave = (key: string, tone: SaveFeedbackMessage['tone']) => {
-        setSaveFeedback({ id: ++saveFeedbackSequence.current, label: t(key), tone, scope, view: currentView });
+    const confirmRecordSave = (key: string) => {
+        setSaveFeedback({ id: ++saveFeedbackSequence.current, label: t(key), scope, view: currentView });
     };
 
     const handleSaveDose = (event: DoseEvent) => {
@@ -170,15 +170,14 @@ const AppContent = () => {
         if (isEdit) updateEvent(event);
         else addEvent(event);
         const isPlanned = event.timeH * 3_600_000 > Date.now();
-        confirmRecordSave(isEdit ? 'shell.save.dose_updated' : isPlanned ? 'shell.save.dose_planned' : 'shell.save.dose_logged',
-            isPlanned ? 'planned' : 'dose');
+        confirmRecordSave(isEdit ? 'shell.save.dose_updated' : isPlanned ? 'shell.save.dose_planned' : 'shell.save.dose_logged');
     };
 
     const handleSaveLabResult = (result: LabResult) => {
         const isEdit = labResults.some(previous => previous.id === result.id);
         if (isEdit) updateLabResult(result);
         else addLabResult(result);
-        confirmRecordSave(isEdit ? 'shell.save.test_updated' : 'shell.save.test_saved', 'test');
+        confirmRecordSave(isEdit ? 'shell.save.test_updated' : 'shell.save.test_saved');
     };
 
     // --- Auto-sync preference ---
@@ -695,7 +694,6 @@ const AppContent = () => {
                             supplies={supplies}
                             schedules={schedules}
                             events={events}
-                            isTransmasc={mode === 'transmasc'}
                             addSupply={addSupply}
                             updateSupply={updateSupply}
                             deleteSupply={deleteSupply}

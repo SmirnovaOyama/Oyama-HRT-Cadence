@@ -30,7 +30,6 @@
     overflow: hidden;
 }
 
-.cadence-select-picked,
 .cadence-select-choice-picked[aria-checked="true"] .list-row-leading {
     animation: cadence-select-pick 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -57,7 +56,6 @@
         transition: none;
     }
 
-    .cadence-select-picked,
     .cadence-select-choice-picked[aria-checked="true"] .list-row-leading,
     .cadence-select-choice-picked[aria-checked="true"] .list-row-check path {
         animation: none;

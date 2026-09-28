@@ -3,8 +3,6 @@ import { useTranslation } from '../contexts/LanguageContext';
 import { usePixelCats, CatStyle } from '../contexts/PixelCatContext';
 import { AppTheme } from '../constants';
 import { BackHeader, ListGroup, ListRow, Switch } from '../components/ui';
-import { Appearance, Desktop, Moon } from '../components/icons';
-import { LabelIcon } from '../components/ui/LabelIcon';
 import PixelCat from '../components/PixelCat';
 import { LIST_CHECK, YouPage } from './you/shared';
 
@@ -43,14 +41,9 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({ theme, setTheme
             <BackHeader parentLabel={t('you.title')} onBack={onBack} title={t('settings.theme')} />
 
             <div className="mt-2 flex flex-col gap-6">
-                <ListGroup className="[&_.list-sep-icon]:ms-[48px]" selection="single" checkIcon={LIST_CHECK} aria-label={t('settings.theme')}>
+                <ListGroup selection="single" checkIcon={LIST_CHECK} aria-label={t('settings.theme')}>
                     {OPTIONS.map(({ value, labelKey }) => (
-                        <ListRow
-                            key={value}
-                            leading={<LabelIcon icon={value === 'dark' ? Moon : value === 'system' ? Desktop : Appearance}
-                                tone={value === 'light' ? 'orange' : value === 'dark' ? 'purple' : value === 'system' ? 'blue' : 'muted'} />}
-                            title={t(labelKey)} selected={theme === value} onClick={() => setTheme(value)}
-                        />
+                        <ListRow key={value} title={t(labelKey)} selected={theme === value} onClick={() => setTheme(value)} />
                     ))}
                 </ListGroup>
 
@@ -70,12 +63,10 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({ theme, setTheme
                             <ListRow
                                 key={id}
                                 leading={
-                                    <span className="grid h-10 w-10 place-items-center" aria-hidden="true">
-                                        <span className="flex h-8 w-8 flex-col overflow-hidden rounded-[8px] border border-[var(--c-hairline)]">
-                                            {bands.map((color, i) => (
-                                                <span key={i} className="block w-full flex-1" style={{ background: color }} />
-                                            ))}
-                                        </span>
+                                    <span className="flex h-6 w-6 flex-col overflow-hidden rounded-[6px] border border-[var(--c-hairline)]" aria-hidden="true">
+                                        {bands.map((color, i) => (
+                                            <span key={i} className="block w-full flex-1" style={{ background: color }} />
+                                        ))}
                                     </span>
                                 }
                                 title={t(`settings.cat_style.${id}`)}

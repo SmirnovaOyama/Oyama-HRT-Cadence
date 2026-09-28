@@ -5,7 +5,6 @@ import './SaveFeedback.css';
 export interface SaveFeedbackMessage {
     id: number;
     label: string;
-    tone: 'dose' | 'planned' | 'test';
 }
 
 interface SaveFeedbackProps {
@@ -29,7 +28,7 @@ export function SaveFeedback({ message, enabled = true, onDismiss }: SaveFeedbac
         <div className="save-feedback" data-visible={visible}>
             <div className="save-feedback-clip">
                 <div className="save-feedback-spacing">
-                    <div className="save-feedback-line" data-tone={message?.tone}>
+                    <div className="save-feedback-line">
                         {visible && (
                             <span key={message.id} className="save-feedback-check" aria-hidden="true">
                                 <Check size={18} />

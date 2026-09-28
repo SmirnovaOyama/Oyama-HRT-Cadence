@@ -17,9 +17,10 @@ These rules replace the row density of the boards. When a board and this file di
    for the same dose", "Encrypted if you like, or as a spreadsheet...") are removed or moved to the group footer.
 4. **Group footers carry the explanation.** One short sentence under the group, 15/22 muted, only when it genuinely
    helps. Most groups need none.
-5. **No icon tiles in settings-style lists** (You, Account, sub-pages, dialogs). Tiles stay only where the icon IS
-   content: medicines and blood tests (Today's Coming up, Timeline history, the Log sheet's What list, blood-test
-   results). Within one group, either every row has a tile or none does.
+5. **No icons in settings-style lists** (You, Account, sub-pages, reminder and supply options). Content rows (Today's
+   Coming up, Timeline history, the Log sheet's What list, schedules, blood-test results, supplies, route choices)
+   lead with one muted 20px glyph (`RowGlyph`), never a tinted tile; medicines are named, not colour-coded (owner
+   update, 2026-09-28). Within one group, either every row has a glyph or none does.
 6. **Destructive actions get their own group at the bottom**: red title rows ("Clear all records", "Delete account",
    "Sign out" is a plain ink or accent title row in that same bottom group), no tile, no sub-line; a footer may say
    what is kept ("Your cloud backup is kept.").

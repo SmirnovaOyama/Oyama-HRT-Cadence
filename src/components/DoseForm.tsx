@@ -5,8 +5,8 @@ import { useDialog } from '../contexts/DialogContext';
 import CustomSelect from './CustomSelect';
 import DateTimePicker from './DateTimePicker';
 import { Route, Ester, ExtraKey, DoseEvent, SL_TIER_ORDER, SublingualTierParams, getBioavailabilityMultiplier, getToE2Factor, getDoseAdvisory } from '../../logic';
-import { Check, ChevronRight, ChevronDown, Close, Plus, Delete, External, Clock, Calendar, TemplateAdd, Repeat, Edit, Save, Gauge, Help, Tablet } from './icons';
-import { Button, ListGroup, ListRow } from './ui';
+import { Check, ChevronRight, ChevronDown, Close, Plus, Delete, External } from './icons';
+import { Button, ListGroup, ListRow, RowGlyph } from './ui';
 import { DoseAdvisoryLine } from './DoseAdvisory';
 import { joinList } from '../i18n/listSeparator';
 import InjectionFields from './dose_form/InjectionFields';
@@ -15,13 +15,11 @@ import SublingualFields from './dose_form/SublingualFields';
 import GelFields from './dose_form/GelFields';
 import PatchFields from './dose_form/PatchFields';
 import type { QuickDose } from './dose_form/QuickDoseButtons';
-import { MedicineIcon } from './dose_form/MedicineIcon';
 import type { AmountBasis } from './dose_form/AmountSection';
 import {
     GroupHeader,
     ListSep,
-    RouteTile,
-    RouteChoiceIcon,
+    RouteGlyph,
     describeAmount,
     describeDose,
     describeWhen,
@@ -38,7 +36,6 @@ import { useHRTMode } from '../contexts/HRTModeContext';
 import { doseTimeForSave, toLocalMinuteString as toLocalInput } from '../utils/doseEventTime';
 import { retainedScheduleOccurrence } from '../utils/doseScheduleLink';
 import './dose_form/DoseForm.css';
-import { DoseFieldIcon, DoseFieldLabel } from './dose_form/DoseFieldIcon';
 
 export interface DoseTemplate {
     id: string;
@@ -908,19 +905,18 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     });
 
     // ── Sections ──────────────────────────────────────────────────────
-    // Route and medicine choices show their glyph beside the selected value.
+    // Routes keep their glyph in the list of choices; medicines are words only.
     const choosers = (
         <div className="list-group">
             <CustomSelect
                 bare
                 label={t('log.route_label')}
-                selectedIconPosition="value"
                 value={route}
                 onChange={(val) => setRoute(val as Route)}
                 options={ROUTE_ORDER.filter(r => availableRoutes.includes(r)).map(r => ({
                     value: r,
                     label: routeName(t, r),
-                    icon: <RouteChoiceIcon route={r} />,
+                    icon: <RouteGlyph route={r} />,
                 }))}
             />
             {route !== Route.patchRemove && availableEsters.length > 1 && (
@@ -929,13 +925,11 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                     <CustomSelect
                         bare
                         label={t('log.ester_label')}
-                        selectedIconPosition="value"
                         value={ester}
                         onChange={(val) => setEster(val as Ester)}
                         options={availableEsters.map(e => ({
                             value: e,
                             label: esterName(t, e),
-                            icon: <MedicineIcon ester={e} />,
                         }))}
                     />
                 </>
@@ -944,7 +938,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     );
 
     /** A template's sub-line: the full dose when it fits one line, else
-     *  the medicine and amount (the tile shows the route). */
+     *  the medicine and amount (the glyph shows the route). */
     const templateSub = (tpl: DoseTemplate): string => {
         const full = describeDose(t, lang, tpl, { unitRate });
         return full.length <= 40 ? full : describeAmount(t, tpl, { unitRate });
@@ -962,7 +956,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
     );
 
     /** A routine's title: medicine and amount ("Estradiol valerate 4 mg"),
-     *  which fits one line. The route is in the tile; it joins the title only
+     *  which fits one line. The route is in the glyph; it joins the title only
      *  when two routines would otherwise read the same. */
     const regimenTitle = (regimen: Regimen): string => {
         const short = describeAmount(t, regimen.last, { unitRate });
@@ -976,12 +970,11 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 <GroupHeader
                     trailing={hasSavedRows || isEditingList ? (
                         <Button variant="plain" onClick={() => setIsEditingList(v => !v)}>
-                            {isEditingList ? <Check size={18} /> : <Edit size={18} />}
                             {isEditingList ? t('log.done') : t('log.edit_list')}
                         </Button>
                     ) : undefined}
                 >
-                    <DoseFieldLabel icon={Tablet}>{t('log.what')}</DoseFieldLabel>
+                    {t('log.what')}
                 </GroupHeader>
                 <ListGroup
                     selection={isEditingList ? undefined : 'single'}
@@ -1004,7 +997,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                                 sub={oneLine(
                                     <span className={due ? 'text-[var(--c-attention)]' : undefined}>{sub}</span>,
                                 )}
-                                leading={<RouteTile route={regimen.last.route} ester={regimen.last.ester} />}
+                                leading={<RouteGlyph route={regimen.last.route} />}
                                 selected={whatChoice === key}
                                 onClick={() => {
                                     applyRegimen(regimen);
@@ -1018,7 +1011,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                         const common = {
                             title: oneLine(tpl.name),
                             sub: oneLine(templateSub(tpl)),
-                            leading: <RouteTile route={tpl.route} ester={tpl.ester} />,
+                            leading: <RouteGlyph route={tpl.route} />,
                         };
                         return isEditingList ? (
                             <ListRow
@@ -1050,7 +1043,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                                 routeName(t, dose.route),
                                 ...(lastMs !== null ? [t('log.last_logged').replace('{when}', formatRelative(lang, lastMs, nowMs))] : []),
                             ])),
-                            leading: <RouteTile route={dose.route} ester={dose.ester} />,
+                            leading: <RouteGlyph route={dose.route} />,
                         };
                         return isEditingList ? (
                             <ListRow
@@ -1074,7 +1067,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                     {!isEditingList && (
                         <ListRow
                             title={t('log.something_else')}
-                            leading={<RouteTile route={route} neutral><Plus size={20} /></RouteTile>}
+                            leading={<RowGlyph icon={Plus} />}
                             drillIn
                             chevron={whatChoice === 'custom' ? <ChevronDown size={16} /> : chevronIcon}
                             aria-expanded={whatChoice === 'custom'}
@@ -1087,17 +1080,16 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
         </section>
     ) : (
         <section>
-            <GroupHeader><DoseFieldLabel icon={Tablet}>{t('log.what')}</DoseFieldLabel></GroupHeader>
+            <GroupHeader>{t('log.what')}</GroupHeader>
             {choosers}
         </section>
     );
 
     const whenSection = (
         <section>
-            <ListGroup header={<DoseFieldLabel icon={Clock}>{t('log.when')}</DoseFieldLabel>} selection="single" checkIcon={checkIcon} chevronIcon={chevronIcon}>
+            <ListGroup header={t('log.when')} selection="single" checkIcon={checkIcon} chevronIcon={chevronIcon}>
                 <ListRow
                     title={t('log.now')}
-                    leading={<DoseFieldIcon icon={Clock} />}
                     value={formatTime(lang, now)}
                     selected={whenMode === 'now'}
                     onClick={() => {
@@ -1107,7 +1099,6 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 />
                 <ListRow
                     title={t('log.earlier')}
-                    leading={<DoseFieldIcon icon={Calendar} tone="teal" />}
                     value={whenMode === 'earlier'
                         ? (sameLocalDay(chosenDate.getTime(), nowMs) ? formatTime(lang, chosenDate) : describeWhen(t, lang, chosenDate))
                         : undefined}
@@ -1205,7 +1196,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 onClick={() => setIsDoseGuideOpen(v => !v)}
             >
                 <span className="list-row-text">
-                    <span className="list-row-title"><DoseFieldLabel icon={Gauge}>{t('dose.guide.title')}</DoseFieldLabel></span>
+                    <span className="list-row-title">{t('dose.guide.title')}</span>
                 </span>
                 {doseGuide?.level && (
                     <span className={`list-row-value ${LEVEL_TEXT[doseGuide.level]}`}>
@@ -1255,7 +1246,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                 onClick={() => setIsGuideOpen(v => !v)}
             >
                 <span className="list-row-text">
-                    <span className="list-row-title"><DoseFieldLabel icon={Help}>{t('log.inj_guide')}</DoseFieldLabel></span>
+                    <span className="list-row-title">{t('log.inj_guide')}</span>
                 </span>
                 <span className="list-row-chevron" aria-hidden="true">
                     <ChevronDown size={16} className={`chev ${isGuideOpen ? 'rotate-180' : ''}`} />
@@ -1330,10 +1321,9 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
 
     const canAddQuick = Boolean(quickDoses && onAddQuickDose) && route !== Route.patchRemove;
     const saveSection = (
-        <ListGroup header={<DoseFieldLabel icon={Save}>{t('log.save_header')}</DoseFieldLabel>} chevronIcon={chevronIcon}>
+        <ListGroup header={t('log.save_header')} chevronIcon={chevronIcon}>
             <ListRow
                 title={t('log.save_template')}
-                leading={<DoseFieldIcon icon={TemplateAdd} tone="violet" />}
                 drillIn
                 chevron={showSaveTemplateInput ? <ChevronDown size={16} /> : chevronIcon}
                 aria-expanded={showSaveTemplateInput}
@@ -1352,14 +1342,12 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
                         autoFocus
                     />
                     <Button variant="secondary" compact onClick={handleSaveAsTemplate}>
-                        <Save size={18} />
                         {t('btn.save')}
                     </Button>
                 </div>
             )}
             {canAddQuick && (
                 <ListRow
-                    leading={<DoseFieldIcon icon={quickExists ? Check : Repeat} tone="amber" />}
                     title={quickExists
                         ? t('log.add_quick_done')
                         : <span className="text-[var(--c-accent)]">{t('log.add_quick')}</span>}
@@ -1381,7 +1369,7 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             disabled={isSaving}
             aria-busy={isSaving}
         >
-            {isSaving ? <span className="dose-form-saving" aria-hidden="true" /> : <Check size={20} />}
+            {isSaving && <span className="dose-form-saving" aria-hidden="true" />}
             <span aria-live="polite">{isSaving ? 'Saving…' : saveLabel}</span>
         </Button>
     );
@@ -1392,14 +1380,12 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             <div className="flex flex-wrap items-center justify-between gap-2">
                 {eventToEdit ? (
                     <Button variant="destructive" className="-ml-3" onClick={handleDeleteEvent}>
-                        <Delete size={18} />
                         {t('log.delete_dose')}
                     </Button>
                 ) : <span />}
                 <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
                     {hideHeader && (
                         <Button variant="secondary" compact onClick={onCancel}>
-                            <Close size={18} />
                             {t('btn.cancel')}
                         </Button>
                     )}
@@ -1413,7 +1399,6 @@ const DoseForm: React.FC<DoseFormProps> = ({ eventToEdit, onSave, onCancel, onDe
             {saveButton}
             {eventToEdit && (
                 <Button variant="destructive" className="-ml-3 self-start" onClick={handleDeleteEvent}>
-                    <Delete size={18} />
                     {t('log.delete_dose')}
                 </Button>
             )}

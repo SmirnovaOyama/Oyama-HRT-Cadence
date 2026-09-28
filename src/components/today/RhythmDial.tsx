@@ -172,7 +172,7 @@ const RhythmDial: React.FC<RhythmDialProps> = ({
                 )}
                 {/* Next-dose tick at the top, in the gap before day 1 comes round again */}
                 {hasDose && (
-                    <path d={`M${CX} 50 L${CX} 14`} style={{ stroke: 'var(--c-accent)', fill: 'none' }} strokeWidth={2.5} strokeLinecap="round" />
+                    <path d={`M${CX} 50 L${CX} 14`} style={{ stroke: 'var(--c-accent)', fill: 'none' }} strokeWidth={2} strokeLinecap="round" />
                 )}
                 {hasDose && Glyph && glyphSize >= 8 && (
                     <Glyph
@@ -192,18 +192,18 @@ const RhythmDial: React.FC<RhythmDialProps> = ({
                             className="text-[14px] xl:text-[10.5px]"
                             style={{
                                 fill: l.isToday ? 'var(--c-ink)' : 'var(--c-muted)',
-                                fontWeight: l.isToday ? 700 : 500,
+                                fontWeight: l.isToday ? 600 : 400,
                             }}
                         >
                             {l.text}
                         </text>
                     ))}
                 </g>
-                <circle cx={CX} cy={CY} r={72} style={{ fill: 'var(--c-surface)', stroke: 'var(--c-hairline)' }} strokeWidth={1} />
+                <circle cx={CX} cy={CY} r={72} style={{ fill: 'var(--c-surface)' }} />
                 <path
                     d={`M${f(hx0)} ${f(hy0)} L${f(hx1)} ${f(hy1)}`}
                     style={{ stroke: 'var(--c-ink)', fill: 'none' }}
-                    strokeWidth={2.5}
+                    strokeWidth={2}
                     strokeLinecap="round"
                 />
             </svg>

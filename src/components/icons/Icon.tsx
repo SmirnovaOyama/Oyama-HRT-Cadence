@@ -3,15 +3,15 @@ import React, { forwardRef } from 'react';
 /**
  * Props for every Cadence icon. The shape matches lucide-react closely enough that
  * existing call sites keep compiling: `strokeWidth`, `absoluteStrokeWidth` and `color`
- * are accepted. The stroke weight is never taken from props; it always comes from
- * optical sizing (see design/cadence/icons/grammar.md).
+ * are accepted. The stroke weight is never taken from props: every icon renders at
+ * the owner's drawn weight (see design/cadence/icons/grammar.md).
  */
 export interface IconProps extends Omit<React.SVGProps<SVGSVGElement>, 'ref' | 'color' | 'strokeWidth'> {
     /** Rendered size in px (width and height). Default 24. */
     size?: number | string;
     /** Accessible name. When given, the icon is exposed as an image instead of being hidden. */
     title?: string;
-    /** Accepted for lucide compatibility and ignored: weight follows optical sizing. */
+    /** Accepted for lucide compatibility and ignored: every icon keeps its drawn weight. */
     strokeWidth?: number | string;
     /** Accepted for lucide compatibility and ignored. */
     absoluteStrokeWidth?: boolean;
@@ -21,14 +21,9 @@ export interface IconProps extends Omit<React.SVGProps<SVGSVGElement>, 'ref' | '
 
 export type IconComponent = React.ForwardRefExoticComponent<IconProps & React.RefAttributes<SVGSVGElement>>;
 
-/** Optical sizing: the geometry never changes, only the stroke weight. */
-export const opticalStrokeWidth = (px: number): number => (px >= 22 ? 1.75 : px >= 18 ? 2 : 2.25);
-
-const toPx = (size: number | string): number => {
-    if (typeof size === 'number') return size;
-    const n = parseFloat(size);
-    return Number.isFinite(n) && /^\s*[\d.]+\s*(px)?\s*$/.test(size) ? n : 24;
-};
+/** The stroke every icon is drawn with, in the 24-unit view box. Icons render
+ *  exactly as drawn, at every size. */
+export const ICON_STROKE_WIDTH = 1.7;
 
 export function createIcon(name: string, children: React.ReactNode): IconComponent {
     const Icon = forwardRef<SVGSVGElement, IconProps>(function CadenceIcon(
@@ -54,7 +49,7 @@ export function createIcon(name: string, children: React.ReactNode): IconCompone
                 height={size}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={opticalStrokeWidth(toPx(size))}
+                strokeWidth={ICON_STROKE_WIDTH}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className={className ? `cadence-icon cadence-icon-${name} ${className}` : `cadence-icon cadence-icon-${name}`}

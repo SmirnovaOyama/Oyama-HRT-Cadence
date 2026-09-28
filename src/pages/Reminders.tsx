@@ -3,13 +3,10 @@ import { saveAs } from 'file-saver';
 import type { DoseEvent } from '../../logic';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useDialog } from '../contexts/DialogContext';
-import { useHRTMode } from '../contexts/HRTModeContext';
-import { BackHeader, Button, Lead, ListGroup, ListRow, ListStack, Switch } from '../components/ui';
-import { Calendar, ChevronRight, Export, Eye, Phone, Plus, Reminder } from '../components/icons';
-import { LabelIcon } from '../components/ui/LabelIcon';
-import { IconTile } from '../components/today/ComingUp';
+import { BackHeader, Button, Lead, ListGroup, ListRow, ListStack, RowGlyph, Switch } from '../components/ui';
+import { ChevronRight, Plus } from '../components/icons';
 import { doseText, fmt, medInline, whenInline } from '../components/today/format';
-import { ScheduleTile, scheduleAsDose, scheduleSub, scheduleTitle } from '../components/reminders/format';
+import { ScheduleGlyph, scheduleAsDose, scheduleSub, scheduleTitle } from '../components/reminders/format';
 import ScheduleSheet from '../components/reminders/ScheduleSheet';
 import { useReminderPrefs } from '../hooks/useReminders';
 import type { Schedule } from '../types/routine';
@@ -34,7 +31,6 @@ export interface RemindersProps {
 const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, updateSchedule, deleteSchedule, onBack }) => {
     const { t, lang } = useTranslation();
     const { showDialog } = useDialog();
-    const { isTransmasc } = useHRTMode();
     const prefs = useReminderPrefs();
     const [view, setView] = useState<'main' | 'calendar'>('main');
     const [sheet, setSheet] = useState<{ open: boolean; schedule: Schedule | null }>({ open: false, schedule: null });
@@ -93,7 +89,6 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                     <div className="flex flex-col items-start gap-4">
                         <p className="m-0 text-base text-[var(--c-ink)]">{t('reminders.calendar.lead')}</p>
                         <Button onClick={downloadCalendar} disabled={!hasActive}>
-                            <Export size={20} />
                             {t('reminders.calendar.download')}
                         </Button>
                         <p className="m-0 text-sm text-[var(--c-muted)]">
@@ -102,7 +97,6 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                     </div>
                     <ListGroup footer={t('reminders.calendar.names_footer')}>
                         <ListRow
-                            leading={<LabelIcon icon={Eye} tone="purple" />}
                             title={t('reminders.calendar.names')}
                             trailing={
                                 <Switch checked={prefs.showNames} onChange={prefs.setShowNames} aria-label={t('reminders.calendar.names')} />
@@ -139,7 +133,7 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                                 <ListRow
                                     key={s.id}
                                     className="relative"
-                                    leading={<ScheduleTile schedule={s} isTransmasc={isTransmasc} />}
+                                    leading={<ScheduleGlyph schedule={s} />}
                                     title={
                                         <>
                                             {/* The whole row opens the sheet; the switch sits above this button. */}
@@ -149,7 +143,7 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                                                 aria-label={title}
                                                 onClick={() => setSheet({ open: true, schedule: s })}
                                             />
-                                            <span className="font-semibold">{title}</span>
+                                            <span className="font-medium">{title}</span>
                                         </>
                                     }
                                     sub={scheduleSub(s, nowMs, lang, t)}
@@ -170,7 +164,7 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                         <ListRow
                             key="new"
                             tone="accent"
-                            leading={<IconTile kind="neutral" icon={Plus} />}
+                            leading={<RowGlyph icon={Plus} tone="accent" />}
                             title={t('reminders.new_schedule')}
                             onClick={() => setSheet({ open: true, schedule: null })}
                         />,
@@ -178,13 +172,12 @@ const Reminders: React.FC<RemindersProps> = ({ schedules, events, addSchedule, u
                 </ListGroup>
 
                 <ListGroup aria-label={t('reminders.delivery')} chevronIcon={CHEVRON} footer={t('reminders.system_footer')}>
-                    <ListRow leading={<LabelIcon icon={Reminder} tone="orange" />} title={t('reminders.in_app')} value={t('reminders.always_on')} />
+                    <ListRow title={t('reminders.in_app')} value={t('reminders.always_on')} />
                     <ListRow
-                        leading={<LabelIcon icon={Phone} tone="blue" />}
                         title={t('reminders.system')}
                         trailing={<Switch checked={prefs.notify} onChange={on => void toggleNotify(on)} aria-label={t('reminders.system')} />}
                     />
-                    <ListRow leading={<LabelIcon icon={Calendar} tone="teal" />} title={t('reminders.calendar')} drillIn onClick={() => setView('calendar')} />
+                    <ListRow title={t('reminders.calendar')} drillIn onClick={() => setView('calendar')} />
                 </ListGroup>
 
             </ListStack>

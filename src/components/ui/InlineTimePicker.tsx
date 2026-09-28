@@ -1,7 +1,6 @@
 import React, { useId, useLayoutEffect, useRef } from 'react';
 import { Button } from './Button';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { Check } from '../icons';
 
 function TimeColumn({ label, value, count, autoFocus, onChange }: {
     label: string;
@@ -78,7 +77,7 @@ export function InlineTimePicker({ value, initialPart, onChange, onClose }: {
                 <TimeColumn label={t('time.hour')} value={value.getHours()} count={24} autoFocus={initialPart === 'hour'} onChange={hour => onChange('hour', hour)} />
                 <TimeColumn label={t('time.minute')} value={value.getMinutes()} count={60} autoFocus={initialPart === 'minute'} onChange={minute => onChange('minute', minute)} />
             </div>
-            <Button compact variant="secondary" className="self-end" onClick={onClose}><Check size={18} />{t('btn.ok')}</Button>
+            <Button compact variant="secondary" className="self-end" onClick={onClose}>{t('btn.ok')}</Button>
         </div>
     );
 }

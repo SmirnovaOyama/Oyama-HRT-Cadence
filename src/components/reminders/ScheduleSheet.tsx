@@ -7,14 +7,12 @@ import type { Schedule } from '../../types/routine';
 import { formatLocalDate } from '../../utils/reminders';
 import { ScheduleTimingFields } from './ScheduleTimingFields';
 import { Regimen, RouteFamily, routeFamily } from '../../utils/schedule';
-import { Button, ListGroup, ListRow } from '../ui';
+import { Button, ListGroup, ListRow, RowGlyph } from '../ui';
 import { SecondaryPage } from '../ui/SecondaryPage';
-import { Calendar, Check, Clock, Delete, Moon, Plus, Reminder, Repeat, Snooze } from '../icons';
-import { LabelIcon } from '../ui/LabelIcon';
+import { Check, Plus } from '../icons';
 import DoseStepper from '../dose_form/DoseStepper';
-import { MedicineIcon } from '../dose_form/MedicineIcon';
-import { RouteChoiceIcon } from '../dose_form/shared';
-import { IconTile, ROUTE_ICON, tileKind } from '../today/ComingUp';
+import { RouteGlyph } from '../dose_form/shared';
+import { ROUTE_ICON } from '../today/ComingUp';
 import { doseText, medName, medShort } from '../today/format';
 
 const CHECK = <Check size={22} />;
@@ -243,7 +241,7 @@ export const ScheduleSheet: React.FC<ScheduleSheetProps> = ({ open, schedule, re
                                     ...availableRegimens.map(r => (
                                         <ListRow
                                             key={r.key}
-                                            leading={<IconTile kind={tileKind(r.ester, isTransmasc)} icon={ROUTE_ICON[r.family]} />}
+                                            leading={<RowGlyph icon={ROUTE_ICON[r.family]} />}
                                             title={regimenTitle(r)}
                                             selected={what === r.key}
                                             onClick={() => pickRegimen(r)}
@@ -251,7 +249,7 @@ export const ScheduleSheet: React.FC<ScheduleSheetProps> = ({ open, schedule, re
                                     )),
                                     <ListRow
                                         key="custom"
-                                        leading={<IconTile kind="neutral" icon={Plus} />}
+                                        leading={<RowGlyph icon={Plus} />}
                                         title={t('reminders.sheet.something_else')}
                                         selected={what === 'custom'}
                                         onClick={() => setWhat('custom')}
@@ -266,7 +264,7 @@ export const ScheduleSheet: React.FC<ScheduleSheetProps> = ({ open, schedule, re
                                     {availableFamilies.map(f => (
                                         <ListRow
                                             key={f}
-                                            leading={<RouteChoiceIcon route={FAMILY_ROUTE[f]} />}
+                                            leading={<RouteGlyph route={FAMILY_ROUTE[f]} />}
                                             title={upperFirst(t(`today.route.${f}`))}
                                             selected={family === f}
                                             onClick={() => pickFamily(f)}
@@ -275,7 +273,7 @@ export const ScheduleSheet: React.FC<ScheduleSheetProps> = ({ open, schedule, re
                                 </ListGroup>
                                 <ListGroup header={t('reminders.sheet.medicine')} selection="single" checkIcon={CHECK}>
                                     {availableEsters.map(e => (
-                                        <ListRow key={e} leading={<MedicineIcon ester={e} />} title={medName(e, t)} selected={draft.ester === e} onClick={() => set({ ester: e })} />
+                                        <ListRow key={e} title={medName(e, t)} selected={draft.ester === e} onClick={() => set({ ester: e })} />
                                     ))}
                                 </ListGroup>
                                 <div>
@@ -297,13 +295,11 @@ export const ScheduleSheet: React.FC<ScheduleSheetProps> = ({ open, schedule, re
                         {/* How often */}
                         <ListGroup header={t('reminders.sheet.how_often')} selection="single" checkIcon={CHECK}>
                             <ListRow
-                                leading={<LabelIcon icon={Calendar} tone="teal" />}
                                 title={t('reminders.sheet.every_day')}
                                 selected={draft.kind === 'daily'}
                                 onClick={() => set({ kind: 'daily' })}
                             />
                             <ListRow
-                                leading={<LabelIcon icon={Repeat} tone="purple" />}
                                 title={t('reminders.sheet.every_n')}
                                 selected={draft.kind === 'every'}
                                 onClick={() => set({ kind: 'every', times: draft.times.slice(0, 1) })}
@@ -343,7 +339,6 @@ export const ScheduleSheet: React.FC<ScheduleSheetProps> = ({ open, schedule, re
                             {LEADS.map(l => (
                                 <ListRow
                                     key={l}
-                                    leading={<LabelIcon icon={l === 0 ? Reminder : Clock} tone="orange" />}
                                     title={t(l === 0 ? 'reminders.sheet.at_time' : `reminders.sheet.before_${l}`)}
                                     selected={draft.leadMin === l}
                                     onClick={() => set({ leadMin: l })}
@@ -355,7 +350,6 @@ export const ScheduleSheet: React.FC<ScheduleSheetProps> = ({ open, schedule, re
                             {NUDGES.map(n => (
                                 <ListRow
                                     key={String(n)}
-                                    leading={<LabelIcon icon={n === null ? Moon : Snooze} tone={n === null ? 'muted' : 'purple'} />}
                                     title={t(n === null ? 'reminders.sheet.nudge_off' : `reminders.sheet.nudge_${n / 60}h`)}
                                     selected={draft.repeatAfterMin === n}
                                     onClick={() => set({ repeatAfterMin: n })}
@@ -366,12 +360,10 @@ export const ScheduleSheet: React.FC<ScheduleSheetProps> = ({ open, schedule, re
 
                     <div className="mt-6 flex flex-col items-center gap-2">
                         <Button block onClick={save}>
-                            <Check size={20} />
                             {t('reminders.sheet.save')}
                         </Button>
                         {schedule && onDelete && (
                             <Button variant="destructive" onClick={remove}>
-                                <Delete size={20} />
                                 {t('reminders.sheet.delete')}
                             </Button>
                         )}

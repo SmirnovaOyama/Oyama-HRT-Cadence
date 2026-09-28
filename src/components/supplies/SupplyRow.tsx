@@ -3,38 +3,37 @@ import { useTranslation } from '../../contexts/LanguageContext';
 import type { Schedule, SupplyItem } from '../../types/routine';
 import type { SupplyForecast } from '../../utils/supplies';
 import { Button, ListRow } from '../ui';
-import { Attention, Reorder } from '../icons';
+import { Attention } from '../icons';
 import { fmt } from '../today/format';
-import { SupplyBar, SupplyTile, supplyDate, supplyFraction, supplySubLine, supplyTone } from './shared';
+import { SupplyBar, SupplyGlyph, supplyDate, supplyFraction, supplySubLine } from './shared';
 
 export interface SupplyRowProps {
     item: SupplyItem;
     forecast: SupplyForecast;
     events: DoseEvent[];
     schedules: Schedule[];
-    isTransmasc?: boolean;
     /** Opens the edit sheet. */
     onOpen?: (item: SupplyItem) => void;
 }
 
-/** One supply in a ListGroup: 40px tile, one-line name, one-line state with a
+/** One supply in a ListGroup: kind glyph, one-line name, one-line state with a
  *  thin bar under it. The state is the amount left ("About 5 mL left, 40
  *  shots"), or, when it matters, the Attention icon with "Reorder soon" or
  *  "Out". No trailing value, so the name keeps the full width (format rule 2). */
-export function SupplyRow({ item, forecast, events, schedules, isTransmasc = false, onOpen }: SupplyRowProps) {
+export function SupplyRow({ item, forecast, events, schedules, onOpen }: SupplyRowProps) {
     const { t, lang } = useTranslation();
     const line = supplySubLine(item, forecast, { events, schedules, lang, t });
     return (
         <ListRow
-            title={<span className="block truncate font-semibold">{item.name}</span>}
-            leading={<SupplyTile item={item} isTransmasc={isTransmasc} />}
+            title={<span className="block truncate font-medium">{item.name}</span>}
+            leading={<SupplyGlyph item={item} />}
             sub={
                 <>
                     {forecast.status === 'ok' ? (
                         <span className="block truncate">{line}</span>
                     ) : (
                         <span
-                            className={`flex items-center gap-1.5 font-semibold ${
+                            className={`flex items-center gap-1.5 font-medium ${
                                 forecast.status === 'out' ? 'text-[var(--c-danger)]' : 'text-[var(--c-attention)]'
                             }`}
                         >
@@ -45,7 +44,6 @@ export function SupplyRow({ item, forecast, events, schedules, isTransmasc = fal
                     <span className="mt-2 mb-1 block">
                         <SupplyBar
                             fraction={supplyFraction(item, forecast.remaining)}
-                            tone={supplyTone(item, isTransmasc)}
                             status={forecast.status}
                             label={line}
                         />
@@ -92,7 +90,6 @@ export function SupplyAttentionPanel({ item, forecast, onUpdateAmount, showBody 
             {onUpdateAmount && (
                 <div>
                     <Button variant="secondary" compact onTint onClick={() => onUpdateAmount(item)}>
-                        <Reorder size={20} />
                         {t('supplies.update_amount')}
                     </Button>
                 </div>

@@ -2,9 +2,8 @@ import React, { useCallback, useState } from 'react';
 import type { DoseEvent } from '../../logic';
 import { useTranslation } from '../contexts/LanguageContext';
 import type { Schedule, SupplyItem } from '../types/routine';
-import { BackHeader, Lead, ListGroup, ListRow, ListStack } from '../components/ui';
+import { BackHeader, Lead, ListGroup, ListRow, ListStack, RowGlyph } from '../components/ui';
 import { Plus } from '../components/icons';
-import { IconTile } from '../components/today/ComingUp';
 import {
     SupplyAttentionPanel,
     SupplyRow,
@@ -20,8 +19,6 @@ export interface SuppliesPageProps {
     supplies: SupplyItem[];
     schedules: Schedule[];
     events: DoseEvent[];
-    /** Transmasculine mode: testosterone takes the accent colour. */
-    isTransmasc?: boolean;
     addSupply: (item: SupplyItem) => void;
     updateSupply: (item: SupplyItem) => void;
     deleteSupply: (id: string) => void;
@@ -38,7 +35,6 @@ const SuppliesPage: React.FC<SuppliesPageProps> = ({
     supplies,
     schedules,
     events,
-    isTransmasc = false,
     addSupply,
     updateSupply,
     deleteSupply,
@@ -89,14 +85,13 @@ const SuppliesPage: React.FC<SuppliesPageProps> = ({
                             forecast={forecast}
                             events={events}
                             schedules={schedules}
-                            isTransmasc={isTransmasc}
                             onOpen={it => setSheet({ mode: 'edit', item: it })}
                         />
                     ))}
                     <ListRow
                         title={t('supplies.add')}
                         tone="accent"
-                        leading={<IconTile kind="neutral" icon={Plus} />}
+                        leading={<RowGlyph icon={Plus} tone="accent" />}
                         onClick={() => setSheet({ mode: 'add', item: null })}
                     />
                 </ListGroup>

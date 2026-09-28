@@ -17,10 +17,8 @@ import EstimateInfoModal from '../components/EstimateInfoModal';
 import DoseAdvisoryNotice from '../components/DoseAdvisory';
 import PixelCat from '../components/PixelCat';
 import { Button, PageHeader, Section } from '../components/ui';
-import { Attention, BackedUp, CloudOff, Help, Plus, Sync, Tests } from '../components/icons';
-import type { IconComponent } from '../components/icons';
+import { Attention, BackedUp, CloudOff, Help, Plus, Sync } from '../components/icons';
 import RhythmDial from '../components/today/RhythmDial';
-import RangeRuler, { TargetRange, rulerScale } from '../components/today/RangeRuler';
 import ComingUp, { LogDosePrefill, ROUTE_ICON, prefillFor } from '../components/today/ComingUp';
 import {
     dayAndTime,
@@ -106,6 +104,11 @@ const MS_H = 3_600_000;
 const NO_SCHEDULES: Schedule[] = [];
 const NO_DUE: DueItem[] = [];
 const NO_SUPPLIES: ForecastedSupply[] = [];
+
+interface TargetRange {
+    low: number;
+    high: number;
+}
 
 /** Target bands the app already uses (useAppData currentStatus, ResultChart's band). */
 const TARGET_E2: TargetRange = { low: 100, high: 200 };
@@ -290,31 +293,26 @@ const Home: React.FC<HomeProps> = ({
         });
     }, [cycle, nowMs, lang, t]);
 
+    // What the two rings are, in words, then any missed daily dose as its own
+    // status line (the one part of the legend that asks for attention).
     const legend = React.useMemo(() => {
-        if (!cycle) return [] as { icon: IconComponent; tone: string; text: string }[];
+        if (!cycle) return { rings: [] as string[], missed: null as string | null };
         const outerMed = medInline(cycle.regimen.ester, t, lang);
-        const rows = [{
-            icon: ROUTE_ICON[cycle.regimen.family],
-            tone: 'text-[var(--c-accent)]',
-            text: cycle.cycleDays === 7
-                ? fmt(t('today.legend.outer_weekly'), { med: outerMed })
-                : fmt(t('today.legend.outer_days'), { med: outerMed, n: cycle.cycleDays }),
-        }];
+        const rings = [cycle.cycleDays === 7
+            ? fmt(t('today.legend.outer_weekly'), { med: outerMed })
+            : fmt(t('today.legend.outer_days'), { med: outerMed, n: cycle.cycleDays })];
+        let missed: string | null = null;
         if (dialPick.inner && slots) {
-            rows.push({
-                icon: ROUTE_ICON[dialPick.inner.family],
-                tone: 'text-[var(--c-second)]',
-                text: fmt(t('today.legend.inner'), { med: medInline(dialPick.inner.ester, t, lang) }),
-            });
-            const missed = slots.filter(s => s.state === 'missed');
-            const missedText = missed.length === 1
-                ? fmt(t('today.legend.missed_one'), { day: weekdayLong(missed[0].dayStartMs, lang) })
-                : missed.length > 1 ? fmt(t('today.legend.missed_many'), { n: missed.length }) : null;
-            if (missedText) rows.push({ icon: Attention, tone: 'text-[var(--c-attention)]', text: missedText });
+            rings.push(fmt(t('today.legend.inner'), { med: medInline(dialPick.inner.ester, t, lang) }));
+            const late = slots.filter(s => s.state === 'missed');
+            missed = late.length === 1
+                ? fmt(t('today.legend.missed_one'), { day: weekdayLong(late[0].dayStartMs, lang) })
+                : late.length > 1 ? fmt(t('today.legend.missed_many'), { n: late.length }) : null;
         }
-        return rows;
+        return { rings, missed };
     }, [cycle, dialPick.inner, slots, lang, t]);
-    const legendLine = legend.length ? joinSentences(lang, legend.map(row => row.text)) : null;
+    const ringsLine = legend.rings.length ? joinSentences(lang, legend.rings) : null;
+    const legendLine = joinSentences(lang, [...legend.rings, ...(legend.missed ? [legend.missed] : [])]) || null;
 
     const openUpcoming = onLogDose ? (item: UpcomingDose) => onLogDose(prefillFor(item, nowMs)) : undefined;
 
@@ -409,32 +407,24 @@ const Home: React.FC<HomeProps> = ({
         </p>
     );
 
-    const [scaleMin, scaleMax] = rulerScale(target);
-    const levelDetails = (
-        <>
-            {hasLevel && (
-                <RangeRuler
-                    value={level}
-                    target={target}
-                    targetLabel={t('today.ruler.target')}
-                    ariaLabel={fmt(t('today.ruler.aria'), {
-                        value: Math.round(level), unit, min: scaleMin, max: scaleMax, low: target.low, high: target.high,
-                    })}
-                />
-            )}
-            {(trend?.outlook || (isTransmasc ? currentT > 0 : currentCPA > 0)) && (
-                <div className="flex flex-col gap-1 text-center text-sm text-[var(--c-muted)]">
-                    {trend?.outlook && <p className="m-0">{trend.outlook}</p>}
-                    {isTransmasc && currentT > 0 && (
-                        <p className="m-0">{fmt(t('today.t_nmol'), { value: (currentT / 28.842).toFixed(1) })}</p>
-                    )}
-                    {!isTransmasc && currentCPA > 0 && (
-                        <p className="m-0">{fmt(t('today.cpa_level'), { value: currentCPA.toFixed(1) })}</p>
-                    )}
-                </div>
-            )}
-        </>
-    );
+    // The status sentence already names the target, so the numbers around it
+    // are one quiet line: where it is heading, then the second medicine.
+    const detailLine = joinSentences(lang, [
+        trend?.outlook ?? null,
+        isTransmasc && currentT > 0 ? fmt(t('today.t_nmol'), { value: (currentT / 28.842).toFixed(1) }) : null,
+        !isTransmasc && currentCPA > 0 ? fmt(t('today.cpa_level'), { value: currentCPA.toFixed(1) }) : null,
+    ].filter(Boolean) as string[]);
+    const levelDetails = detailLine ? (
+        <p className="m-0 text-center text-sm text-[var(--c-muted)]">{detailLine}</p>
+    ) : null;
+
+    // With doses but no blood test yet, the estimate card ends with a quiet
+    // link to add one: words that say why, not a free-standing button.
+    const calibrateLink = showCalibrate ? (
+        <Button variant="plain" onClick={onNavigateToLab} className="self-center whitespace-normal text-center text-[15px] leading-5">
+            {t('advisory.calibrate.cta')}
+        </Button>
+    ) : null;
 
     // Today's two cards share one look: white, a hairline edge, 20px corners.
     const card = 'rounded-[20px] border border-[var(--c-hairline)] bg-[var(--c-surface)]';
@@ -461,18 +451,22 @@ const Home: React.FC<HomeProps> = ({
             >
                 {centre}
             </RhythmDial>
-            {statusLine}
-            {levelDetails}
-            {legend.length > 0 && (
-                <ul className="m-0 flex list-none flex-col gap-1.5 border-t border-[var(--c-hairline)] p-0 pt-3 text-[15px] leading-5 text-[var(--c-muted)]">
-                    {legend.map(({ icon: Icon, tone, text }) => (
-                        <li key={text} className="flex items-start gap-2">
-                            <Icon size={18} className={`mt-px flex-none ${tone}`} />
-                            <span>{text}</span>
-                        </li>
-                    ))}
-                </ul>
+            <div className="flex flex-col gap-1">
+                {statusLine}
+                {levelDetails}
+            </div>
+            {(ringsLine || legend.missed) && (
+                <div className="flex flex-col items-center gap-1 pt-1 text-center text-sm text-[var(--c-muted)]">
+                    {ringsLine && <p className="m-0">{ringsLine}</p>}
+                    {legend.missed && (
+                        <p className="m-0 flex items-start gap-1.5 text-start text-[var(--c-attention)]">
+                            <Attention size={16} className="mt-[3px] flex-none" />
+                            <span>{legend.missed}</span>
+                        </p>
+                    )}
+                </div>
             )}
+            {calibrateLink}
         </section>
     ) : (
         // List-first fallback: no cycle to draw, so the level block stands alone.
@@ -485,6 +479,7 @@ const Home: React.FC<HomeProps> = ({
                 {statusLine}
             </div>
             {levelDetails}
+            {calibrateLink}
         </section>
     );
 
@@ -566,16 +561,8 @@ const Home: React.FC<HomeProps> = ({
                         <DoseAdvisoryNotice
                             advisory={doseAdvisory}
                             hormoneAdvisory={hormoneAdvisory}
-                            showCalibrate={false}
-                            onCalibrate={onNavigateToLab}
                             t={t}
                         />
-                        {showCalibrate && (
-                            <Button variant="secondary" compact onClick={onNavigateToLab} className="self-start px-4">
-                                <Tests size={18} />
-                                {t('advisory.calibrate.cta')}
-                            </Button>
-                        )}
                     </div>
 
                     {(upcoming.length > 0 || suppliesAttention.length > 0) && (
@@ -592,7 +579,6 @@ const Home: React.FC<HomeProps> = ({
                                 nowMs={nowMs}
                                 lang={lang}
                                 t={t}
-                                isTransmasc={isTransmasc}
                                 onOpen={openUpcoming}
                                 reorders={suppliesAttention}
                                 onOpenSupplies={onNavigateToSupplies}

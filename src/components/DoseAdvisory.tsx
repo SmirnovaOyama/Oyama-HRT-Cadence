@@ -1,6 +1,5 @@
 import React from 'react';
 import { Attention } from './icons';
-import { Button } from './ui';
 import { DoseAdvisory as Advisory, HormoneLevelAdvisory } from '../../logic';
 
 // Heads-ups about logged doses and measured labs. Status is always an icon plus
@@ -37,30 +36,20 @@ export const HormoneLevelAdvisoryLine: React.FC<{ advisory: HormoneLevelAdvisory
 );
 
 /**
- * Today's notices, in order: the dose warning, the lab warning (both as
- * attention panels), followed by a blood-test shortcut
- * when no results have been recorded yet.
+ * Today's notices, in order: the dose warning, then the lab warning, both as
+ * attention panels. The blood-test prompt lives in Today's estimate card.
  */
 const DoseAdvisoryNotice: React.FC<{
     advisory: Advisory | null;
     hormoneAdvisory?: HormoneLevelAdvisory | null;
-    showCalibrate: boolean;
-    onCalibrate: () => void;
     t: (k: string) => string;
     className?: string;
-}> = ({ advisory, hormoneAdvisory, showCalibrate, onCalibrate, t, className }) => {
-    if (!advisory && !hormoneAdvisory && !showCalibrate) return null;
+}> = ({ advisory, hormoneAdvisory, t, className }) => {
+    if (!advisory && !hormoneAdvisory) return null;
     return (
         <div className={`flex flex-col gap-3 ${className ?? ''}`}>
             {advisory && <DoseAdvisoryLine advisory={advisory} t={t} panel />}
             {hormoneAdvisory && <HormoneLevelAdvisoryLine advisory={hormoneAdvisory} t={t} panel />}
-            {showCalibrate && (
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 xl:mt-auto">
-                    <Button variant="secondary" compact onClick={onCalibrate}>
-                        {t('advisory.calibrate.cta')}
-                    </Button>
-                </div>
-            )}
         </div>
     );
 };

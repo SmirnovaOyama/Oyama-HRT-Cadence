@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BloodDrop, ChevronRight, Plus, Delete, Sliders } from '../components/icons';
-import { LabelIcon } from '../components/ui/LabelIcon';
+import { BloodDrop, ChevronRight, Plus } from '../components/icons';
 import {
     CalibrationHistoryMode, CalibrationMethod, CalibrationPoint, CalibrationResult, DoseEvent, LabResult, Route,
     convertToNgDl, convertToPgMl, getHormoneLevelAdvisory, isTestosteroneEster, isT_LabUnit,
@@ -13,7 +12,7 @@ import LabResultForm from '../components/LabResultForm';
 import { makeDayFormatter } from '../components/DoseHeatmap';
 import PixelCat from '../components/PixelCat';
 import { HormoneLevelAdvisoryLine } from '../components/DoseAdvisory';
-import { Button, Lead, ListGroup, ListRow, PageHeader, Section } from '../components/ui';
+import { Button, Lead, ListGroup, ListRow, PageHeader, RowGlyph, Section } from '../components/ui';
 import { SecondaryPage } from '../components/ui/SecondaryPage';
 import { CalibrationChoices, CalibrationSummary, methodName } from './CalibrationSettings';
 
@@ -227,21 +226,6 @@ const MeasuredChart: React.FC<{
     );
 };
 
-/** The 40px blood-drop tile at the start of a result row: the hormone this
- *  treatment tracks in the accent, the other one in the second hue. */
-const BloodTile: React.FC<{ primary: boolean }> = ({ primary }) => (
-    <span
-        aria-hidden="true"
-        className="grid h-10 w-10 place-items-center rounded-xl"
-        style={{
-            background: primary ? 'var(--c-accent-container)' : 'var(--c-second-tint)',
-            color: primary ? 'var(--c-accent)' : 'var(--c-second)',
-        }}
-    >
-        <BloodDrop size={20} />
-    </span>
-);
-
 interface LabProps {
     t: (key: string) => string;
     isQuickAddLabOpen: boolean;
@@ -387,7 +371,6 @@ const Lab: React.FC<LabProps> = ({
                                     <ListGroup chevronIcon={<ChevronRight size={16} />}>
                                         <ListRow
                                             title={t('tests.cal_title')}
-                                            leading={<LabelIcon icon={Sliders} tone="teal" />}
                                             value={methodName(calibrationMethod, t)}
                                             drillIn
                                             onClick={onOpenCalibrationSettings}
@@ -406,7 +389,6 @@ const Lab: React.FC<LabProps> = ({
                                 <ListGroup>
                                     {sorted.map(res => {
                                         const isT = isT_LabUnit(res.unit);
-                                        const primary = isT === isTransmasc;
                                         const standing = standingOf(res, targetFor(isT, isTransmasc));
                                         const tm = timingOf(res, injections);
                                         const sub = tm
@@ -422,18 +404,18 @@ const Lab: React.FC<LabProps> = ({
                                         return (
                                             <ListRow
                                                 key={res.id}
-                                                leading={<BloodTile primary={primary} />}
+                                                leading={<RowGlyph icon={BloodDrop} />}
                                                 title={
                                                     // Status words sit at the end of the title line, so the
                                                     // date and timing below get the full width. The name gives
                                                     // way before the number does.
                                                     <span className="flex min-w-0 items-baseline gap-3">
-                                                        <span className="flex min-w-0 flex-1 font-semibold">
+                                                        <span className="flex min-w-0 flex-1 font-medium">
                                                             <span className="truncate">{name}</span>
                                                             <span className="shrink-0 whitespace-nowrap tabular-nums">{value}</span>
                                                         </span>
                                                         <span
-                                                            className="shrink-0 whitespace-nowrap text-sm font-semibold"
+                                                            className="shrink-0 whitespace-nowrap text-sm font-medium"
                                                             style={{ color: standing === 'in' ? 'var(--c-target)' : 'var(--c-attention)' }}
                                                         >
                                                             {t(`tests.status.${standing}`)}
@@ -457,7 +439,6 @@ const Lab: React.FC<LabProps> = ({
                             >
                                 <ListRow
                                     title={t('tests.advanced')}
-                                    leading={<LabelIcon icon={Sliders} tone="teal" />}
                                     sub={t(pkCustomized ? 'tests.advanced_sub_custom' : 'tests.advanced_sub')}
                                     drillIn
                                     onClick={onOpenPKParams}
@@ -472,7 +453,7 @@ const Lab: React.FC<LabProps> = ({
                                     ? t('tests.delete_all_note_one')
                                     : t('tests.delete_all_note').replace('{n}', String(labResults.length))}
                             >
-                                <ListRow tone="destructive" title={<span className="field-label"><Delete size={20} />{t('tests.delete_all')}</span>} onClick={onClearLabResults} />
+                                <ListRow tone="destructive" title={t('tests.delete_all')} onClick={onClearLabResults} />
                             </ListGroup>
                         )}
                     </div>

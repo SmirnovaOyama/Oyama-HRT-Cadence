@@ -7,7 +7,7 @@ import { itemMatches, unitsPerDose } from '../../utils/supplies';
 import { routeFamily } from '../../utils/schedule';
 import { Gel, Injection, Patch, Supplies, Tablet, type IconComponent } from '../icons';
 import { fmt, localeFor, medName, routeNoun, type T } from '../today/format';
-import { tileKind } from '../today/ComingUp';
+import { RowGlyph } from '../ui/RowGlyph';
 
 /* Small pieces of the Supplies UI, shared by the page, the sheet and anything
    else that shows a supply (a Today card, the You list). No shadows, no dots:
@@ -27,34 +27,9 @@ export function supplyIcon(kind: SupplyKind): IconComponent {
     }
 }
 
-type Tone = 'estradiol' | 'cyproterone' | 'neutral';
-
-const TILE_CLASS: Record<Tone, string> = {
-    estradiol: 'bg-[var(--c-accent-container)] text-[var(--c-accent)]',
-    cyproterone: 'bg-[var(--c-second-tint)] text-[var(--c-second)]',
-    neutral: 'bg-[var(--c-plate)] text-[var(--c-muted)]',
-};
-
-const FILL_VAR: Record<Tone, string> = {
-    estradiol: 'var(--c-accent)',
-    cyproterone: 'var(--c-second)',
-    neutral: 'var(--c-control)',
-};
-
-/** Medicine colour of an item: its linked medicine, or neutral. */
-export function supplyTone(item: Pick<SupplyItem, 'link'>, isTransmasc: boolean): Tone {
-    const ester = item.link?.ester;
-    return ester ? tileKind(ester, isTransmasc) : 'neutral';
-}
-
-/** 40px leading tile: the kind's icon in the linked medicine's colour. */
-export function SupplyTile({ item, isTransmasc = false }: { item: Pick<SupplyItem, 'kind' | 'link'>; isTransmasc?: boolean }) {
-    const Icon = supplyIcon(item.kind);
-    return (
-        <span aria-hidden="true" className={`grid h-10 w-10 flex-none place-items-center rounded-xl ${TILE_CLASS[supplyTone(item, isTransmasc)]}`}>
-            <Icon size={22} />
-        </span>
-    );
+/** Leading glyph of a supply row: the kind's icon. */
+export function SupplyGlyph({ item }: { item: Pick<SupplyItem, 'kind'> }) {
+    return <RowGlyph icon={supplyIcon(item.kind)} />;
 }
 
 /** Units that make sense for a kind. The first is the default; one option means
@@ -133,16 +108,15 @@ export function supplyFraction(item: Pick<SupplyItem, 'amount'>, remainingUnits:
     return Math.min(1, Math.max(0, remainingUnits / item.amount));
 }
 
-/** Thin flat progress bar: 4px, radius 2, plate-strong track, medicine colour
+/** Thin flat progress bar: 4px, radius 2, plate-strong track, a quiet control
  *  fill (attention when it is time to reorder, danger when out). */
-export function SupplyBar({ fraction, tone = 'neutral', status = 'ok', label }: {
+export function SupplyBar({ fraction, status = 'ok', label }: {
     fraction: number;
-    tone?: Tone;
     status?: SupplyStatus;
     /** Accessible name, e.g. the sub-line. */
     label?: string;
 }) {
-    const fill = status === 'out' ? 'var(--c-danger)' : status === 'reorder_soon' ? 'var(--c-attention)' : FILL_VAR[tone];
+    const fill = status === 'out' ? 'var(--c-danger)' : status === 'reorder_soon' ? 'var(--c-attention)' : 'var(--c-control)';
     const pct = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
     return (
         <span
@@ -205,4 +179,3 @@ export const SUPPLY_KINDS: SupplyKind[] = ['vial', 'tablets', 'patches', 'gel', 
 /** Default reorder lead time in days. */
 export const DEFAULT_REORDER_LEAD_DAYS = 14;
 
-export type { Tone as SupplyTone };
