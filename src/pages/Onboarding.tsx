@@ -9,6 +9,11 @@ import { LIST_CHECK } from './you/shared';
 
 const ONBOARDING_KEY = 'app-onboarded';
 
+const LANGUAGE_CHOICES = [
+    { value: 'en', label: 'English' },
+    { value: 'zh', label: '简体中文' },
+] as const;
+
 /**
  * Anyone with records on this device has been using the app since before there
  * was an intro, and greeting them as a stranger — worse, offering to set the
@@ -253,7 +258,7 @@ interface OnboardingProps {
 
 /** First run: a welcome, HRT mode, how tracking works, and data privacy. */
 const Onboarding: React.FC<OnboardingProps> = ({ onDone }) => {
-    const { t } = useTranslation();
+    const { t, lang, setLang } = useTranslation();
     const { mode, setMode, isTransmasc } = useHRTMode();
     const curve = useOnboardingCurve(isTransmasc);
 
@@ -275,6 +280,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ onDone }) => {
             <p className="mx-auto mt-3 mb-0 max-w-sm text-base text-[var(--c-muted)]">
                 {t('onboarding.welcome_subtitle')}
             </p>
+            {/* The welcome asks for a language, so it offers them. Each is named in
+                itself, and the choice is the same preference the You page sets. */}
+            <ListGroup
+                selection="single"
+                checkIcon={LIST_CHECK}
+                aria-label={t('settings.language')}
+                className="mx-auto mt-6 w-full max-w-sm text-start"
+            >
+                {LANGUAGE_CHOICES.map(({ value, label }) => (
+                    <ListRow
+                        key={value}
+                        title={<span lang={value === 'zh' ? 'zh-CN' : 'en'}>{label}</span>}
+                        selected={lang === value}
+                        onClick={() => setLang(value)}
+                    />
+                ))}
+            </ListGroup>
         </div>,
 
         <div key="mode" className="pt-8">
