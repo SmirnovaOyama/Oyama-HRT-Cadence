@@ -522,7 +522,7 @@ const AppContent = () => {
                     ref={mainScrollRef}
                     data-page-scroll
                     key={currentView}
-                    className={`flex-1 flex flex-col overflow-y-auto scrollbar-hide scroll-pb-nav ${transitionDirection === 'backward' ? 'view-enter-backward' : 'view-enter-forward'}`}
+                    className={`flex-1 flex flex-col overflow-y-auto scrollbar-hide-mobile scroll-pb-nav ${transitionDirection === 'backward' ? 'view-enter-backward' : 'view-enter-forward'}`}
                 >
                     <div style={{ display: hasPages ? 'none' : undefined }}>
                     {currentView === 'home' && (

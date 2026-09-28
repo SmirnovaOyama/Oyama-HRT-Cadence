@@ -605,6 +605,25 @@ body {
     scrollbar-width: none;
 }
 
+/* The page scroller hides its bar only on phones, where momentum and the tab
+   bar do that job. On desktop the bar is the one sign of where you are in a
+   long page, and a stable gutter keeps pages of different lengths from
+   shifting sideways when a classic scrollbar comes and goes. */
+@media (max-width: 767px) {
+    .scrollbar-hide-mobile {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .scrollbar-hide-mobile::-webkit-scrollbar {
+        display: none;
+    }
+}
+@media (min-width: 768px) {
+    .scrollbar-hide-mobile {
+        scrollbar-gutter: stable;
+    }
+}
+
 .font-display {
     font-family: var(--font-display);
 }

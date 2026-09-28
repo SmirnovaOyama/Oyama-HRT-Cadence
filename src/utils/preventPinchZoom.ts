@@ -30,7 +30,14 @@ export function preventPinchZoom(): void {
     // event rather than a gesture — same physical pinch, so same treatment.
     // Keyboard zoom (⌘/Ctrl with +/-) isn't cancellable and stays available,
     // which is what keeps this from taking zoom away outright.
-    window.addEventListener('wheel', (e) => {
-        if (e.ctrlKey) e.preventDefault();
-    }, { passive: false });
+    //
+    // Only where there are no gesture events. A non-passive wheel listener on
+    // the window makes WebKit route every scroll through the main thread, which
+    // made scrolling in Safari lag behind the trackpad; Safari's pinch is already
+    // cancelled above. Blink only waits on the first wheel event of a scroll.
+    if (!('GestureEvent' in window)) {
+        window.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) e.preventDefault();
+        }, { passive: false });
+    }
 }
