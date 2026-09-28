@@ -3,369 +3,196 @@
 import { createIcon } from './Icon';
 
 export const Today = createIcon('today', <>
-    <path d="M12 12V5.5A6.5 6.5 0 0 1 17 16Z" fill="currentColor" fillOpacity="0.18" stroke="none" />
-    <path d="M13.25 3.09A9 9 0 0 1 18.19 5.46M19.75 7.42A9 9 0 0 1 20.97 12.76M20.41 15.2A9 9 0 0 1 17 19.49M14.74 20.57A9 9 0 0 1 9.26 20.57M7 19.49A9 9 0 0 1 3.59 15.2M3.03 12.76A9 9 0 0 1 4.25 7.42M5.81 5.46A9 9 0 0 1 10.75 3.09" />
-    <path d="M12 12L17 16" />
+    <circle cx="12" cy="12" r="4.5" />
+    <path d="M12 2.5v1.8M12 19.7v1.8M2.5 12h1.8M19.7 12h1.8M5.3 5.3l1.3 1.3M17.4 17.4l1.3 1.3M5.3 18.7l1.3-1.3M17.4 6.6l1.3-1.3" />
 </>);
 
 export const Timeline = createIcon('timeline', <>
-    <path d="M5.5 7.5V10.5M5.5 13.5V16.5M10.5 6H20M10.5 12H17M10.5 18H19" />
-    <circle cx="5.5" cy="6" r="1.5" />
-    <circle cx="5.5" cy="12" r="1.5" />
-    <circle cx="5.5" cy="18" r="1.5" />
+    <circle cx="5.5" cy="6" r="1.8" />
+    <circle cx="5.5" cy="12" r="1.8" />
+    <circle cx="5.5" cy="18" r="1.8" />
+    <path d="M5.5 7.8v2.4M5.5 13.8v2.4M10.5 6h10M10.5 12h7M10.5 18h10" />
 </>);
 
-export const Log = createIcon('log', <path d="M12 5.5V18.5M5.5 12H18.5" />);
+export const Log = createIcon('log', <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 8v8M8 12h8" />
+</>);
 
 export const Tests = createIcon('tests', <>
-    <path d="M8.5 14.5H15.5V18A3.5 3.5 0 0 1 8.5 18Z" fill="currentColor" fillOpacity="0.16" stroke="none" transform="rotate(30 12 12)" />
-    <path d="M8.5 7.5V18A3.5 3.5 0 0 0 15.5 18V7.5M8.5 14.5H15.5" transform="rotate(30 12 12)" />
-    <rect x="7.5" y="4.5" width="9" height="3" rx="1" transform="rotate(30 12 12)" />
+    <path d="M7.5 3h9M9 3v13.5a3 3 0 0 0 6 0V3" />
+    <path d="M9 11c1 .7 2 .7 3 0s2-.7 3 0" />
+    <circle cx="11" cy="14.6" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="13.1" cy="17" r="0.7" fill="currentColor" stroke="none" />
 </>);
 
 export const You = createIcon('you', <>
-    <circle cx="12" cy="7.5" r="3.5" />
-    <path d="M5 20V18.5A7 5 0 0 1 19 18.5V20" />
+    <circle cx="12" cy="9" r="4.5" />
+    <path d="M3.5 20.5c1.7-3 4.8-5 8.5-5s6.8 2 8.5 5" />
 </>);
 
-export const Injection = createIcon('injection', <path d="M9.5 3.5H14.5M12 3.5V7.5M7.5 7.5H16.5M9 7.5V17A1.5 1.5 0 0 0 10.5 18.5H13.5A1.5 1.5 0 0 0 15 17V7.5M9 12.5H11M12 18.5V22" transform="rotate(45 12 12)" />);
+export const Injection = createIcon('injection', <>
+    <rect x="8" y="2.5" width="8" height="3.5" rx="1" />
+    <path d="M9.5 6v1.2C8 7.7 7 8.8 7 10.5V19a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-8.5c0-1.7-1-2.8-2.5-3.3V6M7 13.5h10" />
+</>);
 
 export const Tablet = createIcon('tablet', <>
-    <rect x="3.5" y="7.5" width="17" height="9" rx="4.5" transform="rotate(-45 12 12)" />
-    <path d="M9 9L15 15" />
+    <path d="M9.2 20l10.8-10.8a3.96 3.96 0 0 0-5.6-5.6L3.6 14.4A3.96 3.96 0 0 0 9.2 20z" />
+    <path d="M9 9l6 6" />
 </>);
 
-export const Patch = createIcon('patch', <path d="M20 13V7.5A3.5 3.5 0 0 0 16.5 4H7.5A3.5 3.5 0 0 0 4 7.5V16.5A3.5 3.5 0 0 0 7.5 20H13L20 13ZM13 20V16A3 3 0 0 1 16 13H20" />);
+export const Patch = createIcon('patch', <>
+    <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+    <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" />
+</>);
 
 export const Gel = createIcon('gel', <>
-    <rect x="6.5" y="10" width="11" height="10" rx="3" />
-    <path d="M9.5 10V8H14.5V10M12 8V4M8.5 4H16.5V5.5" />
+    <path d="M7.5 3h9l-.9 11.1a1 1 0 0 1-1 .9H9.4a1 1 0 0 1-1-.9z" />
+    <path d="M7.8 6.5h8.4M10.5 15v3a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-3" />
 </>);
 
 export const Sublingual = createIcon('sublingual', <>
-    <path d="M12 3.5V10.5M8.5 7L12 10.5L15.5 7" />
-    <rect x="4.5" y="14" width="15" height="6.5" rx="3.25" fill="currentColor" fillOpacity="0.12" />
-    <path d="M12 14V20.5" />
+    <path d="M3 11c2.8-2.5 6-3 9-1.5 3-1.5 6.2-1 9 1.5-2.2 4.4-5.3 6.8-9 6.8S5.2 15.4 3 11z" />
+    <path d="M3 11h18" />
+    <rect x="10" y="12.6" width="4" height="2.2" rx="1.1" />
 </>);
 
-export const Reminder = createIcon('reminder', <path d="M5.5 17C7 15 7 13.5 7 10A5 5 0 0 1 17 10C17 13.5 17 15 18.5 17H5.5ZM10 20A2.5 2.5 0 0 0 14 20M12 3V5" />);
+export const Reminder = createIcon('reminder', <>
+    <path d="M6 10a6 6 0 0 1 12 0c0 3.6.8 5.7 1.5 7a.6.6 0 0 1-.5.9H5a.6.6 0 0 1-.5-.9C5.2 15.7 6 13.6 6 10z" />
+    <path d="M9.8 20.8c.5.8 1.3 1.2 2.2 1.2s1.7-.4 2.2-1.2" />
+</>);
 
-export const Assistant = createIcon('assistant', <path d="M9 3.5V7M15 3.5V7M6 7H18V10.5A6 6 0 0 1 6 10.5V7ZM12 16.5V20.5" />);
-
-export const Check = createIcon('check', <path d="M5 12L10 17L19 7" strokeLinejoin="miter" strokeMiterlimit="10" />);
+export const Check = createIcon('check', <polyline points="4.5,12.5 9.5,17.5 19.5,7" />);
 
 export const InTarget = createIcon('in-target', <>
     <circle cx="12" cy="12" r="9" />
-    <path d="M8 12.5L11 15.5L16 9.5" strokeLinejoin="miter" strokeMiterlimit="10" />
+    <polyline points="8,12.3 10.8,15 16,9.5" />
 </>);
 
-export const Up = createIcon('up', <path d="M12 19V5M7 10L12 5L17 10" />);
-
-export const Down = createIcon('down', <path d="M12 5V19M7 14L12 19L17 14" />);
-
 export const Attention = createIcon('attention', <>
-    <path d="M13.95 5.32L20.64 17.01A2 2 0 0 1 18.9 20L5.1 20A2 2 0 0 1 3.36 17.01L10.05 5.32A2.25 2.25 0 0 1 13.95 5.32ZM12 9V13" />
-    <circle cx="12" cy="16.5" r="1.25" fill="currentColor" stroke="none" />
+    <path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.3a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3zM12 9.5V14" />
+    <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
 </>);
 
 export const Info = createIcon('info', <>
     <circle cx="12" cy="12" r="9" />
-    <path d="M12 11V16.5" />
-    <circle cx="12" cy="7.5" r="1.25" fill="currentColor" stroke="none" />
+    <path d="M12 11v5.5" />
+    <circle cx="12" cy="7.8" r="1" fill="currentColor" stroke="none" />
 </>);
 
 export const Help = createIcon('help', <>
     <circle cx="12" cy="12" r="9" />
-    <path d="M9.25 8.75A2.75 2.75 0 1 1 13.94 10.69C13.17 11.47 12 12.1 12 13" />
-    <circle cx="12" cy="16.75" r="1.25" fill="currentColor" stroke="none" />
+    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.3c-.7.3-1.1 1-1.1 1.7v.5" />
+    <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
 </>);
 
-export const Close = createIcon('close', <path d="M6.5 6.5L17.5 17.5M17.5 6.5L6.5 17.5" />);
+export const Close = createIcon('close', <path d="M6 6l12 12M18 6L6 18" />);
 
 export const Clock = createIcon('clock', <>
     <circle cx="12" cy="12" r="9" />
-    <path d="M12 7V12L15.5 14" />
+    <path d="M12 7v5l3.5 2" />
 </>);
-
-export const Calendar = createIcon('calendar', <>
-    <rect x="4" y="5.5" width="16" height="15" rx="2.5" />
-    <path d="M8 3.5V7.5M16 3.5V7.5M4 10.5H20M8 15H11" />
-</>);
-
-export const Snooze = createIcon('snooze', <path d="M6 3.5H18M6 20.5H18M7.5 3.5V6.5C7.5 9.5 16.5 14.5 16.5 17.5V20.5M16.5 3.5V6.5C16.5 9.5 7.5 14.5 7.5 17.5V20.5" />);
-
-export const Skip = createIcon('skip', <path d="M4.5 6.5L14.5 12L4.5 17.5ZM19.5 6V18" />);
-
-export const Repeat = createIcon('repeat', <path d="M18 4L21 7L18 10M21 7H7A4 4 0 0 0 3 11M6 20L3 17L6 14M3 17H17A4 4 0 0 0 21 13" />);
 
 export const Supplies = createIcon('supplies', <>
-    <rect x="8" y="3.5" width="8" height="4" rx="1.5" />
-    <path d="M8 7.5L6.64 9.76A1 1 0 0 0 6.5 10.28V18A2.5 2.5 0 0 0 9 20.5H15A2.5 2.5 0 0 0 17.5 18V10.28A1 1 0 0 0 17.36 9.76L16 7.5M10 15H14M12 13V17" />
+    <path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5z" />
+    <path d="M3.5 7.5L12 12l8.5-4.5M12 12v9M7.8 5.2l8.5 4.5" />
 </>);
 
-export const Reorder = createIcon('reorder', <>
-    <rect x="3.5" y="4" width="17" height="4.5" rx="1.5" />
-    <path d="M5 8.5V18A2.5 2.5 0 0 0 7.5 20.5H16.5A2.5 2.5 0 0 0 19 18V8.5M10 12.5H14" />
+export const BloodDrop = createIcon('blood-drop', <>
+    <path d="M12 2.8c3.4 4 6.8 7.7 6.8 11.4a6.8 6.8 0 0 1-13.6 0C5.2 10.5 8.6 6.8 12 2.8z" />
+    <path d="M9.2 14.8a3 3 0 0 0 2.5 2.6" />
 </>);
 
-export const Site = createIcon('site', <>
-    <circle cx="12" cy="7" r="3" />
-    <path d="M5 20.5V19A7 5.5 0 0 1 19 19V20.5" />
-    <circle cx="12" cy="17" r="1.5" />
-</>);
+export const ChevronRight = createIcon('chevron-right', <polyline points="9,5.5 15.5,12 9,18.5" />);
 
-export const BloodDrop = createIcon('blood-drop', <path d="M12 3.5C10.5 6.5 6 10 6 14.5A6 6 0 0 0 18 14.5C18 10 13.5 6.5 12 3.5Z" />);
+export const ChevronDown = createIcon('chevron-down', <polyline points="5.5,9 12,15.5 18.5,9" />);
 
-export const ChevronRight = createIcon('chevron-right', <path d="M9 6.5L14.5 12L9 17.5" />);
+export const Back = createIcon('back', <path d="M19.5 12h-15M10.5 6l-6 6 6 6" />);
 
-export const ChevronDown = createIcon('chevron-down', <path d="M6.5 9L12 14.5L17.5 9" />);
+export const Minus = createIcon('minus', <path d="M4.5 12h15" />);
 
-export const Back = createIcon('back', <path d="M19.5 12H4.5M10 6.5L4.5 12L10 17.5" />);
-
-export const Minus = createIcon('minus', <path d="M5.5 12H18.5" />);
-
-export const Plus = createIcon('plus', <path d="M12 5.5V18.5M5.5 12H18.5" />);
-
-export const More = createIcon('more', <path d="M5 7H19M5 12H19M5 17H19" />);
+export const Plus = createIcon('plus', <path d="M12 4.5v15M4.5 12h15" />);
 
 export const BackedUp = createIcon('backed-up', <>
-    <path d="M7 18.5A4 4 0 0 1 6.5 10.53A5.5 5.5 0 0 1 17.43 9.6A4.5 4.5 0 0 1 16.5 18.5Z" />
-    <path d="M8.5 13L11 15.5L15.5 11" strokeLinejoin="miter" strokeMiterlimit="10" />
+    <path d="M7 18.5a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.5 1.5 3.8 3.8 0 0 1-.4 7.5z" />
+    <polyline points="9.5,13.8 11.4,15.7 14.8,12.3" />
 </>);
 
-export const Sync = createIcon('sync', <path d="M3.5 12A8.5 8.5 0 0 1 18 6M18 3V6H15M20.5 12A8.5 8.5 0 0 1 6 18M6 21V18H9" />);
+export const Sync = createIcon('sync', <>
+    <circle cx="12" cy="12" r="2" />
+    <path d="M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8M5.2 5.2a9.6 9.6 0 0 0 0 13.6M18.8 5.2a9.6 9.6 0 0 1 0 13.6" />
+</>);
 
 export const Lock = createIcon('lock', <>
-    <rect x="5" y="10" width="14" height="10.5" rx="2.5" />
-    <path d="M8 10V7.5A4 4 0 0 1 16 7.5V10M12 14V16.5" />
+    <rect x="5" y="10.5" width="14" height="10" rx="2" />
+    <path d="M8 10.5v-3a4 4 0 0 1 8 0v3M12 15v2" />
 </>);
 
 export const TwoStep = createIcon('two-step', <>
-    <path d="M12 3.5L17.67 5.53A2 2 0 0 1 19 7.41V11.5C19 16 16 19.25 12 20.5C8 19.25 5 16 5 11.5V7.41A2 2 0 0 1 6.33 5.53Z" />
-    <path d="M8.5 12L11 14.5L15.5 10" strokeLinejoin="miter" strokeMiterlimit="10" />
+    <rect x="2.5" y="7.5" width="19" height="9" rx="3" />
+    <path d="M17.5 10v4" />
+    <circle cx="7" cy="12" r="1" fill="currentColor" stroke="none" />
+    <circle cx="10.3" cy="12" r="1" fill="currentColor" stroke="none" />
+    <circle cx="13.6" cy="12" r="1" fill="currentColor" stroke="none" />
 </>);
-
-export const Key = createIcon('key', <>
-    <circle cx="8.26" cy="15.24" r="4.5" />
-    <path d="M11.44 12.06L19.22 4.28M15.33 8.17L17.45 10.29L19.22 8.53L18.33 7.64L20.45 5.52L19.22 4.28" />
-</>);
-
-export const SignIn = createIcon('sign-in', <path d="M11 4H17.5A2.5 2.5 0 0 1 20 6.5V17.5A2.5 2.5 0 0 1 17.5 20H11M3.5 12H14.5M10.5 8L14.5 12L10.5 16" />);
-
-export const SignOut = createIcon('sign-out', <path d="M13 4H6.5A2.5 2.5 0 0 0 4 6.5V17.5A2.5 2.5 0 0 0 6.5 20H13M9.5 12H20.5M16.5 8L20.5 12L16.5 16" />);
 
 export const Eye = createIcon('eye', <>
-    <path d="M3 12A10 10 0 0 1 21 12A10 10 0 0 1 3 12Z" />
+    <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
     <circle cx="12" cy="12" r="3" />
 </>);
 
-export const Language = createIcon('language', <>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 3A4.5 9 0 0 0 12 21A4.5 9 0 0 0 12 3M3 12H21" />
-</>);
-
-export const Appearance = createIcon('appearance', <>
-    <circle cx="14" cy="12" r="5" />
-    <path d="M14 7A5 5 0 0 1 14 17Z" fill="currentColor" stroke="none" />
-    <path d="M14 19.5L14 21M8.7 17.3L7.64 18.36M6.5 12L5 12M8.7 6.7L7.64 5.64M14 4.5L14 3" />
-</>);
-
-export const Weight = createIcon('weight', <>
-    <rect x="4" y="4" width="16" height="16" rx="3.5" />
-    <path d="M7.5 10.5A4.5 4.5 0 0 1 16.5 10.5M12 10.5L14.25 7.75" />
-</>);
-
-export const Summary = createIcon('summary', <>
-    <rect x="5" y="3.5" width="14" height="17" rx="2.5" />
-    <path d="M8.5 8H15.5M8.5 12H15.5M8.5 16H13" />
-</>);
-
-export const Export = createIcon('export', <path d="M4 15V18A2.5 2.5 0 0 0 6.5 20.5H17.5A2.5 2.5 0 0 0 20 18V15M12 3.5V14M8 10L12 14L16 10" />);
-
-export const Import = createIcon('import', <path d="M4 15V18A2.5 2.5 0 0 0 6.5 20.5H17.5A2.5 2.5 0 0 0 20 18V15M12 14V3.5M8 7.5L12 3.5L16 7.5" />);
-
-export const Share = createIcon('share', <path d="M9 9.5H7.5A2.5 2.5 0 0 0 5 12V18.5A2.5 2.5 0 0 0 7.5 21H16.5A2.5 2.5 0 0 0 19 18.5V12A2.5 2.5 0 0 0 16.5 9.5H15M12 3V14.5M8 7L12 3L16 7" />);
-
-export const Link = createIcon('link', <path d="M8.5 15.5L15.5 8.5M8 10L5 13A4.24 4.24 0 0 0 11 19L14 16M10 8L13 5A4.24 4.24 0 0 1 19 11L16 14" />);
+export const Share = createIcon('share', <path d="M8.5 9H7a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 17 9h-1.5M12 14V3M8.5 6.5L12 3l3.5 3.5" />);
 
 export const Copy = createIcon('copy', <>
-    <rect x="4" y="7.5" width="12.5" height="13" rx="2.5" />
-    <path d="M8 7.5V6A2.5 2.5 0 0 1 10.5 3.5H17.5A2.5 2.5 0 0 1 20 6V13A2.5 2.5 0 0 1 17.5 15.5H16.5" />
+    <rect x="8" y="8" width="12.5" height="12.5" rx="2" />
+    <path d="M16 8V5.5a2 2 0 0 0-2-2H5.5a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2H8" />
 </>);
 
-export const External = createIcon('external', <path d="M10.5 4H6.5A2.5 2.5 0 0 0 4 6.5V17.5A2.5 2.5 0 0 0 6.5 20H17.5A2.5 2.5 0 0 0 20 17.5V13.5M11 13L20 4M14 4H20V10" />);
+export const External = createIcon('external', <path d="M13.5 3.5h7v7M20.5 3.5l-9 9M18 14v4.5a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2H10" />);
 
-export const Edit = createIcon('edit', <path d="M4 20L5.5 14.5L16 4A2.82 2.82 0 0 1 20 8L9.5 18.5ZM14 6L18 10" />);
+export const Delete = createIcon('delete', <path d="M4 6.5h16M9.5 6.5v-2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2M6 6.5l.9 13a1.5 1.5 0 0 0 1.5 1.4h7.2a1.5 1.5 0 0 0 1.5-1.4l.9-13M10 10.5v6M14 10.5v6" />);
 
-export const Delete = createIcon('delete', <path d="M4 7H20M9 7V5A1.5 1.5 0 0 1 10.5 3.5H13.5A1.5 1.5 0 0 1 15 5V7M6 7L6.86 18.65A2 2 0 0 0 8.86 20.5H15.14A2 2 0 0 0 17.14 18.65L18 7M10 11V16.5M14 11V16.5" />);
+export const Spinner = createIcon('spinner', <path d="M21 12a9 9 0 1 1-9-9" />);
 
-export const Server = createIcon('server', <>
-    <rect x="4" y="4" width="16" height="16" rx="2.5" />
-    <path d="M4 12H20M7.5 8H10.5M7.5 16H10.5" />
-</>);
+export const EyeOff = createIcon('eye-off', <path d="M9.2 5.9A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.4 3.3M14.1 14.3A3 3 0 0 1 9.7 10M17 17.1A9.6 9.6 0 0 1 12 18.5c-6 0-9.5-6.5-9.5-6.5A17 17 0 0 1 7 6.9M4.5 4.5l15 15" />);
 
-export const Terminal = createIcon('terminal', <>
-    <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
-    <path d="M7 9L10 12L7 15M13 15H17" />
-</>);
+export const Cloud = createIcon('cloud', <path d="M7 18.5a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.5 1.5 3.8 3.8 0 0 1-.4 7.5z" />);
 
-export const Laptop = createIcon('laptop', <path d="M5.5 16V6A2 2 0 0 1 7.5 4H16.5A2 2 0 0 1 18.5 6V16M3 16H21L20 19.5H4L3 16Z" />);
-
-export const Phone = createIcon('phone', <>
-    <rect x="6.5" y="3" width="11" height="18" rx="2.5" />
-    <path d="M10 17.5H14" />
-</>);
-
-export const ActivityLog = createIcon('activity-log', <path d="M4.5 8A8.5 8.5 0 1 1 4.5 16M4.5 3.5V8H9M12 7.5V12L15 14" />);
-
-export const Permissions = createIcon('permissions', <>
-    <rect x="3.5" y="3.5" width="17" height="6" rx="3" />
-    <rect x="3.5" y="14.5" width="17" height="6" rx="3" />
-    <path d="M16.5 3.5V9.5M7.5 14.5V20.5" />
-</>);
-
-export const Moon = createIcon('moon', <path d="M11.01 4.01A8.5 8.5 0 1 0 19.99 12.99A6.5 6.5 0 0 1 11.01 4.01Z" />);
-
-export const Spinner = createIcon('spinner', <path d="M12 3A9 9 0 1 1 3 12" />);
-
-export const EyeOff = createIcon('eye-off', <path d="M3.5 8A9.5 9.5 0 0 0 20.5 8M6.5 11.5L5 14M12 13V16M17.5 11.5L19 14" />);
-
-export const Cloud = createIcon('cloud', <path d="M7 18.5A4 4 0 0 1 6.5 10.53A5.5 5.5 0 0 1 17.43 9.6A4.5 4.5 0 0 1 16.5 18.5Z" />);
-
-export const CloudOff = createIcon('cloud-off', <path d="M13.9 18.5H7A4 4 0 0 1 6.02 10.62M9.98 5.38A5.5 5.5 0 0 1 17.43 9.6A4.5 4.5 0 0 1 20.55 15.96M4 4L20 20" />);
-
-export const CloudUpload = createIcon('cloud-upload', <path d="M7 17A4 4 0 0 1 6.5 9.03A5.5 5.5 0 0 1 17.43 8.1A4.5 4.5 0 0 1 16.5 17M12 21V11.5M8.5 15L12 11.5L15.5 15" />);
-
-export const CloudDownload = createIcon('cloud-download', <path d="M7 17A4 4 0 0 1 6.5 9.03A5.5 5.5 0 0 1 17.43 8.1A4.5 4.5 0 0 1 16.5 17M12 11.5V21M8.5 17.5L12 21L15.5 17.5" />);
+export const CloudOff = createIcon('cloud-off', <path d="M9.3 5.4A6 6 0 0 1 17.9 11a3.8 3.8 0 0 1 2.4 5.6M16.5 18.5H7a4.5 4.5 0 0 1-.6-9M4 4l16 16" />);
 
 export const Search = createIcon('search', <>
     <circle cx="10.5" cy="10.5" r="6.5" />
-    <path d="M15.5 15.5L20.5 20.5" />
+    <path d="M15.2 15.2l5.3 5.3" />
 </>);
 
-export const Settings = createIcon('settings', <>
-    <path d="M10.19 5.24L10.59 3.11A9 9 0 0 1 13.41 3.11L13.81 5.24A7 7 0 0 1 16.95 7.05L16.95 7.05L18.99 6.34A9 9 0 0 1 20.4 8.77L18.76 10.19A7 7 0 0 1 18.76 13.81L18.76 13.81L20.4 15.23A9 9 0 0 1 18.99 17.66L16.95 16.95A7 7 0 0 1 13.81 18.76L13.81 18.76L13.41 20.89A9 9 0 0 1 10.59 20.89L10.19 18.76A7 7 0 0 1 7.05 16.95L7.05 16.95L5.01 17.66A9 9 0 0 1 3.6 15.23L5.24 13.81A7 7 0 0 1 5.24 10.19L5.24 10.19L3.6 8.77A9 9 0 0 1 5.01 6.34L7.05 7.05A7 7 0 0 1 10.19 5.24Z" />
-    <circle cx="12" cy="12" r="3" />
+export const Shield = createIcon('shield', <>
+    <path d="M12 3c2.6 1.4 5 2 7.5 2.2v6.3c0 4.5-3 7.9-7.5 9.5-4.5-1.6-7.5-5-7.5-9.5V5.2C7 5 9.4 4.4 12 3z" />
+    <circle cx="12" cy="10" r="2.2" />
+    <path d="M8.3 16.2c.8-1.6 2.1-2.4 3.7-2.4s2.9.8 3.7 2.4" />
 </>);
-
-export const Sliders = createIcon('sliders', <>
-    <path d="M3.5 8H7M11 8H20.5M3.5 16H13M17 16H20.5" />
-    <circle cx="9" cy="8" r="2" />
-    <circle cx="15" cy="16" r="2" />
-</>);
-
-export const Users = createIcon('users', <>
-    <circle cx="9" cy="8" r="3.5" />
-    <path d="M3.5 20V18.5A5.5 5.5 0 0 1 14.5 18.5V20M16 4.5A3.5 3.5 0 0 1 16 11.5M18 14A5.3 5.3 0 0 1 20.5 18.5V20" />
-</>);
-
-export const Shield = createIcon('shield', <path d="M12 3.5L17.67 5.53A2 2 0 0 1 19 7.41V11.5C19 16 16 19.25 12 20.5C8 19.25 5 16 5 11.5V7.41A2 2 0 0 1 6.33 5.53Z" />);
-
-export const ShieldOff = createIcon('shield-off', <path d="M9.12 4.53L12 3.5L17.67 5.53A2 2 0 0 1 19 7.41V11.5C19 12.4 18.88 13.26 18.65 14.06M14.67 19.27C13.86 19.79 12.96 20.2 12 20.5C8 19.25 5 16 5 11.5V9.6M4 4L20 20" />);
 
 export const Passkey = createIcon('passkey', <>
-    <circle cx="8" cy="8" r="3.5" />
-    <path d="M3 20.5V20A5 5.5 0 0 1 13 20V20.5" />
-    <circle cx="18" cy="7.5" r="3" />
-    <path d="M18 10.5V20.5H20.5V17.5H18" />
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 19.5c.9-3 3.4-5 6.5-5 1.2 0 2.3.3 3.2.8" />
+    <circle cx="17.5" cy="12.5" r="2.5" />
+    <path d="M17.5 15v5.5M17.5 18.2h1.8" />
 </>);
 
-export const ImageAdd = createIcon('image-add', <path d="M11.5 4.5H6A2.5 2.5 0 0 0 3.5 7V17.5A2.5 2.5 0 0 0 6 20H18A2.5 2.5 0 0 0 20.5 17.5V12M3.5 16L8.5 11L13 15.5L16 12.5L20.5 17M18 3V9M15 6H21" />);
+export const Notice = createIcon('notice', <path d="M15.5 4v16l-8-4.5H5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h2.5zM7.5 15.5l1 4.5M18.5 9.5c.9.7 1.5 1.5 1.5 2.5s-.6 1.8-1.5 2.5" />);
 
-export const ImageOff = createIcon('image-off', <path d="M8.5 4.5H18A2.5 2.5 0 0 1 20.5 7V15M15.5 20H6A2.5 2.5 0 0 1 3.5 17.5V8.5M3.5 16L8 11.5M3.5 3.5L20.5 20.5" />);
+export const ChevronUp = createIcon('chevron-up', <polyline points="5.5,15 12,8.5 18.5,15" />);
 
-export const Template = createIcon('template', <path d="M6 6A2.5 2.5 0 0 1 8.5 3.5H15.5A2.5 2.5 0 0 1 18 6V20.5L12 16.5L6 20.5Z" />);
-
-export const TemplateAdd = createIcon('template-add', <path d="M13 7V6A2.5 2.5 0 0 0 10.5 3.5H6.5A2.5 2.5 0 0 0 4 6V20.5L8.5 17L13 20.5V15M18 7V13M15 10H21" />);
-
-export const Reset = createIcon('reset', <path d="M4.5 8A8.5 8.5 0 1 1 4.5 16M4.5 3.5V8H9" />);
-
-export const Save = createIcon('save', <path d="M6 3.5H16L20.5 8V18A2.5 2.5 0 0 1 18 20.5H6A2.5 2.5 0 0 1 3.5 18V6A2.5 2.5 0 0 1 6 3.5ZM8 3.5V8H15V3.5M8 20.5V14H16V20.5" />);
-
-export const Notice = createIcon('notice', <path d="M8 9L18.5 4.5V19.5L8 15ZM8 9H5.5A2 2 0 0 0 3.5 11V13A2 2 0 0 0 5.5 15H8M6 15L7.5 20H10L9 15.43M21 10V14" />);
-
-export const Database = createIcon('database', <>
-    <ellipse cx="12" cy="6" rx="7.5" ry="2.5" />
-    <path d="M4.5 6V18A7.5 2.5 0 0 0 19.5 18V6M4.5 12A7.5 2.5 0 0 0 19.5 12" />
-</>);
-
-export const HardDrive = createIcon('hard-drive', <path d="M5.58 5.94A2 2 0 0 1 7.5 4.5H16.5A2 2 0 0 1 18.42 5.94L20.44 12.79A1.5 1.5 0 0 1 20.5 13.22V17A2.5 2.5 0 0 1 18 19.5H6A2.5 2.5 0 0 1 3.5 17V13.22A1.5 1.5 0 0 1 3.56 12.79ZM3.5 13H20.5M14 16.25H17" />);
-
-export const Merge = createIcon('merge', <path d="M3.5 5.5H5C10 5.5 9.5 12 14 12H20.5M3.5 18.5H5C10 18.5 9.5 12 14 12M16 7.5L20.5 12L16 16.5" />);
-
-export const Desktop = createIcon('desktop', <>
-    <rect x="3.5" y="4" width="17" height="12.5" rx="2.5" />
-    <path d="M12 16.5V20.5M8 20.5H16" />
-</>);
-
-export const Devices = createIcon('devices', <>
-    <path d="M11 16.5H6A2.5 2.5 0 0 1 3.5 14V6.5A2.5 2.5 0 0 1 6 4H15A2.5 2.5 0 0 1 17.5 6.5M9 16.5V20M6 20H11" />
-    <rect x="14" y="9" width="7" height="11.5" rx="1.5" />
-</>);
-
-export const ChevronUp = createIcon('chevron-up', <path d="M6.5 15L12 9.5L17.5 15" />);
-
-export const ChevronLeft = createIcon('chevron-left', <path d="M15 6.5L9.5 12L15 17.5" />);
-
-export const Off = createIcon('off', <>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M5.64 5.64L18.36 18.36" />
-</>);
+export const ChevronLeft = createIcon('chevron-left', <polyline points="15,5.5 8.5,12 15,18.5" />);
 
 export const Verified = createIcon('verified', <>
-    <path d="M14.91 4.98A3.13 3.13 0 0 1 19.02 9.09A3.13 3.13 0 0 1 19.02 14.91A3.13 3.13 0 0 1 14.91 19.02A3.13 3.13 0 0 1 9.09 19.02A3.13 3.13 0 0 1 4.98 14.91A3.13 3.13 0 0 1 4.98 9.09A3.13 3.13 0 0 1 9.09 4.98A3.13 3.13 0 0 1 14.91 4.98Z" />
-    <path d="M8.5 12L11 14.5L15.5 10" strokeLinejoin="miter" strokeMiterlimit="10" />
+    <path d="M19.67 8.82A3.6 3.6 0 0 1 19.67 15.18A3.6 3.6 0 0 1 15.18 19.67A3.6 3.6 0 0 1 8.82 19.67A3.6 3.6 0 0 1 4.33 15.18A3.6 3.6 0 0 1 4.33 8.82A3.6 3.6 0 0 1 8.82 4.33A3.6 3.6 0 0 1 15.18 4.33A3.6 3.6 0 0 1 19.67 8.82z" />
+    <polyline points="8.6,12.2 10.9,14.5 15.4,10" />
 </>);
 
 export const Select = createIcon('select', <>
-    <path d="M4 5H20M4 11H11M4 17H8" />
-    <path d="M12 16L15 19L20.5 12" strokeLinejoin="miter" strokeMiterlimit="10" />
+    <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+    <polyline points="8,12.3 10.8,15 16,9.5" />
 </>);
-
-export const Forward = createIcon('forward', <path d="M5 6.5L10.5 12L5 17.5M13 6.5L18.5 12L13 17.5" />);
-
-export const Rewind = createIcon('rewind', <path d="M19 6.5L13.5 12L19 17.5M11 6.5L5.5 12L11 17.5" />);
-
-export const Gauge = createIcon('gauge', <path d="M4.5 16.5A8.5 8.5 0 1 1 19.5 16.5M12 12.5L15.5 8.5M9 19.5H15" />);
-
-export const Radar = createIcon('radar', <>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M7.5 12A4.5 4.5 0 1 0 12 7.5M12 12L18 6" />
-</>);
-
-export const Wind = createIcon('wind', <path d="M4.5 3.5V20.5M4.5 5L20 7V12L4.5 14M11 6V13" />);
-
-export const Molecule = createIcon('molecule', <>
-    <circle cx="7" cy="16" r="3.5" />
-    <circle cx="17" cy="16" r="3" />
-    <circle cx="12" cy="6.5" r="3" />
-    <path d="M8.5 13L10.5 9M10.5 16H14" />
-</>);
-
-export const Ring = createIcon('ring', <>
-    <path d="M12 3.5L19.5 7.5V16.5L12 20.5L4.5 16.5V7.5Z" />
-    <circle cx="12" cy="12" r="4" />
-</>);
-
-export const Orbit = createIcon('orbit', <>
-    <circle cx="12" cy="12" r="2" />
-    <ellipse cx="12" cy="12" rx="9" ry="5" transform="rotate(-30 12 12)" />
-</>);
-
-export const Helix = createIcon('helix', <path d="M7 3.5C7 8 17 8 17 12C17 16 7 16 7 20.5M17 3.5C17 8 7 8 7 12C7 16 17 16 17 20.5M7 12H17" />);
-
-export const Shell = createIcon('shell', <path d="M4.01 10.09A8.5 8.5 0 0 1 19.99 10.09L14 19.5H10ZM11 17L8.5 5.25M13 17L15.5 5.25" />);
-
-export const Flask = createIcon('flask', <path d="M8.5 3.5H15.5M10 3.5V8.51A2 2 0 0 1 9.77 9.43L5.53 17.57A2 2 0 0 0 7.3 20.5H16.7A2 2 0 0 0 18.47 17.57L14.23 9.43A2 2 0 0 1 14 8.51V3.5M7.13 14.5H16.87" />);
-
-export const GelDrop = createIcon('gel-drop', <path d="M8.03 20A6 6 0 0 1 6 15.5C6 11 10.5 7.5 12 4.5C13.5 7.5 18 11 18 15.5A6 6 0 0 1 15.97 20M3.5 20H20.5" />);
-
-export const Disclaimer = createIcon('disclaimer', <>
-    <path d="M14 3H7.5A2.5 2.5 0 0 0 5 5.5V18.5A2.5 2.5 0 0 0 7.5 21H16.5A2.5 2.5 0 0 0 19 18.5V8ZM14 3V6.5A1.5 1.5 0 0 0 15.5 8H19M12 10V13.5" />
-    <circle cx="12" cy="17" r="1.25" fill="currentColor" stroke="none" />
-</>);
-
-export const HrtType = createIcon('hrt-type', <path d="M12 17L8.54 19M8.54 19L5.07 17M5.07 17L5.07 13M5.07 13L8.54 11M8.54 11L12 13M12 13L12 17M18.93 17L15.46 19M15.46 19L12 17M12 13L15.46 11M15.46 11L18.93 13M18.93 13L18.93 17M8.54 11L8.54 7M8.54 7L12 5M12 5L15.46 7M15.46 7L15.46 11" />);
 
 /** Every Cadence icon by its kebab-case name. */
 export const cadenceIcons = {
@@ -380,101 +207,41 @@ export const cadenceIcons = {
     'gel': Gel,
     'sublingual': Sublingual,
     'reminder': Reminder,
-    'assistant': Assistant,
     'check': Check,
     'in-target': InTarget,
-    'up': Up,
-    'down': Down,
     'attention': Attention,
     'info': Info,
     'help': Help,
     'close': Close,
     'clock': Clock,
-    'calendar': Calendar,
-    'snooze': Snooze,
-    'skip': Skip,
-    'repeat': Repeat,
     'supplies': Supplies,
-    'reorder': Reorder,
-    'site': Site,
     'blood-drop': BloodDrop,
     'chevron-right': ChevronRight,
     'chevron-down': ChevronDown,
     'back': Back,
     'minus': Minus,
     'plus': Plus,
-    'more': More,
     'backed-up': BackedUp,
     'sync': Sync,
     'lock': Lock,
     'two-step': TwoStep,
-    'key': Key,
-    'sign-in': SignIn,
-    'sign-out': SignOut,
     'eye': Eye,
-    'language': Language,
-    'appearance': Appearance,
-    'weight': Weight,
-    'summary': Summary,
-    'export': Export,
-    'import': Import,
     'share': Share,
-    'link': Link,
     'copy': Copy,
     'external': External,
-    'edit': Edit,
     'delete': Delete,
-    'server': Server,
-    'terminal': Terminal,
-    'laptop': Laptop,
-    'phone': Phone,
-    'activity-log': ActivityLog,
-    'permissions': Permissions,
-    'moon': Moon,
     'spinner': Spinner,
     'eye-off': EyeOff,
     'cloud': Cloud,
     'cloud-off': CloudOff,
-    'cloud-upload': CloudUpload,
-    'cloud-download': CloudDownload,
     'search': Search,
-    'settings': Settings,
-    'sliders': Sliders,
-    'users': Users,
     'shield': Shield,
-    'shield-off': ShieldOff,
     'passkey': Passkey,
-    'image-add': ImageAdd,
-    'image-off': ImageOff,
-    'template': Template,
-    'template-add': TemplateAdd,
-    'reset': Reset,
-    'save': Save,
     'notice': Notice,
-    'database': Database,
-    'hard-drive': HardDrive,
-    'merge': Merge,
-    'desktop': Desktop,
-    'devices': Devices,
     'chevron-up': ChevronUp,
     'chevron-left': ChevronLeft,
-    'off': Off,
     'verified': Verified,
     'select': Select,
-    'forward': Forward,
-    'rewind': Rewind,
-    'gauge': Gauge,
-    'radar': Radar,
-    'wind': Wind,
-    'molecule': Molecule,
-    'ring': Ring,
-    'orbit': Orbit,
-    'helix': Helix,
-    'shell': Shell,
-    'flask': Flask,
-    'gel-drop': GelDrop,
-    'disclaimer': Disclaimer,
-    'hrt-type': HrtType,
 } as const;
 
 export type CadenceIconName = keyof typeof cadenceIcons;

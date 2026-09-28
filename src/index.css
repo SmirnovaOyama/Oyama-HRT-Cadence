@@ -73,7 +73,7 @@
     --color-m3-on-surface: #1F1B16;
     --color-m3-on-surface-variant: #5F574C;
     --color-m3-outline: #8F8578;
-    --color-m3-outline-variant: #E2DACB;
+    --color-m3-outline-variant: #E8E2D7;
 
     /* Dark primary container */
     --color-m3-dark-primary-container: #4A2616;
@@ -388,7 +388,7 @@ html.mono {
     --c-plate: #F3EEE6;
     --c-plate-strong: #E9E2D6;
     --c-surface: #FFFFFF;
-    --c-hairline: #E2DACB;
+    --c-hairline: #E8E2D7;
     --c-rule: #CBBFAE;
     --c-control: #8F8578;
     --c-ink: #1F1B16;
@@ -561,15 +561,16 @@ body {
         white-space: nowrap;
         font-size: 13px;
         line-height: 18px;
-        font-weight: 600;
+        font-weight: 500;
         color: inherit;
     }
 
+    /* The current tab: ink on a neutral pill. The accent stays with Log. */
     .tabbar-item[aria-current="page"] {
-        color: var(--c-on-accent-container);
+        color: var(--c-ink);
     }
     .tabbar-item[aria-current="page"] .tabbar-pill {
-        background: var(--c-accent-container);
+        background: var(--c-plate-strong);
     }
     .tabbar-item:not([aria-current="page"]):not(.tabbar-log):hover {
         color: var(--c-ink);
@@ -1017,52 +1018,10 @@ body {
         cursor: not-allowed;
     }
 
-    /* With a sub-line or a 40px icon tile. */
+    /* With a sub-line. */
     .list-row-tall {
         min-height: 64px;
     }
-
-    /* Route choices use their own vivid palette; navigation stays unchanged. */
-    .route-choice-icon {
-        position: relative;
-        display: grid;
-        place-items: center;
-        flex: none;
-        width: 36px;
-        height: 36px;
-        border-radius: 11px;
-        color: var(--route-ink);
-        background: var(--route-fill);
-    }
-    .route-choice-icon[data-route="injection"] { --route-ink: #1763CB; --route-fill: #DCECFF; }
-    .route-choice-icon[data-route="oral"] { --route-ink: #8A40BD; --route-fill: #F0DFFF; }
-    .route-choice-icon[data-route="sublingual"] { --route-ink: #BB337C; --route-fill: #FFDFEF; }
-    .route-choice-icon[data-route="gel"] { --route-ink: #087D85; --route-fill: #CFF4EE; }
-    .route-choice-icon[data-route="patchApply"] { --route-ink: #317D37; --route-fill: #DEF1C9; }
-    .route-choice-icon[data-route="patchRemove"] { --route-ink: #BC5123; --route-fill: #FFE4CF; }
-    .dark .route-choice-icon[data-route="injection"] { --route-ink: #8BBBFF; --route-fill: #1E3557; }
-    .dark .route-choice-icon[data-route="oral"] { --route-ink: #D4A2FF; --route-fill: #3E2854; }
-    .dark .route-choice-icon[data-route="sublingual"] { --route-ink: #FFA2D0; --route-fill: #50263D; }
-    .dark .route-choice-icon[data-route="gel"] { --route-ink: #71DED8; --route-fill: #183E40; }
-    .dark .route-choice-icon[data-route="patchApply"] { --route-ink: #AADF83; --route-fill: #2D4025; }
-    .dark .route-choice-icon[data-route="patchRemove"] { --route-ink: #FFB383; --route-fill: #4D3022; }
-    .route-choice-mark {
-        position: absolute;
-        right: -2px;
-        bottom: -2px;
-        display: grid;
-        place-items: center;
-        width: 16px;
-        height: 16px;
-        border: 2px solid var(--c-surface);
-        border-radius: 50%;
-        background: var(--route-ink);
-        color: var(--route-fill);
-    }
-    .route-choice-icon .cadence-icon { zoom: 1; }
-    .select-value-icon { display: inline-flex; flex: none; }
-    .select-value-icon > * { width: 28px; height: 28px; border-radius: 9px; }
-    .select-value-icon > * > svg { width: 19px; height: 19px; }
 
     .list-row-leading {
         display: inline-flex;
@@ -1070,6 +1029,21 @@ body {
         align-items: center;
         justify-content: center;
     }
+
+    /* RowGlyph: a content row's 20px outline mark in a 24px column. Muted
+       unless the words beside it carry the same meaning. */
+    .row-glyph {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        color: var(--c-muted);
+    }
+    .row-glyph[data-tone="accent"] { color: var(--c-accent); }
+    .row-glyph[data-tone="attention"] { color: var(--c-attention); }
+    .row-glyph[data-tone="danger"] { color: var(--c-danger); }
+    .row-glyph .cadence-icon { zoom: 1; }
 
     .list-row-text {
         display: flex;
@@ -1164,10 +1138,31 @@ body {
         border: 0;
         background-color: var(--c-hairline);
     }
-    /* After rows with a 40px icon tile: 16 + 40 + 12 gap. */
+    /* After rows with a leading glyph: 16 + 24 + 12 gap, the text column. */
     .list-sep-icon,
     .list-sep.list-sep-icon {
-        margin-inline-start: 68px;
+        margin-inline-start: 52px;
+    }
+
+    /* Timeline history: every day in one card. A day's ListGroup loses its
+       own card and its header becomes a quiet line inside the shared one. */
+    .timeline-days {
+        overflow: hidden;
+        background-color: var(--c-surface);
+        border: 1px solid var(--c-hairline);
+        border-radius: 14px;
+    }
+    .timeline-days > div > .list-group {
+        border: 0;
+        border-radius: 0;
+        background-color: transparent;
+    }
+    .timeline-days > div > .list-group-header {
+        margin: 0;
+        padding: 14px 16px 0;
+    }
+    .timeline-days > div + div {
+        border-top: 1px solid var(--c-hairline);
     }
 
     /* ── Switch (spec/components.md C13) ────────────────────────

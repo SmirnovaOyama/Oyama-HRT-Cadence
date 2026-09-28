@@ -1,11 +1,9 @@
 import { localeFor } from '../components/today/format';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Attention, Back, ChevronDown, CloudDownload, CloudUpload, Database, Delete, Devices, Edit, ImageAdd, Key, Lock, Merge, Minus,
-    Passkey, Plus, SignIn, SignOut, Spinner, TwoStep, Verified, You,
+    Attention, ChevronDown, Delete, Minus, Passkey, Plus, Spinner, TwoStep, Verified,
 } from '../components/icons';
 import { BackHeader, Button, ListGroup, ListRow, SegmentedControl } from '../components/ui';
-import { LabelIcon } from '../components/ui/LabelIcon';
 import { Avatar, GroupHeader, LIST_CHEVRON, SyncPanel, YouPage, useSyncWords } from './you/shared';
 import { useTranslation } from '../contexts/LanguageContext';
 
@@ -378,7 +376,7 @@ const Account: React.FC<AccountProps> = ({
     );
 
     return (
-        <YouPage className="[&_.list-sep-icon]:ms-[48px]">
+        <YouPage>
             <BackHeader parentLabel={t('you.title')} onBack={() => onNavigate('settings')} title={t('account.title')} />
 
             {user ? (
@@ -402,8 +400,8 @@ const Account: React.FC<AccountProps> = ({
                             </div>
                         </div>
                         <ListGroup chevronIcon={LIST_CHEVRON}>
-                            <ListRow className="min-h-[52px]" leading={<LabelIcon icon={ImageAdd} tone="pink" />} title={t('you.account.change_photo')} drillIn onClick={() => onNavigate('edit-avatar')} />
-                            <ListRow className="min-h-[52px]" leading={<LabelIcon icon={Edit} tone="blue" />} title={t('you.account.change_username')} drillIn onClick={() => onNavigate('edit-profile')} />
+                            <ListRow className="min-h-[52px]" title={t('you.account.change_photo')} drillIn onClick={() => onNavigate('edit-avatar')} />
+                            <ListRow className="min-h-[52px]" title={t('you.account.change_username')} drillIn onClick={() => onNavigate('edit-profile')} />
                         </ListGroup>
                     </div>
 
@@ -426,7 +424,6 @@ const Account: React.FC<AccountProps> = ({
                                             onTint
                                             onClick={() => { setUnlockError(null); setUnlockTarget({ purpose: 'sync' }); }}
                                         >
-                                            <Key size={20} />
                                             {t('sync.unlock_action')}
                                         </Button>
                                     </div>
@@ -443,9 +440,7 @@ const Account: React.FC<AccountProps> = ({
                                 onClick={handleSave}
                                 disabled={savingCloud || syncStatus === 'locked' || syncStatus === 'syncing'}
                             >
-                                {savingCloud
-                                    ? <Spinner size={20} className="animate-spin" />
-                                    : <CloudUpload size={20} />}
+                                {savingCloud && <Spinner size={20} className="animate-spin" />}
                                 {t('you.account.back_up_now')}
                             </Button>
 
@@ -474,7 +469,6 @@ const Account: React.FC<AccountProps> = ({
                                                             aria-controls={panelId}
                                                             onClick={() => toggleExpand(b)}
                                                         >
-                                                            <span className="list-row-leading"><LabelIcon icon={Database} tone="blue" /></span>
                                                             <span className="list-row-text">
                                                                 <span className="list-row-title">
                                                                     {new Date(b.created_at * 1000).toLocaleString(localeFor(lang), { dateStyle: 'medium', timeStyle: 'short' })}
@@ -574,7 +568,6 @@ const Account: React.FC<AccountProps> = ({
                                                                                         block
                                                                                         onClick={() => { onCloudMerge(b.id); setExpandedId(null); setMergeDiffId(null); }}
                                                                                     >
-                                                                                        <Merge size={20} />
                                                                                         {fill(t('you.account.confirm_merge'), { n: diff.total })}
                                                                                     </Button>
                                                                                 )}
@@ -590,7 +583,6 @@ const Account: React.FC<AccountProps> = ({
                                                                                 aria-expanded={showingDiff}
                                                                                 onClick={() => setMergeDiffId(showingDiff ? null : b.id)}
                                                                             >
-                                                                                <Merge size={20} />
                                                                                 {t(showingDiff ? 'you.account.hide_merge' : 'you.account.show_merge')}
                                                                             </Button>
                                                                             <Button
@@ -599,7 +591,6 @@ const Account: React.FC<AccountProps> = ({
                                                                                 className="flex-1"
                                                                                 onClick={() => { onCloudLoad(b.id); setExpandedId(null); }}
                                                                             >
-                                                                                <CloudDownload size={20} />
                                                                                 {t('account.restore')}
                                                                             </Button>
                                                                         </div>
@@ -624,25 +615,23 @@ const Account: React.FC<AccountProps> = ({
 
                     {/* Security */}
                     <ListGroup header={t('you.account.security')} chevronIcon={LIST_CHEVRON}>
-                        <ListRow className="min-h-[52px]" leading={<LabelIcon icon={Lock} tone="teal" />} title={t('you.account.password')} drillIn onClick={() => onNavigate('change-password')} />
+                        <ListRow className="min-h-[52px]" title={t('you.account.password')} drillIn onClick={() => onNavigate('change-password')} />
                         <ListRow
                             className="min-h-[52px]"
-                            leading={<LabelIcon icon={TwoStep} tone="green" />}
                             title={t('you.account.two_step')}
                             value={t(twoFAEnabled ? 'you.account.on' : 'you.account.off')}
                             drillIn
                             onClick={() => onNavigate('two-factor')}
                         />
-                        <ListRow className="min-h-[52px]" leading={<LabelIcon icon={Passkey} tone="purple" />} title={t('you.account.passkeys')} drillIn onClick={() => onNavigate('two-factor')} />
-                        <ListRow className="min-h-[52px]" leading={<LabelIcon icon={Devices} tone="blue" />} title={t('you.account.sessions')} drillIn onClick={() => onNavigate('sessions')} />
+                        <ListRow className="min-h-[52px]" title={t('you.account.passkeys')} drillIn onClick={() => onNavigate('two-factor')} />
+                        <ListRow className="min-h-[52px]" title={t('you.account.sessions')} drillIn onClick={() => onNavigate('sessions')} />
                     </ListGroup>
 
                     {/* Sign out and delete, in their own group at the bottom. */}
                     <ListGroup footer={t('you.account.delete_footer')}>
-                        <ListRow className="min-h-[52px]" leading={<LabelIcon icon={SignOut} tone="muted" />} title={<span className="text-[var(--c-ink)]">{t('you.sign_out')}</span>} onClick={onLogout} />
+                        <ListRow className="min-h-[52px]" title={<span className="text-[var(--c-ink)]">{t('you.sign_out')}</span>} onClick={onLogout} />
                         <ListRow
                             className="min-h-[52px]"
-                            leading={<Delete size={20} className="text-[var(--c-danger)]" />}
                             title={<span className="text-[var(--c-danger)]">{t('you.delete_account')}</span>}
                             onClick={() => onNavigate('delete-account')}
                         />
@@ -670,7 +659,7 @@ const Account: React.FC<AccountProps> = ({
                             </p>
                         )}
                         <div>
-                            <label htmlFor="account-username" className={fieldLabel}><LabelIcon icon={You} tone="blue" size={18} />{t('auth.username')}</label>
+                            <label htmlFor="account-username" className={fieldLabel}>{t('auth.username')}</label>
                             <input
                                 id="account-username"
                                 type="text"
@@ -683,7 +672,7 @@ const Account: React.FC<AccountProps> = ({
                             />
                         </div>
                         <div>
-                            <label htmlFor="account-password" className={fieldLabel}><LabelIcon icon={Lock} tone="teal" size={18} />{t('auth.password')}</label>
+                            <label htmlFor="account-password" className={fieldLabel}>{t('auth.password')}</label>
                             <input
                                 id="account-password"
                                 type="password"
@@ -703,7 +692,7 @@ const Account: React.FC<AccountProps> = ({
                                 </p>
                                 {useBackupCode ? (
                                     <div className="flex flex-col items-start gap-2">
-                                        <label htmlFor="account-backup-code" className={fieldLabel}><LabelIcon icon={Key} tone="orange" size={18} />{t('auth.backup_code_label')}</label>
+                                        <label htmlFor="account-backup-code" className={fieldLabel}>{t('auth.backup_code_label')}</label>
                                         <input
                                             id="account-backup-code"
                                             type="text"
@@ -716,7 +705,6 @@ const Account: React.FC<AccountProps> = ({
                                             required={useBackupCode}
                                         />
                                         <Button variant="plain" className="-ms-3" onClick={() => { setUseBackupCode(false); setBackupCode(''); }}>
-                                            <Back size={20} />
                                             {twoFAMethod === 'totp' ? t('auth.totp_code') : t('auth.passkey_as_2fa')}
                                         </Button>
                                     </div>
@@ -724,7 +712,7 @@ const Account: React.FC<AccountProps> = ({
                                     <>
                                         {twoFAMethod !== 'passkey' && (
                                             <div>
-                                                <label htmlFor="account-totp" className={fieldLabel}><LabelIcon icon={TwoStep} tone="green" size={18} />{t('auth.totp_code')}</label>
+                                                <label htmlFor="account-totp" className={fieldLabel}>{t('auth.totp_code')}</label>
                                                 <input
                                                     id="account-totp"
                                                     type="text"
@@ -757,7 +745,6 @@ const Account: React.FC<AccountProps> = ({
                                             </>
                                         )}
                                         <Button variant="plain" onClick={() => setUseBackupCode(true)}>
-                                            <Key size={20} />
                                             {t('auth.use_backup_code')}
                                         </Button>
                                     </>
@@ -766,7 +753,7 @@ const Account: React.FC<AccountProps> = ({
                         )}
                         {!(needsTOTP && twoFAMethod === 'passkey' && !useBackupCode) && (
                             <Button type="submit" variant="primary" block disabled={authLoading}>
-                                {authLoading ? <Spinner size={20} className="animate-spin" /> : isLogin ? <SignIn size={20} /> : <You size={20} />}
+                                {authLoading && <Spinner size={20} className="animate-spin" />}
                                 {isLogin ? t('you.account.sign_in') : t('you.account.create')}
                             </Button>
                         )}

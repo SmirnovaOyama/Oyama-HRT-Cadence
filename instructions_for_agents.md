@@ -43,3 +43,8 @@ This overrides the older requirement to put simple choices on secondary pages; k
 forms and confirmations on their existing pages.
 
 Latest owner update (2026-09-26): support English and Simplified Chinese, with an inline language selector on the You page and localized dates. Preserve existing language preferences. This overrides all earlier English-only instructions. Deploy the redesign to hrt.mahiro.uk while preserving the original site’s accounts, encrypted backups, avatars and browser records.
+
+Latest owner update (2026-09-28): calm the UI. The icons are the owner's own drawings (revision 4 of
+`design/cadence/icons/grammar.md`; ask the owner for new ones); the UI rules are the 2026-09-28 section of `design/cadence/README.md`. In short:
+no coloured tiles or settings glyphs, one muted `RowGlyph` on content rows only, words-only text buttons apart from
+add, share, copy and icon-only buttons, and colour only where it means something.

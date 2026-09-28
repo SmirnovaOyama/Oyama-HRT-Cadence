@@ -1,7 +1,6 @@
 import React from 'react';
-import { Today, Timeline, Tests, You, Shield, Log, Reminder, Supplies, Attention } from './icons';
+import { Today, Timeline, Tests, You, Shield, Log, Plus, Reminder, Supplies, Attention } from './icons';
 import type { IconComponent } from './icons';
-import { Button } from './ui';
 import PixelCat from './PixelCat';
 import { useTranslation } from '../contexts/LanguageContext';
 import { tabForView, TabKey, ViewKey } from '../hooks/useAppNavigation';
@@ -9,7 +8,12 @@ import { tabForView, TabKey, ViewKey } from '../hooks/useAppNavigation';
 /* Desktop rail (boards DesktopToday / DesktopAssistant, recipe C17): plate
    background with a right hairline, the wordmark, the two main actions, the
    top-level destinations. Account, mode and backup details belong on You.
-   Hidden below md, where the bottom TabBar takes over. */
+   Hidden below md, where the bottom TabBar takes over.
+
+   The actions are capsule rows like the destinations, on the same icon column:
+   "Log a dose" with the owner's circled plus in the accent, "Add a blood test"
+   with a plain plus. One touch of colour in the rail, and nothing heavier than
+   the page it opens (owner update, 2026-09-28). */
 
 interface SidebarProps {
     currentView: ViewKey;
@@ -70,18 +74,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <span className="whitespace-nowrap text-[20px] leading-7 font-medium text-[var(--c-ink)]">Oyama Tracker</span>
             </div>
 
-            <div className="flex flex-col gap-3">
-                <Button variant="primary" compact block className="text-[17px] leading-[24px]" onClick={onLogDose} disabled={locked}>
-                    <Log size={18} />
-                    <span>{t('shell.rail.log_dose')}</span>
-                </Button>
-                <Button variant="secondary" compact block onTint className="text-[17px] leading-[24px]" onClick={onAddTest} disabled={locked}>
-                    <Tests size={18} />
-                    {t('shell.rail.add_test')}
-                </Button>
+            <div className="flex flex-col gap-1">
+                <button
+                    type="button"
+                    onClick={onLogDose}
+                    disabled={locked}
+                    className="rail-item flex min-h-[44px] w-full items-center gap-3 rounded-full px-4 text-left text-[17px] leading-[24px] font-medium text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <Log size={20} className="shrink-0 text-[var(--c-accent)]" />
+                    <span className="min-w-0 flex-1 truncate">{t('shell.rail.log_dose')}</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={onAddTest}
+                    disabled={locked}
+                    className="rail-item flex min-h-[44px] w-full items-center gap-3 rounded-full px-4 text-left text-[17px] leading-[24px] text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <Plus size={20} className="shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{t('shell.rail.add_test')}</span>
+                </button>
             </div>
 
-            <nav aria-label={t('shell.nav.main')} className="flex flex-col gap-1">
+            <nav aria-label={t('shell.nav.main')} className="flex flex-col gap-0.5">
                 {items.map(({ id, labelKey, icon: Icon }) => {
                     const isActive = activeTab === id;
                     const attention = id === 'supplies' && suppliesAttention;
@@ -93,8 +107,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                             disabled={locked}
                             aria-current={isActive ? 'page' : undefined}
                             aria-label={attention ? t('shell.rail.supplies_attention') : undefined}
-                            className={`rail-item flex min-h-[44px] w-full items-center gap-3 rounded-full px-4 text-left text-[17px] leading-[24px] font-medium ${isActive
-                                ? 'bg-[var(--c-plate-strong)] text-[var(--c-ink)]'
+                            className={`rail-item flex min-h-[44px] w-full items-center gap-3 rounded-full px-4 text-left text-[17px] leading-[24px] ${isActive
+                                ? 'bg-[var(--c-plate-strong)] font-medium text-[var(--c-ink)]'
                                 : 'text-[var(--c-muted)] hover:text-[var(--c-ink)] hover:bg-[var(--c-plate-strong)]'
                                 } disabled:cursor-not-allowed disabled:opacity-50`}
                         >

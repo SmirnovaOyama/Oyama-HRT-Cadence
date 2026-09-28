@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
 import { useDialog } from '../contexts/DialogContext';
-import { Ester, LabResult, isT_LabUnit } from '../../logic';
-import { Calendar, ChevronRight, Close, Delete, Save } from './icons';
-import { MedicineIcon } from './dose_form/MedicineIcon';
-import { LabelIcon } from './ui/LabelIcon';
+import { LabResult, isT_LabUnit } from '../../logic';
+import { ChevronRight } from './icons';
 import { v4 as uuidv4 } from 'uuid';
 import DateTimePicker from './DateTimePicker';
 import { formatTime } from '../utils/helpers';
@@ -45,7 +43,7 @@ const HormoneValueGroup: React.FC<{
     value: string;
     onValueChange: (v: string) => void;
 }> = ({ id, label, units, unit, onUnitChange, value, onValueChange }) => (
-    <ListGroup header={<label htmlFor={id} className="field-label font-normal"><span className="select-value-icon"><MedicineIcon ester={isT_LabUnit(unit) ? Ester.T : Ester.E2} /></span>{label}</label>}>
+    <ListGroup header={<label htmlFor={id}>{label}</label>}>
         <div className="list-row gap-3 py-1">
             <input
                 id={id}
@@ -144,7 +142,7 @@ const LabResultForm: React.FC<LabResultFormProps> = ({ resultToEdit, onSave, onC
             <div className="flex flex-col gap-2">
                 <ListGroup chevronIcon={<ChevronRight size={16} />}>
                     <ListRow
-                        title={<span className="field-label"><LabelIcon icon={Calendar} tone="blue" />{t('tests.date')}</span>}
+                        title={t('tests.date')}
                         value={<span className="tabular-nums">{dateLabel}</span>}
                         drillIn
                         aria-expanded={isDatePickerOpen}
@@ -200,14 +198,13 @@ const LabResultForm: React.FC<LabResultFormProps> = ({ resultToEdit, onSave, onC
 
             <div className="flex flex-col gap-2">
                 <Button block onClick={handleSave} disabled={!canSave || !dateStr}>
-                    <Save size={20} />
                     {t('tests.save')}
                 </Button>
                 <div className="flex items-center justify-between gap-3">
                     {resultToEdit && onDelete ? (
-                        <Button variant="destructive" onClick={handleDelete}><Delete size={18} />{t('tests.delete')}</Button>
+                        <Button variant="destructive" onClick={handleDelete}>{t('tests.delete')}</Button>
                     ) : <span />}
-                    <Button variant="plain" onClick={onCancel}><Close size={18} />{t('btn.cancel')}</Button>
+                    <Button variant="plain" onClick={onCancel}>{t('btn.cancel')}</Button>
                 </div>
             </div>
         </div>

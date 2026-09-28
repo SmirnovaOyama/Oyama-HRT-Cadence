@@ -4,8 +4,6 @@ import { Ester, isTestosteroneEster } from '../../../logic';
 import { SegmentedControl } from '../ui';
 import DoseStepper from './DoseStepper';
 import { GroupHeader, esterName, formatApprox, midSentence } from './shared';
-import { Gauge } from '../icons';
-import { DoseFieldLabel } from './DoseFieldIcon';
 
 export type AmountBasis = 'raw' | 'bio';
 
@@ -81,7 +79,7 @@ const AmountSection: React.FC<AmountSectionProps> = ({
                     />
                 ) : undefined}
             >
-                <DoseFieldLabel icon={Gauge}>{t('log.how_much')}</DoseFieldLabel>
+                {t('log.how_much')}
             </GroupHeader>
             <div className="list-group">
                 <DoseStepper

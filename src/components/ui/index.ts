@@ -3,3 +3,5 @@ export type { ButtonProps, ButtonVariant } from './Button';
 export * from './List';
 export * from './Switch';
 export * from './PageHeader';
+export { RowGlyph } from './RowGlyph';
+export type { RowGlyphTone } from './RowGlyph';

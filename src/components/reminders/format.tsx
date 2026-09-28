@@ -1,4 +1,4 @@
-// Wording and tiles for schedules: "Cyproterone acetate 12.5 mg", "Every day at
+// Wording and glyphs for schedules: "Cyproterone acetate 12.5 mg", "Every day at
 // 21:00", "Every Monday at 09:00". Strings come from
 // src/i18n/cadence/reminders.ts and today.ts.
 
@@ -8,7 +8,8 @@ import type { Lang } from '../../i18n/translations';
 import type { Schedule } from '../../types/routine';
 import { intervalDays, nextOccurrences, scheduleTimes } from '../../utils/reminders';
 import { routeFamily, startOfLocalDay, atTimeOfDay } from '../../utils/schedule';
-import { IconTile, ROUTE_ICON, tileKind } from '../today/ComingUp';
+import { ROUTE_ICON } from '../today/ComingUp';
+import { RowGlyph } from '../ui';
 import { T, doseText, fmt, formatTime, localeFor, medShort, weekdayLong } from '../today/format';
 import { Tablet } from '../icons';
 
@@ -48,8 +49,8 @@ export function scheduleSub(s: Schedule, nowMs: number, lang: Lang, t: T): strin
     return fmt(t('reminders.cadence.every_next'), { n, date: shortDay(next, lang) });
 }
 
-/** 40px medicine tile for a schedule, coloured like Today's rows. */
-export function ScheduleTile({ schedule, isTransmasc }: { schedule: Pick<Schedule, 'route' | 'ester'>; isTransmasc: boolean }): React.ReactElement {
+/** A schedule's route glyph, as Today's rows draw it. */
+export function ScheduleGlyph({ schedule }: { schedule: Pick<Schedule, 'route'> }): React.ReactElement {
     const family = routeFamily(schedule.route);
-    return <IconTile kind={tileKind(schedule.ester, isTransmasc)} icon={family ? ROUTE_ICON[family] : Tablet} />;
+    return <RowGlyph icon={family ? ROUTE_ICON[family] : Tablet} />;
 }

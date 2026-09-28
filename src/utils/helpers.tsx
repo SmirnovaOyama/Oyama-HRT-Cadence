@@ -1,6 +1,4 @@
-import { EstradiolIcon } from '../components/icons/EstradiolIcon';
-import { Syringe, Pill, Droplet, Sticker, X, FlaskConical, Shield } from '../components/icons';
-import { Route, DoseEvent, Ester, getBioavailabilityMultiplier, getToE2Factor, ExtraKey } from '../../logic';
+import { Route, DoseEvent, getBioavailabilityMultiplier, getToE2Factor, ExtraKey } from '../../logic';
 import { Lang } from '../i18n/translations';
 
 export const LOCALE_MAP: Record<Lang, string> = {
@@ -82,32 +80,6 @@ export const formatBytes = (bytes: number): string => {
 // Keep the clock in English regardless of the browser's own locale.
 export const formatTime = (date: Date, timeZone?: string) => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone });
-};
-
-const iconMuted = "w-5 h-5 text-[var(--color-m3-on-surface-variant)] dark:text-[var(--color-m3-dark-on-surface-variant)]";
-
-export const getRouteIcon = (route: Route) => {
-    switch (route) {
-        case Route.injection: return <Syringe className={iconMuted} />;
-        case Route.oral: return <Pill className={iconMuted} />;
-        case Route.sublingual: return <Pill className={iconMuted} />;
-        case Route.gel: return <Droplet className={iconMuted} />;
-        case Route.patchApply: return <Sticker className={iconMuted} />;
-        case Route.patchRemove: return <X className={iconMuted} />;
-    }
-};
-
-export const getEsterIcon = (ester: Ester) => {
-    switch (ester) {
-        case Ester.E2:
-        case Ester.EB:
-        case Ester.EV:
-        case Ester.EC:
-        case Ester.EN:
-        case Ester.EU: return <EstradiolIcon size={20} />;
-        case Ester.CPA: return <Shield className={iconMuted} />;
-        default: return <FlaskConical className={iconMuted} />;
-    }
 };
 
 export const getBioDoseMG = (event: DoseEvent) => {

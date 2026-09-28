@@ -315,7 +315,6 @@ const ResultChart = ({
         muted: 'var(--c-muted)',
         hairline: 'var(--c-hairline)',
         rule: 'var(--c-rule)',
-        plate: 'var(--c-plate)',
         paper: 'var(--c-paper)',
         surface: 'var(--c-surface)',
         target: 'var(--c-target)',
@@ -1148,11 +1147,6 @@ const ResultChart = ({
                             </text>
                         )}
 
-                        {/* Past on a plate tint, future on paper */}
-                        {splitX > mL && (
-                            <rect x={mL} y={mT} width={splitX - mL} height={plotH} fill={c.plate} />
-                        )}
-
                         {/* Target band */}
                         {primaryTarget && (() => {
                             const yHi = Math.max(mT, Math.min(bottom, YP(primaryTarget.high)));
@@ -1352,7 +1346,7 @@ const ResultChart = ({
                             // A halo in the colour behind it keeps the label clear of the curves.
                             <text className="chart-appear" style={{ animationDelay: '120ms' }} pointerEvents="none"
                                   x={targetX} y={targetY} fontSize={axisFont} fontWeight={600} fill={c.target}
-                                  stroke={splitX >= targetX + targetW ? c.plate : halo} strokeWidth={4} strokeLinejoin="round" paintOrder="stroke">
+                                  stroke={halo} strokeWidth={4} strokeLinejoin="round" paintOrder="stroke">
                                 {targetText}
                             </text>
                         )}
@@ -1367,12 +1361,11 @@ const ResultChart = ({
                             </text>
                         )}
 
-                        {/* Now: a 2px ink rule with its tab above the plot */}
+                        {/* Now: a quiet rule with its time written above the plot */}
                         {nowIn && (
                             <g className="chart-appear" style={{ animationDelay: sweepDelay(nowX) }} pointerEvents="none">
-                                <line x1={nowX} y1={tabY + tabH} x2={nowX} y2={bottom} stroke={c.ink} strokeWidth={2} />
-                                <rect x={tabX} y={tabY} width={tabW} height={tabH} rx={6 * ui} fill={c.ink} />
-                                <text x={tabX + tabW / 2} y={tabY + 15.5 * ui} textAnchor="middle" fontSize={axisFont} fontWeight={600} fill={c.paper}>
+                                <line x1={nowX} y1={tabY + tabH - 2 * ui} x2={nowX} y2={bottom} stroke={c.ink} strokeOpacity={0.55} strokeWidth={1.5} />
+                                <text x={tabX + tabW / 2} y={tabY + 15.5 * ui} textAnchor="middle" fontSize={axisFont} fontWeight={600} fill={c.ink}>
                                     {nowText}
                                 </text>
                             </g>
@@ -1405,7 +1398,7 @@ const ResultChart = ({
             </div>
 
             {/* Readout: what the chart says at the read-off, or now */}
-            <div className="mt-2 rounded-xl bg-[var(--c-plate)] px-4 py-3" aria-live="polite">
+            <div className="mt-3 border-t border-[var(--c-hairline)] pt-3" aria-live="polite">
                 <p className="m-0 text-sm font-semibold text-[var(--c-ink)] tabular-nums">{whenText(readT)}</p>
                 {(readMain || readSecond) && (
                     <p className="m-0 text-sm text-[var(--c-ink)] tabular-nums">

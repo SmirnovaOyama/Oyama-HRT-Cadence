@@ -39,7 +39,15 @@ dropdown open after selection; close it only with its trigger or Escape.
 This overrides the older requirement to put simple choices on secondary pages; keep substantial
 forms and confirmations on their existing pages.
 
-Latest owner icon update (2026-09-25): use simpler original outline glyphs across the app,
-keeping Today exactly as approved. Follow the revised `design/cadence/icons/grammar.md`.
+Owner icon update (2026-09-25, superseded 2026-09-28): simpler original outline glyphs; the Today glyph is no
+longer frozen.
 
 Latest owner update (2026-09-26): support English and Simplified Chinese, with an inline language selector on the You page and localized dates. Preserve existing language preferences. This overrides all earlier English-only instructions. Deploy the redesign to hrt.mahiro.uk while preserving the original site’s accounts, encrypted backups, avatars and browser records.
+
+Latest owner update (2026-09-28): the UI must be calm, not cluttered, and the icons must look like the icons in
+Claude's apps, not AI slop. The icons are the owner's own drawings (`design/cadence/icons/grammar.md` revision 4); ask them for new ones rather
+than drawing them. Follow the 2026-09-28 section of
+`design/cadence/README.md`: one accent, colour only for meaning, no coloured tiles or glyphs on settings rows, field
+labels or medicine choices (content rows use one muted `RowGlyph`), words-only text buttons apart from add, share,
+copy and icon-only buttons, and nothing said twice on a screen. This overrides the 2026-09-26 request for colourful
+tiles and glyphs throughout forms and settings.

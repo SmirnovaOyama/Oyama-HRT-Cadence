@@ -29,21 +29,11 @@
     max-width: 100%;
     padding: 6px 14px 6px 7px;
     border-radius: 999px;
-    background: var(--c-target-fill);
-    color: var(--c-target);
+    background: var(--c-plate);
+    color: var(--c-ink);
     font-size: 0.9375rem;
     font-weight: 500;
     line-height: 1.4;
-}
-
-.save-feedback-line[data-tone="test"] {
-    background: var(--c-second-tint);
-    color: var(--c-second);
-}
-
-.save-feedback-line[data-tone="planned"] {
-    background: var(--c-accent-container);
-    color: var(--c-on-accent-container);
 }
 
 .save-feedback-check {
@@ -54,6 +44,7 @@
     height: 28px;
     border-radius: 50%;
     background: var(--c-surface);
+    color: var(--c-target);
     animation: save-feedback-confirm 360ms cubic-bezier(.22, 1, .36, 1) both;
 }
 

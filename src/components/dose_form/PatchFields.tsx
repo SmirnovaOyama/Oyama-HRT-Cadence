@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from '../../contexts/LanguageContext';
-import { Check, ChevronRight, Gauge, Calendar } from '../icons';
+import { Check, ChevronRight } from '../icons';
 import { ListGroup, ListRow, SegmentedControl } from '../ui';
 import DoseStepper from './DoseStepper';
 import { GroupHeader, formatAmount } from './shared';
-import { DoseFieldLabel } from './DoseFieldIcon';
 
 interface PatchFieldsProps {
     patchMode: "dose" | "rate";
@@ -50,7 +49,7 @@ const PatchFields: React.FC<PatchFieldsProps> = ({
     return (
         <>
             <section>
-                <GroupHeader><DoseFieldLabel icon={Gauge}>{t('log.how_much')}</DoseFieldLabel></GroupHeader>
+                <GroupHeader>{t('log.how_much')}</GroupHeader>
                 <SegmentedControl<"dose" | "rate">
                     aria-label={t('log.patch_mode')}
                     className="mb-2"
@@ -84,7 +83,7 @@ const PatchFields: React.FC<PatchFieldsProps> = ({
             </section>
 
             <ListGroup
-                header={<DoseFieldLabel icon={Calendar}>{t('log.patch_wear')}</DoseFieldLabel>}
+                header={t('log.patch_wear')}
                 selection="single"
                 checkIcon={<Check size={22} />}
                 chevronIcon={<ChevronRight size={16} />}

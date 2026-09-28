@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Attention, Sync } from './icons';
+import { Attention } from './icons';
 import { Button } from './ui/Button';
 import { TRANSLATIONS } from '../i18n/translations';
 
@@ -68,7 +68,6 @@ class ErrorBoundary extends React.Component<Props, State> {
                         </div>
                     )}
                     <Button variant="primary" onClick={this.handleReload}>
-                        <Sync size={20} />
                         {tr('error.reload')}
                     </Button>
                 </div>

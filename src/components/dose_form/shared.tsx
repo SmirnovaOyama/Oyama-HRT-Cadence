@@ -1,6 +1,7 @@
 import React from 'react';
 import { Route, Ester, ExtraKey } from '../../../logic';
-import { Injection, Tablet, Sublingual, Gel, Patch, Plus, Minus } from '../icons';
+import { Injection, Tablet, Sublingual, Gel, Patch, type IconComponent } from '../icons';
+import { RowGlyph } from '../ui/RowGlyph';
 import type { Lang } from '../../i18n/translations';
 import { joinList } from '../../i18n/listSeparator';
 import { LOCALE_MAP } from '../../utils/helpers';
@@ -27,7 +28,7 @@ export const formatApprox = (val: number): string => {
     return String(parseFloat(val < 10 ? val.toFixed(2) : val.toFixed(1)));
 };
 
-const ROUTE_ICON: Record<Route, React.ComponentType<{ size?: number }>> = {
+const ROUTE_ICON: Record<Route, IconComponent> = {
     [Route.injection]: Injection,
     [Route.oral]: Tablet,
     [Route.sublingual]: Sublingual,
@@ -36,42 +37,11 @@ const ROUTE_ICON: Record<Route, React.ComponentType<{ size?: number }>> = {
     [Route.patchRemove]: Patch,
 };
 
-export const RouteIcon: React.FC<{ route: Route; size?: number }> = ({ route, size = 20 }) => {
-    const Icon = ROUTE_ICON[route] ?? Injection;
-    return <Icon size={size} />;
-};
-
-/** Color-coded route choices, with explicit on/off marks for patches. */
-export const RouteChoiceIcon: React.FC<{ route: Route }> = ({ route }) => (
-    <span aria-hidden="true" data-route={route} className="route-choice-icon">
-        <RouteIcon route={route} size={23} />
-        {(route === Route.patchApply || route === Route.patchRemove) && (
-            <span className="route-choice-mark">
-                {route === Route.patchApply ? <Plus size={11} /> : <Minus size={11} />}
-            </span>
-        )}
-    </span>
+/** A route's leading glyph in a list row or a route choice. The row's words
+ *  name the medicine and route; the glyph only helps the eye find it. */
+export const RouteGlyph: React.FC<{ route: Route }> = ({ route }) => (
+    <RowGlyph icon={ROUTE_ICON[route] ?? Injection} />
 );
-
-/** 40px icon tile for list rows: hormones in the accent tint, the
- *  anti-androgen in the second (purple) tint, like the board. */
-export const RouteTile: React.FC<{ route: Route; ester?: Ester; neutral?: boolean; children?: React.ReactNode }> = ({
-    route,
-    ester,
-    neutral,
-    children,
-}) => {
-    const tone = neutral
-        ? 'bg-[var(--c-plate)] text-[var(--c-muted)]'
-        : ester === Ester.CPA
-            ? 'bg-[var(--c-second-tint)] text-[var(--c-second)]'
-            : 'bg-[var(--c-accent-container)] text-[var(--c-accent)]';
-    return (
-        <span aria-hidden="true" className={`grid h-10 w-10 flex-none place-items-center rounded-xl ${tone}`}>
-            {children ?? <RouteIcon route={route} />}
-        </span>
-    );
-};
 
 /** Inset separator between hand-built list rows (ListGroup adds its own). */
 export const ListSep: React.FC<{ icon?: boolean }> = ({ icon }) => (

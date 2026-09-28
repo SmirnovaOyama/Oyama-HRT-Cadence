@@ -7,7 +7,8 @@ import React, { createContext, useContext, useEffect, useId } from 'react';
    Row density follows design/cadence/spec/format_rules.md, which wins over the
    boards: a one-line title, then EITHER a trailing value OR one short state
    sub-line (never both). Explanations go in the group footer. Settings-style
-   lists carry no icon tiles, and a group either gives every row a tile or none. */
+   lists carry no leading icons; content rows may lead with a RowGlyph, and a
+   group gives every row one or none. */
 
 const DEV = import.meta.env.DEV;
 
@@ -57,8 +58,8 @@ export interface ListGroupProps {
 }
 
 /** A white, hairline-bordered group of rows. Separators are inserted between
- *  rows automatically, inset to the text column (68px after a row with a
- *  leading icon tile, 16px otherwise). */
+ *  rows automatically, inset to the text column (52px after a row with a
+ *  leading glyph, 16px otherwise). */
 export function ListGroup({
     children,
     header,
@@ -88,15 +89,15 @@ export function ListGroup({
         items.push(row);
     });
 
-    // format_rules 5: within one group, every row has a tile or none does.
+    // format_rules 5: within one group, every row has a leading glyph or none does.
     const tiles = rows.filter(row => (row.props as { leading?: React.ReactNode }).leading != null).length;
     const mixedTiles = tiles > 0 && tiles < rows.length;
     const groupLabel = textOf(header) || ariaLabel || '';
     useEffect(() => {
         if (mixedTiles) {
             warnOnce(
-                `[ListGroup]${groupLabel ? ` "${groupLabel}":` : ''} ${tiles} of ${rows.length} rows have a leading tile. ` +
-                'Give every row in a group a tile or none (design/cadence/spec/format_rules.md rule 5).',
+                `[ListGroup]${groupLabel ? ` "${groupLabel}":` : ''} ${tiles} of ${rows.length} rows have a leading glyph. ` +
+                'Give every row in a group a glyph or none (design/cadence/spec/format_rules.md rule 5).',
             );
         }
     }, [mixedTiles, groupLabel, tiles, rows.length]);
@@ -162,7 +163,7 @@ interface ListRowOwnProps {
      *  page ("Clear all records", "Delete account"). accent: accent-coloured
      *  title for a plain action row ("Sign out"). */
     tone?: 'destructive' | 'accent';
-    /** 40px icon tile or similar at the start. Makes the row 64px tall. */
+    /** A RowGlyph (or an avatar) at the start. Content rows only. */
     leading?: React.ReactNode;
     /** Anything else at the end, such as a Switch. Drawn after `value`. */
     trailing?: React.ReactNode;
@@ -225,7 +226,7 @@ export function ListRow(props: ListRowProps) {
 
     const classes = [
         'list-row',
-        (tall || sub != null || leading != null) && 'list-row-tall',
+        (tall || sub != null) && 'list-row-tall',
         value != null && 'list-row-has-value',
         tone === 'destructive' && 'list-row-destructive',
         tone === 'accent' && 'list-row-accent',

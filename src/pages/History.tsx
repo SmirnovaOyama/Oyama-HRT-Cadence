@@ -1,10 +1,9 @@
 import type { QuickDose } from '../components/dose_form/QuickDoseButtons';
 import { ShareButton } from '../components/ui/ShareButton';
-import { LabelIcon } from '../components/ui/LabelIcon';
 import React, { useEffect, useMemo, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
-    Check, ChevronDown, ChevronRight, Close, Delete, Gel, Injection, Patch, Plus, Repeat, Select, Sublingual, Tablet,
+    Check, ChevronDown, Gel, Injection, Patch, Plus, Select, Sublingual, Tablet,
     type IconComponent,
 } from '../components/icons';
 import {
@@ -25,7 +24,7 @@ import ResultChart from '../components/ResultChart';
 import PixelCat from '../components/PixelCat';
 import { DoseTemplate } from '../components/DoseFormModal';
 import { DoseDayGroup } from '../hooks/useAppData';
-import { Button, ListGroup, ListRow, PageHeader, Section, Switch } from '../components/ui';
+import { Button, ListGroup, ListRow, PageHeader, RowGlyph, Section, Switch } from '../components/ui';
 
 const MAX_BATCH_COUNT = 365;
 /** Day groups drawn at first, and added per "Show earlier days". */
@@ -55,24 +54,10 @@ const ROUTE_ICON: Record<Route, IconComponent> = {
     [Route.patchRemove]: Patch,
 };
 
-/** The 40px tile at the start of a dose row: the route's icon on the
- *  compound's tint (cyproterone in the second hue, the rest in the accent). */
-export const DoseTile: React.FC<{ ev: DoseEvent }> = ({ ev }) => {
-    const Icon = ROUTE_ICON[ev.route] ?? Tablet;
-    const second = ev.ester === Ester.CPA;
-    return (
-        <span
-            aria-hidden="true"
-            className="grid h-10 w-10 place-items-center rounded-xl"
-            style={{
-                background: second ? 'var(--c-second-tint)' : 'var(--c-accent-container)',
-                color: second ? 'var(--c-second)' : 'var(--c-accent)',
-            }}
-        >
-            <Icon size={20} />
-        </span>
-    );
-};
+/** The glyph at the start of a dose row: the route, in the muted ink. */
+export const DoseGlyph: React.FC<{ ev: DoseEvent }> = ({ ev }) => (
+    <RowGlyph icon={ROUTE_ICON[ev.route] ?? Tablet} />
+);
 
 /** "Estradiol valerate 4 mg, injection". */
 export const doseTitle = (ev: DoseEvent, t: (k: string) => string): string => {
@@ -350,7 +335,7 @@ const History: React.FC<HistoryProps> = ({
 
     const numInput = 'input-base !w-24 !min-h-11 !py-2 text-end tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
 
-    // One dose row: tile, one-line title, the time at the end. The details
+    // One dose row: glyph, one-line title, the time at the end. The details
     // (volume, site, equivalent dose) show in the form when the row opens.
     const doseRow = (ev: DoseEvent, isEditing: boolean) => {
         const { name, dose } = doseRowParts(ev, t);
@@ -360,7 +345,7 @@ const History: React.FC<HistoryProps> = ({
             <ListRow
                 key={ev.id}
                 id={`dose-${ev.id}`}
-                leading={<DoseTile ev={ev} />}
+                leading={<DoseGlyph ev={ev} />}
                 title={
                     <span className="flex min-w-0">
                         <span className="truncate">{name}</span>
@@ -395,7 +380,7 @@ const History: React.FC<HistoryProps> = ({
                     subtitle={selectMode ? t('timeline.selected_n').replace('{n}', String(selectedIds.size)) : undefined}
                     className={selectMode ? undefined : `items-center flex-wrap gap-y-2 [&>div:last-child]:gap-2 ${totalRecords > 0 || onNavigateToShare ? '[&>div:last-child]:w-full [&>div:last-child]:justify-start sm:[&>div:last-child]:w-auto' : ''}`}
                     trailing={selectMode ? (
-                        <Button variant="plain" onClick={exitSelectMode}><Close size={18} />{t('btn.cancel')}</Button>
+                        <Button variant="plain" onClick={exitSelectMode}>{t('btn.cancel')}</Button>
                     ) : (
                         <>
                             {onNavigateToShare && (
@@ -415,7 +400,7 @@ const History: React.FC<HistoryProps> = ({
                                 aria-expanded={isQuickAddOpen}
                                 onClick={() => setIsQuickAddOpen(!isQuickAddOpen)}
                             >
-                                {isQuickAddOpen ? <><Close size={18} />{t('btn.cancel')}</> : (<><Plus size={18} />{t('timeline.add_dose')}</>)}
+                                {isQuickAddOpen ? t('btn.cancel') : (<><Plus size={18} />{t('timeline.add_dose')}</>)}
                             </Button>
                         </>
                     )}
@@ -427,11 +412,9 @@ const History: React.FC<HistoryProps> = ({
                 <div className="sticky top-0 z-20 border-b border-[var(--c-hairline)] bg-[var(--c-paper)]">
                     <div className="flex w-full max-w-2xl items-center justify-between gap-3 px-4 py-1 md:px-8 xl:max-w-none">
                         <Button variant="plain" onClick={toggleSelectAll} disabled={filteredEvents.length === 0}>
-                            <Select size={18} />
                             {t('timeline.select_all')}
                         </Button>
                         <Button variant="destructive" onClick={handleDeleteSelected} disabled={!selectedIds.size}>
-                            <Delete size={18} />
                             {selectedIds.size ? t('timeline.delete_n').replace('{n}', String(selectedIds.size)) : t('btn.delete')}
                         </Button>
                     </div>
@@ -493,7 +476,7 @@ const History: React.FC<HistoryProps> = ({
                             <div className="order-1 mt-2 flex flex-col gap-4 xl:mt-0">
                                 <ListGroup footer={batchOn ? batchHint : t('timeline.batch_desc')}>
                                     <ListRow
-                                        title={<span id="timeline-batch-title" className="field-label"><Repeat size={20} />{t('timeline.batch')}</span>}
+                                        title={<span id="timeline-batch-title">{t('timeline.batch')}</span>}
                                         trailing={<Switch checked={batchOn} onChange={setBatchOn} aria-labelledby="timeline-batch-title" />}
                                     />
                                     {batchOn && (
@@ -560,69 +543,74 @@ const History: React.FC<HistoryProps> = ({
                                     <CustomSelect
                                         label={t('timeline.filter_label')}
                                         value={filter}
-                                        selectedIconPosition="value"
-                                        options={FILTERS.map(value => ({ value, label: t(`timeline.filter.${value}`), icon: <LabelIcon icon={value === 'injections' ? Injection : value === 'tablets' ? Tablet : value === 'gels' ? Gel : Select} tone={value === 'injections' ? 'blue' : value === 'tablets' ? 'purple' : value === 'gels' ? 'teal' : 'muted'} /> }))}
+                                        options={FILTERS.map(value => ({ value, label: t(`timeline.filter.${value}`) }))}
                                         onChange={value => {
                                             setFilter(value as Filter);
                                             setDayLimit(DAYS_PER_PAGE);
                                         }}
                                     />
 
-                                    {showTodayPlaceholder && (
-                                        <ListGroup header={<h3 className="m-0 truncate">{dayHeading(todayKey)}</h3>}>
-                                            <ListRow title={t('timeline.nothing_today')} />
-                                        </ListGroup>
-                                    )}
-
                                     {filteredGroups.length === 0 && (
                                         <p className="m-0 px-4 text-sm text-[var(--c-muted)]">{t('timeline.filter_empty')}</p>
                                     )}
 
-                                    {visibleGroups.map(({ key, events: dayEvents }) => (
-                                        <ListGroup
-                                            key={key}
-                                            header={<h3 className="m-0 truncate">{dayHeading(key)}</h3>}
-                                            selection={selectMode ? 'multiple' : undefined}
-                                            checkIcon={<Check size={22} />}
-                                        >
-                                            {dayEvents.flatMap(ev => {
-                                                const isEditing = editingId === ev.id && !selectMode;
-                                                const row = doseRow(ev, isEditing);
-                                                if (!isEditing) return [row];
-                                                // What the one-line row leaves out: volume, site, equivalent dose.
-                                                const detail = doseDetail(ev, t, lang, false);
-                                                // Mounted only for the row being edited: with hundreds of
-                                                // records, a form per row re-rendered all of them on every change.
-                                                return [
-                                                    row,
-                                                    <div key={`${ev.id}-edit`} className="bg-[var(--c-plate)] px-4 pb-4 pt-3">
-                                                        {detail && <p className="m-0 mb-3 text-sm text-[var(--c-muted)]">{detail}</p>}
-                                                        <DoseForm
-                                                            eventToEdit={ev}
-                                                            onSave={(e) => {
-                                                                onSaveEvent(e);
-                                                                setEditingId(null);
-                                                            }}
-                                                            onCancel={() => setEditingId(null)}
-                                                            onDelete={(id) => {
-                                                                onDeleteEvent(id);
-                                                                setEditingId(null);
-                                                            }}
-                                                            templates={doseTemplates}
-                                                            onSaveTemplate={onSaveTemplate}
-                                                            onDeleteTemplate={onDeleteTemplate}
-                                                            quickDoses={quickDoses}
-                                                            onAddQuickDose={onAddQuickDose}
-                                                            onDeleteQuickDose={onDeleteQuickDose}
-                                                            isInline={true}
-                                                            hideHeader={true}
-                                                            events={allEvents}
-                                                        />
-                                                    </div>,
-                                                ];
-                                            })}
-                                        </ListGroup>
-                                    ))}
+                                    {/* The days share one card; each day's name is a quiet heading
+                                        inside it rather than a card of its own. */}
+                                    {(showTodayPlaceholder || visibleGroups.length > 0) && (
+                                        <div className="timeline-days">
+                                            {showTodayPlaceholder && (
+                                                <ListGroup header={<h3 className="m-0 truncate">{dayHeading(todayKey)}</h3>}>
+                                                    <ListRow title={<span className="text-[var(--c-muted)]">{t('timeline.nothing_today')}</span>} />
+                                                </ListGroup>
+                                            )}
+
+                                            {visibleGroups.map(({ key, events: dayEvents }) => (
+                                                <ListGroup
+                                                    key={key}
+                                                    header={<h3 className="m-0 truncate">{dayHeading(key)}</h3>}
+                                                    selection={selectMode ? 'multiple' : undefined}
+                                                    checkIcon={<Check size={22} />}
+                                                >
+                                                    {dayEvents.flatMap(ev => {
+                                                        const isEditing = editingId === ev.id && !selectMode;
+                                                        const row = doseRow(ev, isEditing);
+                                                        if (!isEditing) return [row];
+                                                        // What the one-line row leaves out: volume, site, equivalent dose.
+                                                        const detail = doseDetail(ev, t, lang, false);
+                                                        // Mounted only for the row being edited: with hundreds of
+                                                        // records, a form per row re-rendered all of them on every change.
+                                                        return [
+                                                            row,
+                                                            <div key={`${ev.id}-edit`} className="bg-[var(--c-plate)] px-4 pb-4 pt-3">
+                                                                {detail && <p className="m-0 mb-3 text-sm text-[var(--c-muted)]">{detail}</p>}
+                                                                <DoseForm
+                                                                    eventToEdit={ev}
+                                                                    onSave={(e) => {
+                                                                        onSaveEvent(e);
+                                                                        setEditingId(null);
+                                                                    }}
+                                                                    onCancel={() => setEditingId(null)}
+                                                                    onDelete={(id) => {
+                                                                        onDeleteEvent(id);
+                                                                        setEditingId(null);
+                                                                    }}
+                                                                    templates={doseTemplates}
+                                                                    onSaveTemplate={onSaveTemplate}
+                                                                    onDeleteTemplate={onDeleteTemplate}
+                                                                    quickDoses={quickDoses}
+                                                                    onAddQuickDose={onAddQuickDose}
+                                                                    onDeleteQuickDose={onDeleteQuickDose}
+                                                                    isInline={true}
+                                                                    hideHeader={true}
+                                                                    events={allEvents}
+                                                                />
+                                                            </div>,
+                                                        ];
+                                                    })}
+                                                </ListGroup>
+                                            ))}
+                                        </div>
+                                    )}
 
                                     {filteredGroups.length > dayLimit && (
                                         <Button

@@ -1,8 +1,7 @@
 import React, { useId, useRef, useState } from 'react';
 import { useTranslation } from '../contexts/LanguageContext';
-import { ChevronDown, ChevronUp, Copy, Import } from './icons';
+import { ChevronDown, ChevronUp } from './icons';
 import { Button, ListGroup, ListRow } from './ui';
-import { LabelIcon } from './ui/LabelIcon';
 
 interface ImportSectionProps {
     onImportJson: (text: string) => boolean | Promise<boolean>;
@@ -34,17 +33,15 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onImportJson }) => {
     };
 
     return (
-        <div className="flex flex-col gap-4 [&_.list-sep-icon]:ms-[48px]">
+        <div className="flex flex-col gap-4">
             <ListGroup footer={t('account.import.footer')}>
                 <ListRow
                     className="min-h-[52px]"
-                    leading={<LabelIcon icon={Import} tone="blue" />}
                     title={t('account.import.file')}
                     onClick={() => fileInputRef.current?.click()}
                 />
                 <ListRow
                     className="min-h-[52px]"
-                    leading={<LabelIcon icon={Copy} tone="purple" />}
                     title={t('account.import.paste')}
                     aria-expanded={showPaste}
                     aria-controls={pasteId}
@@ -80,7 +77,6 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onImportJson }) => {
                     />
                     <div className="flex justify-end">
                         <Button variant="primary" compact onClick={handleTextImport} disabled={!text.trim()}>
-                            <Import size={20} />
                             {t('account.import.bring_in')}
                         </Button>
                     </div>

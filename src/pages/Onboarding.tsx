@@ -129,6 +129,9 @@ interface PointProps {
     onClick?: () => void;
 }
 
+/** Separators under the 28px pixel marks start at their rows' text (16 + 28 + 12). */
+const MARK_ROWS = '[&_.list-sep-icon]:ms-[56px]';
+
 // A function rather than a component: ListGroup reads each row's `leading`
 // prop to inset the separator under it, so the rows have to be ListRows.
 const pointRow = ({ mark, title, desc, state = 'done', duration, playKey, onClick }: PointProps) => (
@@ -138,7 +141,7 @@ const pointRow = ({ mark, title, desc, state = 'done', duration, playKey, onClic
            to sit on one column, but they are drawings, and a drawing in a
            tinted square is an icon again. */
         leading={
-            <span className="flex h-10 w-10 items-center justify-center">
+            <span className="flex h-7 w-7 items-center justify-center">
                 <PixelMark key={playKey} name={mark} size={28} state={state} duration={duration} />
             </span>
         }
@@ -231,7 +234,7 @@ const HowStep: React.FC<{ curve: CurveData | null }> = ({ curve }) => {
                 </div>
             </Stage>
             <Body>
-                <ListGroup footer={t('account.onboarding.how_note')}>
+                <ListGroup footer={t('account.onboarding.how_note')} className={MARK_ROWS}>
                     {HOW_ROWS.map(({ mark, title, desc }, i) => pointRow({
                         mark,
                         title: t(title),
@@ -302,7 +305,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onDone }) => {
 
         <div key="privacy" className="pt-8">
             <StepTitle title={t('onboarding.privacy_title')} subtitle={t('onboarding.privacy_subtitle')} />
-            <ListGroup className="mt-6">
+            <ListGroup className={`mt-6 ${MARK_ROWS}`}>
                 {pointRow({ mark: 'lock', title: t('onboarding.privacy_local'), desc: t('account.onboarding.local_desc') })}
                 {pointRow({ mark: 'cloud', title: t('onboarding.privacy_cloud'), desc: t('account.onboarding.cloud_desc') })}
                 {pointRow({ mark: 'caution', title: t('onboarding.privacy_medical'), desc: t('account.onboarding.medical_desc') })}

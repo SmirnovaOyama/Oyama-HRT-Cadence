@@ -2,50 +2,7 @@
    their actual number, delay a save, or keep decorative motion running. */
 :root {
     --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
-    --icon-blue: #2467D2;
-    --icon-purple: #843CCA;
-    --icon-pink: #BE2877;
-    --icon-teal: #007B8C;
-    --icon-green: #347F36;
-    --icon-orange: #B75514;
 }
-
-.dark {
-    --icon-blue: #98BFFF;
-    --icon-purple: #CEAAFF;
-    --icon-pink: #FFA1D0;
-    --icon-teal: #72DCE8;
-    --icon-green: #B1DC88;
-    --icon-orange: #FFB977;
-}
-
-.label-icon { display: inline-flex; align-items: center; flex: none; color: var(--c-muted); }
-.label-icon[data-tone="blue"] { color: var(--icon-blue); }
-.label-icon[data-tone="purple"] { color: var(--icon-purple); }
-.label-icon[data-tone="pink"] { color: var(--icon-pink); }
-.label-icon[data-tone="teal"] { color: var(--icon-teal); }
-.label-icon[data-tone="green"] { color: var(--icon-green); }
-.label-icon[data-tone="orange"] { color: var(--icon-orange); }
-.label-icon .cadence-icon { zoom: 1; }
-.field-label { display: inline-flex; align-items: center; gap: 8px; }
-
-/* Plain label glyphs keep the original compact settings density. Larger
-   medicine/route tiles and rows with subtitles retain their existing height. */
-.list-row:has(> .list-row-leading > .label-icon):not(:has(.list-row-sub)) {
-    min-height: 52px;
-}
-.list-row:has(> .list-row-leading > .label-icon) + .list-sep-icon {
-    margin-inline-start: 48px;
-}
-.list-row-has-value:has(> .list-row-leading > .label-icon) { gap: 10px; }
-.list-row-has-value:has(> .list-row-leading > .label-icon) .list-row-value {
-    min-width: min(3.5em, 35%);
-}
-/* You page (owner request, 2026-09-27): every row's text starts on one column,
-   16 + 20px glyph + 12, which is where its inset separators start too. Rows with
-   a value otherwise sat 2px further left. Scoped so other lists keep theirs. */
-.you-settings .list-group .list-row:has(> .list-row-leading) { gap: 12px; }
-.you-settings .list-group-footer { padding-top: 6px; }
 
 @keyframes control-land {
     from { scale: 0.9; }
